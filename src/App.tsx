@@ -12,6 +12,8 @@ export default function App() {
     [paused, setPaused] = useState(false),
     [mirror, setMirror] = useState(false),
     [trails, setTrails] = useState(true),
+    [constellation, setConstellation] = useState(false),
+    [motionDemo, setMotionDemo] = useState(false),
     [confidence, setConfidence] = useState(0.45),
     [selected, setSelected] = useState<number | null>(null),
     [tracks, setTracks] = useState<Track[]>([]),
@@ -77,34 +79,43 @@ export default function App() {
     if (next === mode) return;
     setMode(next);
     setPaused(false);
-    if (input.source?.kind === "demo") void input.demo(next);
+    if (input.source?.kind === "demo") void input.demo(next, motionDemo);
   };
   const onDemo = () => {
     setPaused(false);
     setMirror(false);
-    void input.demo(mode);
+    void input.demo(mode, motionDemo);
+  };
+  const onMotionDemo = () => {
+    const next = !motionDemo;
+    setMotionDemo(next);
+    setPaused(false);
+    setMirror(false);
+    void input.demo(mode, next);
   };
   const onCamera = () => {
     setPaused(false);
     if (input.source?.kind === "camera") onDemo();
     else {
+      setMotionDemo(false);
       setMirror(true);
       void input.camera();
     }
   };
   const onUpload = (file: File) => {
     setPaused(false);
+    setMotionDemo(false);
     setMirror(false);
     void input.upload(file);
   };
   const exportSession = () => {
     const payload = {
       app: "SPECTRA",
-      version: "1.0.0",
+      version: "1.1.0",
       exportedAt: new Date().toISOString(),
       mode,
       source: input.source?.kind ?? null,
-      settings: { confidence, mirror, trails },
+      settings: { confidence, mirror, trails, constellation, motionDemo },
       notes:
         "Latest 1000 processed frames of this source and mode. Image-normalized coordinates; no media included. Timestamps are monotonic page time.",
       frames: history.current,
@@ -173,6 +184,7 @@ export default function App() {
           mirror={mirror}
           onMirror={() => setMirror((m) => !m)}
           trails={trails}
+          constellation={constellation}
           selected={mode === "objects" ? selected : null}
           status={input.pending ? "Opening source" : vision.status}
           error={input.error || vision.error}
@@ -208,6 +220,10 @@ export default function App() {
                   input.source.element.naturalHeight
                 : 1
           }
+          constellation={constellation}
+          onConstellation={() => setConstellation((value) => !value)}
+          motionDemo={motionDemo && input.source?.kind === "demo"}
+          onMotionDemo={onMotionDemo}
         />
       </div>
       <Footer

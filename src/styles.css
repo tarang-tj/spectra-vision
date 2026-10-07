@@ -221,6 +221,7 @@ p {
   align-items: stretch;
 }
 .camera-stage {
+  width: 100%;
   position: relative;
   aspect-ratio: 16/10;
   border: 1px solid var(--border);
@@ -277,6 +278,7 @@ p {
   gap: 12px;
 }
 .playback {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -336,6 +338,43 @@ p {
 .tool[aria-pressed="true"] {
   background: #a4ffd925;
   color: var(--accent);
+}
+.record-tool[aria-pressed="true"] {
+  color: #ffa1b2;
+  background: #ff5b7c22;
+}
+.recording-badge {
+  position: absolute;
+  top: 48px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: #150910dd;
+  color: #ffa1b2;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.recording-badge i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff718e;
+}
+.motion-demo {
+  width: 100%;
+  margin-top: 14px;
+  font-size: 12px;
+  min-height: 40px;
+}
+.motion-demo[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.controls .switch-row + .switch-row {
+  margin-top: 14px;
 }
 .inspector {
   border: 1px solid var(--border);
@@ -663,14 +702,14 @@ footer i {
 }
 @media (min-width: 1400px) {
   .inspector {
-    padding: 24px 22px;
-    gap: 30px;
+    padding: 20px 22px;
+    gap: 20px;
   }
   .detections {
-    max-height: 192px;
+    max-height: 140px;
   }
   .motion svg {
-    height: 155px;
+    height: 124px;
   }
   .tool {
     min-width: 57px;
@@ -846,8 +885,8 @@ footer i {
     padding: 2px;
   }
   .tool {
-    min-width: 31px;
-    min-height: 32px;
+    min-width: 40px;
+    min-height: 40px;
     padding: 3px;
   }
   .tool svg {

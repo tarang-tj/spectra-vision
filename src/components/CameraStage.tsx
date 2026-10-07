@@ -8,12 +8,15 @@ import {
   Play,
   RotateCcw,
   Eraser,
+  Circle,
+  Square,
 } from "lucide-react";
 import type { Mode, Source, Track, VisionResult } from "../vision/types";
 import { MODE_LABELS, COLORS } from "../vision/types";
 import { isPinching } from "../vision/geometry";
 import { draw } from "../vision/render";
 import type { Stroke } from "../vision/render";
+import { useRecording } from "../vision/useRecording";
 export default function CameraStage(props: {
   source: Source | null;
   mode: Mode;
@@ -24,6 +27,7 @@ export default function CameraStage(props: {
   mirror: boolean;
   onMirror: () => void;
   trails: boolean;
+  constellation: boolean;
   selected: number | null;
   status: string;
   error: string;
@@ -52,6 +56,11 @@ export default function CameraStage(props: {
     pinches = useRef<boolean[]>([]),
     active = useRef<(Stroke | null)[]>([]);
   const [fullscreen, setFullscreen] = useState(false);
+  const capture = useRecording(
+    canvas,
+    `${mode}:${source?.generation ?? 0}`,
+    notice,
+  );
   latest.current = props;
   useEffect(() => {
     strokes.current = [];
@@ -164,6 +173,7 @@ export default function CameraStage(props: {
             strokes.current,
             p.selected,
             p.paused || reducedMotion.matches ? 0 : time,
+            p.constellation,
           );
         }
       }
@@ -206,7 +216,9 @@ export default function CameraStage(props: {
     source?.kind === "camera"
       ? "CAMERA"
       : source?.kind === "demo"
-        ? "DEMO IMAGE"
+        ? source.element instanceof HTMLVideoElement
+          ? "ANIMATED DEMO"
+          : "DEMO IMAGE"
         : source?.kind === "video"
           ? "LOCAL VIDEO"
           : "LOCAL IMAGE";
@@ -227,6 +239,12 @@ export default function CameraStage(props: {
         </span>
         <span className="hud-badge mode-badge">{MODE_LABELS[mode]}</span>
       </div>
+      {capture.recording && (
+        <div className="recording-badge" role="status">
+          <i />
+          REC {String(capture.seconds).padStart(2, "0")} / 30s
+        </div>
+      )}
       {error ? (
         <div className="stage-message error" role="alert">
           <strong>Let’s get you seeing.</strong>
@@ -300,6 +318,16 @@ export default function CameraStage(props: {
           <button className="tool" onClick={shot} disabled={!source}>
             <Camera size={20} />
             <span>Screenshot</span>
+          </button>
+          <button
+            className="tool record-tool"
+            aria-label={capture.recording ? "Stop recording" : "Record canvas"}
+            aria-pressed={capture.recording}
+            onClick={capture.toggle}
+            disabled={!source || capture.saving || status !== "Ready"}
+          >
+            {capture.recording ? <Square size={20} /> : <Circle size={20} />}
+            <span>{capture.recording ? "Stop" : "Record"}</span>
           </button>
           <button className="tool" onClick={expand}>
             <Expand size={20} />

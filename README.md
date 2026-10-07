@@ -2,7 +2,7 @@
 
 **Reality, augmented.** A camera-first computer vision studio by **Tarang Jammalamadaka**.
 
-[Open the live studio](https://tarang-tj.github.io/spectra-vision/) · [v1.0.0](https://github.com/tarang-tj/spectra-vision/releases/tag/v1.0.0) · [Ownership and license](LICENSE)
+[Open the live studio](https://tarang-tj.github.io/spectra-vision/) · [Watch the video demo](https://tarang-tj.github.io/spectra-vision/demo/) · [v1.1.0](https://github.com/tarang-tj/spectra-vision/releases/tag/v1.1.0) · [Ownership and license](LICENSE)
 
 Three real vision models turn your camera into an interactive canvas: tracked object boxes, a glowing body skeleton, and hand-controlled light painting. Everything runs in your browser.
 
@@ -15,7 +15,9 @@ _Interface design concept. The running app calculates its own detections, scores
 1. Open the [live studio](https://tarang-tj.github.io/spectra-vision/). The Objects demo starts automatically; allow the model a moment to load.
 2. Choose **Start camera**, or **Upload** a local image/video. Camera access requires HTTPS or localhost and browser permission.
 3. Switch between **Objects**, **Body** and **Hands**. For body tracking, step back until your entire body is visible. For hand painting, pinch thumb and index together, move your hand, then release.
-4. Use **Mirror**, **Trails**, **Pause**, **Screenshot**, **Fullscreen** or **Export session**. **Demo** restores the sample for the selected mode. **Stop camera** releases its media tracks.
+4. Try **Constellation** to isolate luminous tracking geometry. **Try motion demo** loads a labeled, animated pan of a generated still photo; it demonstrates tracking, not a real person changing pose.
+5. Use **Record** to save up to 30 seconds of the rendered canvas. No microphone or screen capture permission is needed. Stop saves the clip; changing source or mode also finalizes it.
+6. Use **Mirror**, **Trails**, **Pause**, **Screenshot**, **Fullscreen** or **Export session**. **Demo** restores the sample for the selected mode. **Stop camera** releases its media tracks.
 
 Use a current Chrome or Edge browser for the tested path. No account or API key is needed. Model downloads total about 21 MB, plus the WebAssembly runtime; each mode loads on demand.
 
@@ -29,13 +31,15 @@ Use a current Chrome or Edge browser for the tested path. No account or API key 
 
 The inspector shows detections and image positions. Confidence controls the detection threshold; the motion map shows normalized image coordinates. Inference time and processed frame rate are measured, rather than illustrative counters.
 
+**Recordings** capture the canvas at up to 24 fps, use a supported WebM/MP4 codec, and stop at 30 seconds or approximately 32 MB. Closing the app discards an unfinished recording. The exported clip includes source pixels and effects, without the surrounding interface. Recording stays in browser memory until downloaded.
+
 **Screenshots** save the rendered canvas as PNG. **Exports** save JSON containing the latest 1,000 processed frames of the current source and mode, model outputs and settings. They include no image/video data or local filename. Exports reset when source or mode changes. Light-paint strokes are visual effects and are not included in JSON.
 
 ## Privacy
 
 Camera frames and selected files stay in browser memory; SPECTRA has no image upload endpoint, account, analytics or face identification. The static host serves the app, fonts, runtime, models and demo assets and can receive normal HTTP request metadata. The build downloads models from Google's official storage, verifies their SHA-256 hashes, then serves them from the app's own origin.
 
-Camera access starts only after an explicit action. Pause stops inference and freezes playback while retaining camera access; Stop camera, choosing Demo, choosing another source or leaving the app releases the stream. Screenshots and exports download only when requested.
+Camera access starts only after an explicit action. Pause stops inference and freezes playback while retaining camera access; Stop camera, choosing Demo, choosing another source or leaving the app releases the stream. Screenshots and exports download only when requested. Starting a recording authorizes its automatic download when stopped or when the source/mode changes; recordings never leave this device unless you share them.
 
 ## Run locally
 
@@ -74,7 +78,7 @@ The workflow runs type checking, unit tests, a production build and real browser
 ## Architecture
 
 ```text
-Camera / local file / labeled demo image
+Camera / local file / labeled still or animated demo
     → owned media source with generation token
     → ImageBitmap (one inference frame in flight)
     → dedicated vision worker / self-hosted MediaPipe WASM
@@ -90,6 +94,7 @@ React and TypeScript manage controls and source ownership. A dedicated worker pe
 | `src/vision/useVision.ts` / `public/vision-worker.js` | Model lifecycle, bounded frame transfer and stale-result guards        |
 | `src/vision/tracker.ts`                               | Class-aware object association, missed-frame expiry and bounded trails |
 | `src/vision/geometry.ts` / `render.ts`                | Letterboxing, mirroring, pinch geometry and overlays                   |
+| `src/vision/useRecording.ts`                          | Canvas-only video capture, time/size limits and stream cleanup         |
 | `scripts/models.json` / `setup-assets.mjs`            | Pinned model URLs, verified hashes, runtime and notices                |
 | `tests/`                                              | Association/geometry unit tests and real-model browser workflows       |
 
@@ -100,7 +105,7 @@ React and TypeScript manage controls and source ownership. A dedicated worker pe
 - Object IDs use geometric association, not appearance-based re-identification, and can switch when similar objects cross. Trails retain only bounded recent history.
 - Pinching uses aspect-correct thumb–index distance relative to palm length, with hysteresis. It is a gesture heuristic. Reduce glare and keep fingers visible.
 - The motion map and exported `x/y` positions are image coordinates; they are not physical depth. Landmark `z` values are model estimates, not calibrated distances.
-- Still demos repeatedly infer the same image. A live camera or local video provides actual motion. On slower devices, CPU inference can reduce frame rate. Fullscreen and video codec support vary by browser.
+- Still demos repeatedly infer the same image. Animated demos pan a generated still photo; they do not simulate changing poses or supply prerecorded model results. A live camera or local video provides real scene motion. On slower devices, CPU inference can reduce frame rate. Fullscreen and video codec support vary by browser.
 - The tested browser path is Chromium on desktop and a narrow mobile viewport. Physical cameras, mobile Safari and every device/codec combination have not been verified.
 
 ## Ownership and third-party rights
@@ -109,4 +114,4 @@ React and TypeScript manage controls and source ownership. A dedicated worker pe
 
 MediaPipe, pretrained model weights, React, icons, fonts and other dependencies retain their respective authors' rights and licenses. They are not claimed as Tarang's original work. Full details, official model references and attribution are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); every deployed build includes Apache-2.0 and installed dependency license texts under `licenses/`.
 
-The interface concept and demo photos were AI-generated for this project. Their provenance and prompts are recorded in [docs/design/asset-provenance.md](docs/design/asset-provenance.md).
+The interface concept and demo photos were AI-generated for this project. Sample MP4s are locally animated versions of those photos. The narrated video demo records the actual running app; source labels remain visible. Their provenance and prompts are recorded in [docs/design/asset-provenance.md](docs/design/asset-provenance.md).

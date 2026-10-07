@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Watch SPECTRA turn real computer vision into a private creative canvas. A studio by Tarang Jammalamadaka."
+    />
+    <title>SPECTRA — Video demo</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, system-ui, sans-serif;
+        background: #090e11;
+        color: #f3f7f6;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        max-width: 1280px;
+        margin: auto;
+        padding: 40px 24px;
+      }
+      nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 64px;
+      }
+      .brand {
+        letter-spacing: 0.3em;
+        font-weight: 650;
+        color: #a4ffd9;
+      }
+      a {
+        color: #a4ffd9;
+        text-underline-offset: 4px;
+      }
+      h1 {
+        font-size: clamp(40px, 7vw, 78px);
+        line-height: 1.06;
+        letter-spacing: -0.045em;
+        margin: 0 0 16px;
+      }
+      p {
+        color: #b1bec3;
+        line-height: 1.7;
+      }
+      .lead {
+        max-width: 720px;
+        font-size: 19px;
+        margin-bottom: 30px;
+      }
+      video {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        border: 1px solid #31544d;
+        border-radius: 6px;
+        background: #060a0d;
+      }
+      .actions {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+        margin: 24px 0;
+      }
+      .note {
+        max-width: 850px;
+        font-size: 14px;
+      }
+      footer {
+        margin-top: 48px;
+        padding-top: 24px;
+        border-top: 1px solid #31544d;
+        font-size: 12px;
+        color: #b1bec3;
+      }
+      a:focus-visible {
+        outline: 2px solid #a4ffd9;
+        outline-offset: 4px;
+      }
+      @media (max-width: 600px) {
+        main {
+          padding: 24px 16px;
+        }
+        nav {
+          margin-bottom: 40px;
+          font-size: 13px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav>
+        <span class="brand">SPECTRA</span><a href="../">Open the studio ↗</a>
+      </nav>
+      <h1>Reality, augmented.</h1>
+      <p class="lead">
+        Objects, body and hands become a creative canvas. Watch the real app in
+        motion, then try it on your own device.
+      </p>
+      <video
+        controls
+        playsinline
+        preload="metadata"
+        poster="video-poster.jpg"
+        aria-label="Narrated SPECTRA demonstration"
+      >
+        <source src="spectra-demo-v1.1.0.mp4" type="video/mp4" />
+        <track
+          kind="captions"
+          src="captions.vtt"
+          srclang="en"
+          label="English"
+          default
+        />
+        <p><a href="spectra-demo-v1.1.0.mp4">Download the video demo</a>.</p>
+      </video>
+      <div class="actions">
+        <a href="../">Try SPECTRA</a
+        ><a href="spectra-demo-v1.1.0.mp4" download>Download MP4</a
+        ><a href="https://github.com/tarang-tj/spectra-vision"
+          >View on GitHub</a
+        >
+      </div>
+      <p class="note">
+        Recorded from the running app with real model inference. The labeled
+        sample clips animate generated still photos; they demonstrate image
+        tracking, without changing human poses. Your camera and uploaded files
+        are processed in your browser.
+      </p>
+      <footer>
+        Created by Tarang Jammalamadaka. © 2026. All rights reserved for
+        original work.
+        <a href="https://github.com/tarang-tj/spectra-vision/blob/main/LICENSE"
+          >Ownership and license</a
+        >.
+      </footer>
+    </main>
+  </body>
+</html>

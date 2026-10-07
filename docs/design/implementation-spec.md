@@ -27,3 +27,9 @@ App composes Header, CameraStage, Inspector and Footer, backed by a source contr
 ## Necessary deviations from concept
 
 Actual model results replace illustrative detections and dummy metrics. Body/Hands have mode-specific inspector labels. Demo selector, stop-camera state, clear paint, camera selector and local source reset are required to make all flows usable. Help explains model limitations and camera recovery. These controls reuse existing toolbar/rail styles; no new major panel families. No animated fake scene motion is introduced in a still-image demo.
+
+## v1.1 functional extensions
+
+Constellation adds an optional dark canvas scrim and static image-plane grid; glow remains tied to inferred geometry. A second inspector switch and motion-demo button extend the existing control rail. Record adds one outlined toolbar action plus a compact recording timer. Labeled animated demo clips pan the existing generated still photos; the still demo remains unchanged by default. These are intentional functional additions, preserving the original composition, tokens, heading, source actions and icon family. No preset supplies model results.
+
+Extended copy: Constellation; Try motion demo; Use still demo; ANIMATED DEMO; Animated demo · still-photo pan; Record; Stop; Watch demo. Recording timer is a measured runtime value. Video watch-page copy and chapter cards belong to the demo deliverable, not the app concept.

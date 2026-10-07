@@ -43,3 +43,9 @@ Prompt:
 ```text
 Use case: photorealistic-natural. Asset type: genuine CV hand tracking demo photo for a camera app. Horizontal 16:10 composition, close-up photograph of two human hands held up against a simple matte dark teal studio backdrop. Hands fully visible including wrists, anatomically correct five fingers on each hand. Left side one right hand has thumb and index finger tips lightly pinching together, remaining three fingers open. Right side other left hand has palm facing camera and all five fingers comfortably spread. Crisp natural skin texture, soft daylight studio lighting, elegant neutral photo, no digital overlays, no text, no watermarks. Hands occupy most of picture and don't overlap. Realistic proportions, consistent lighting, clear knuckles, clear thumb. This asset is run through a real hand landmark model, so correct anatomy and unobstructed fingers are essential.
 ```
+
+## Animated samples and video demo
+
+`public/demo/studio-motion.mp4` and `hands-motion.mp4` are 12-second, silent H.264 clips made locally with FFmpeg from the generated photos above. Each translates an uncropped 920 × 576 photo slowly across a 1024 × 640 dark canvas at 24 fps, using sinusoidal horizontal and vertical offsets. They contain no changing human poses or baked model geometry. The UI labels them ANIMATED DEMO and still-photo pan.
+
+The v1.1 video demo captures the actual Chromium-rendered app with real model inference, then adds original title cards, captions and a locally synthesized voiceover. It uses no third-party music or footage. Video assets retain the same original-work rights reservation and third-party exclusions as the project.

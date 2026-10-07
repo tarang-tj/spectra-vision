@@ -15,6 +15,7 @@ export function draw(
   strokes: Stroke[],
   selected: number | null,
   time: number,
+  constellation = false,
 ) {
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = "#10191c";
@@ -33,6 +34,23 @@ export function draw(
   }
   ctx.drawImage(e, rect.x, rect.y, rect.w, rect.h);
   ctx.restore();
+  if (constellation) {
+    ctx.fillStyle = "#060e18ee";
+    ctx.fillRect(0, 0, width, height);
+    // The map is static; all bright geometry below comes from model outputs.
+    ctx.strokeStyle = "#a4ffd912";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = rect.x; x <= rect.x + rect.w; x += 48) {
+      ctx.moveTo(x, rect.y);
+      ctx.lineTo(x, rect.y + rect.h);
+    }
+    for (let y = rect.y; y <= rect.y + rect.h; y += 48) {
+      ctx.moveTo(rect.x, y);
+      ctx.lineTo(rect.x + rect.w, y);
+    }
+    ctx.stroke();
+  }
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   const path = (
@@ -150,6 +168,18 @@ export function draw(
         ctx.strokeStyle = color;
         ctx.lineWidth = 1;
         ctx.stroke();
+        if (constellation) {
+          [4, 8, 12, 16, 20].forEach((tip) => {
+            const p = landmarks[tip];
+            if (!p) return;
+            const q = point(p),
+              halo = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, 38);
+            halo.addColorStop(0, `${color}55`);
+            halo.addColorStop(1, `${color}00`);
+            ctx.fillStyle = halo;
+            ctx.fillRect(q.x - 38, q.y - 38, 76, 76);
+          });
+        }
       }
     });
   if (trails && mode !== "objects")

@@ -14,6 +14,10 @@ export default function Inspector({
   onSelect,
   mirror,
   aspect,
+  constellation,
+  onConstellation,
+  motionDemo,
+  onMotionDemo,
 }: {
   mode: Mode;
   tracks: Track[];
@@ -26,6 +30,10 @@ export default function Inspector({
   onSelect: (id: number | null) => void;
   mirror: boolean;
   aspect: number;
+  constellation: boolean;
+  onConstellation: () => void;
+  motionDemo: boolean;
+  onMotionDemo: () => void;
 }) {
   const rows =
     mode === "objects"
@@ -159,6 +167,25 @@ export default function Inspector({
             <span />
           </button>
         </div>
+        <div className="switch-row">
+          <span>Constellation</span>
+          <button
+            className="switch"
+            role="switch"
+            aria-label="Constellation"
+            aria-checked={constellation}
+            onClick={onConstellation}
+          >
+            <span />
+          </button>
+        </div>
+        <button
+          className="motion-demo button compact"
+          aria-pressed={motionDemo}
+          onClick={onMotionDemo}
+        >
+          {motionDemo ? "Use still demo" : "Try motion demo"}
+        </button>
       </div>
       <p className="mode-tip">
         <Lightbulb size={22} />

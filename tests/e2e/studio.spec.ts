@@ -2,6 +2,89 @@ import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
+test("animated samples drive real tracking; constellation recordings decode and release capture tracks", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const captures: MediaStream[] = [];
+    Object.assign(window, { spectraCaptures: captures });
+    const capture = HTMLCanvasElement.prototype.captureStream;
+    HTMLCanvasElement.prototype.captureStream = function (fps) {
+      const stream = capture.call(this, fps);
+      captures.push(stream);
+      return stream;
+    };
+  });
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await ready(page);
+  await page.getByRole("button", { name: "Try motion demo" }).click();
+  await ready(page);
+  await expect(page.locator(".hud-badge").first()).toHaveText("ANIMATED DEMO");
+  await page.waitForTimeout(1800);
+  const data = await session(page);
+  const positions = data.frames.flatMap(
+    (frame: { detections: { label: string; box: { x: number } }[] }) =>
+      frame.detections.filter((d) => d.label === "person").map((d) => d.box.x),
+  );
+  expect(positions.length).toBeGreaterThan(2);
+  expect(Math.max(...positions) - Math.min(...positions)).toBeGreaterThan(
+    0.005,
+  );
+  await page.getByRole("switch", { name: "Constellation" }).click();
+  await expect(
+    page.getByRole("switch", { name: "Constellation" }),
+  ).toHaveAttribute("aria-checked", "true");
+  await page.getByRole("button", { name: "Record canvas" }).click();
+  await expect(page.locator(".recording-badge")).toContainText("REC");
+  await page.waitForTimeout(1400);
+  const download = page.waitForEvent("download");
+  // A mode change automatically finalizes the clip from the previous session.
+  await page.getByRole("button", { name: "Body", exact: true }).click();
+  const clip = await download;
+  expect(clip.suggestedFilename()).toMatch(/^spectra-objects-.*\.(webm|mp4)$/);
+  const bytes = await readFile((await clip.path())!);
+  expect(bytes.length).toBeGreaterThan(1000);
+  const dimensions = await page.evaluate(
+    async ({ bytes, mime }) => {
+      const url = URL.createObjectURL(
+        new Blob([new Uint8Array(bytes)], { type: mime }),
+      );
+      const video = document.createElement("video");
+      video.muted = true;
+      video.src = url;
+      await video.play();
+      const dimensions = [video.videoWidth, video.videoHeight];
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+      URL.revokeObjectURL(url);
+      return dimensions;
+    },
+    {
+      bytes: Array.from(bytes),
+      mime: clip.suggestedFilename().endsWith("mp4")
+        ? "video/mp4"
+        : "video/webm",
+    },
+  );
+  expect(dimensions.every((v) => v > 0)).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (
+          window as unknown as { spectraCaptures: MediaStream[] }
+        ).spectraCaptures.flatMap((s) =>
+          s.getTracks().map((t) => t.readyState),
+        ),
+      ),
+    )
+    .toEqual(["ended"]);
+  await ready(page);
+  await expect(
+    page.getByRole("button", { name: "Record canvas" }),
+  ).toBeVisible();
+});
+
 async function ready(page: Page) {
   await expect(page.getByTestId("latency")).toHaveText(/^\d+ ms$/);
   await expect(page.getByRole("alert")).toHaveCount(0);
@@ -26,6 +109,12 @@ test("real object inference, controls, filtered results and usable exports", asy
   await expect(
     page.locator(".detection-row").filter({ hasText: "person" }),
   ).toBeVisible();
+  const stage = await page.locator(".camera-stage").boundingBox(),
+    rail = await page.locator(".inspector").boundingBox();
+  expect(stage!.x + stage!.width).toBeLessThanOrEqual(rail!.x);
+  await expect(
+    page.getByRole("button", { name: "Export session" }),
+  ).toBeInViewport();
   await page.getByRole("button", { name: "Pause detection" }).click();
   await expect(page.getByTestId("fps")).toHaveText("0.0 fps");
   const data = await session(page);

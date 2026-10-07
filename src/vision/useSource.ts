@@ -64,10 +64,26 @@ export function useSource() {
     [dispose],
   );
   const demo = useCallback(
-    async (mode: Mode = "objects") => {
-      const token = begin(),
-        image = new Image();
+    async (mode: Mode = "objects", motion = false) => {
+      const token = begin();
       try {
+        if (motion) {
+          const video = document.createElement("video");
+          video.muted = true;
+          video.loop = true;
+          video.playsInline = true;
+          video.src = `${import.meta.env.BASE_URL}demo/${mode === "hands" ? "hands" : "studio"}-motion.mp4`;
+          current.current = {
+            element: video,
+            kind: "demo",
+            label: "Animated demo · still-photo pan",
+            generation: token,
+          };
+          await video.play();
+          commit(video, "demo", "Animated demo · still-photo pan", token);
+          return;
+        }
+        const image = new Image();
         image.src = `${import.meta.env.BASE_URL}demo/${mode === "hands" ? "hands" : "studio"}.png`;
         await image.decode();
         commit(

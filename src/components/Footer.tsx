@@ -41,6 +41,7 @@ export default function Footer({
       <footer>
         <span>
           Objects <i>·</i> Body <i>·</i> Hands
+          <i>·</i> <a href={`${import.meta.env.BASE_URL}demo/`}>Watch demo</a>
         </span>
         <div>
           <span>No account. No uploads.</span>
@@ -75,8 +76,10 @@ export default function Footer({
             keep your full body visible in Body mode and your fingers
             unobstructed in Hands. Video uploads loop and are muted. Pause stops
             inference; Stop camera releases the camera. Demo images are still
-            photos with real model inference. For best results use a current
-            Chrome or Edge browser.
+            photos with real model inference. Motion demos pan those photos;
+            Constellation isolates the tracking geometry. Record saves up to 30
+            seconds of canvas video locally and stops when source or mode
+            changes. For best results use a current Chrome or Edge browser.
           </p>
           <a
             href="https://github.com/tarang-tj/spectra-vision/blob/main/THIRD_PARTY_NOTICES.md"
