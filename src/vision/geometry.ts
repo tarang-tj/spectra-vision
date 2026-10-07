@@ -1,17 +1,18 @@
 import type { Point } from "./types";
+// `out` lets the per-frame caller reuse one rectangle instead of allocating.
 export function fit(
   sourceWidth: number,
   sourceHeight: number,
   width: number,
   height: number,
+  out = { x: 0, y: 0, w: 0, h: 0 },
 ) {
   const scale = Math.min(width / sourceWidth, height / sourceHeight);
-  return {
-    x: (width - sourceWidth * scale) / 2,
-    y: (height - sourceHeight * scale) / 2,
-    w: sourceWidth * scale,
-    h: sourceHeight * scale,
-  };
+  out.x = (width - sourceWidth * scale) / 2;
+  out.y = (height - sourceHeight * scale) / 2;
+  out.w = sourceWidth * scale;
+  out.h = sourceHeight * scale;
+  return out;
 }
 export function project(
   p: Point,

@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import type { Mode, Source, VisionResult } from "./types";
+import { tasksOf } from "../modes";
+import type { ModeDef } from "../modes";
+import { mergeResults } from "./merge";
+import { createTaskRunner } from "./task-runner";
+import type { TaskRunner } from "./task-runner";
+import type { Source, TaskKind, TaskResult, VisionResult } from "./types";
+
+/** Runs the selected mode's models on the current source. One worker per task,
+ * loaded only when the mode is selected and terminated when it changes. */
 export function useVision(
-  mode: Mode,
+  mode: ModeDef,
   source: Source | null,
   paused: boolean,
   confidence: number,
@@ -10,93 +18,85 @@ export function useVision(
     [status, setStatus] = useState("Loading model"),
     [error, setError] = useState("");
   const [restart, setRestart] = useState(0),
-    workerRef = useRef<Worker | null>(null),
     settings = useRef({ source, paused, confidence });
   settings.current = { source, paused, confidence };
   useEffect(() => {
     setResult(null);
   }, [source?.generation, mode]);
   useEffect(() => {
-    const base = new URL(import.meta.env.BASE_URL, location.href).href;
-    const worker = new Worker(`${base}vision-worker.js`);
-    workerRef.current = worker;
+    const base = new URL(import.meta.env.BASE_URL, location.href).href,
+      specs = tasksOf(mode),
+      kinds = specs.map((spec) => spec.kind);
     let stopped = false,
-      ready = false,
-      busy = false,
       raf = 0,
-      lastFrame = 0;
+      pending = specs.length,
+      latest: Partial<Record<TaskKind, TaskResult>> = {};
     setStatus("Loading model");
     setError("");
     setResult(null);
+    const unavailable = (message: string) => {
+      if (stopped) return;
+      clearTimeout(timeout);
+      setError(message);
+      setStatus("Model unavailable");
+    };
     const timeout = setTimeout(() => {
-      if (!ready) {
+      if (pending > 0) {
         setError("Model load timed out. Check your connection and retry.");
         setStatus("Model unavailable");
       }
     }, 45000);
-    worker.onmessage = (event) => {
-      if (stopped) return;
-      const message = event.data;
-      if (message.type === "ready") {
-        ready = true;
-        clearTimeout(timeout);
-        setStatus("Ready");
-      } else if (message.type === "result") {
-        busy = false;
-        if (message.result.generation === settings.current.source?.generation)
-          setResult(message.result);
-      } else if (message.type === "error") {
-        busy = false;
-        ready = false;
-        clearTimeout(timeout);
-        setError(message.error);
-        setStatus("Model unavailable");
-      }
-    };
-    worker.onerror = () => {
-      busy = false;
-      ready = false;
-      clearTimeout(timeout);
-      setError(
-        "Vision worker failed. Retry or use a current Chrome/Edge browser.",
-      );
-      setStatus("Model unavailable");
-    };
-    worker.postMessage({ type: "init", mode, base });
-    const tick = async (time: number) => {
-      if (stopped) return;
-      raf = requestAnimationFrame(tick);
-      const state = settings.current,
-        element = state.source?.element;
-      if (!ready || busy || state.paused || !element || time - lastFrame < 65)
-        return;
-      if (element instanceof HTMLVideoElement && element.readyState < 2) return;
-      busy = true;
-      lastFrame = time;
-      const generation = state.source!.generation;
+    const runners: TaskRunner[] = specs.map((spec) =>
+      createTaskRunner(spec, base, {
+        onReady() {
+          if (stopped || --pending > 0) return;
+          clearTimeout(timeout);
+          setStatus("Ready");
+        },
+        onResult(taskResult) {
+          if (stopped) return;
+          // Results for a source that has since been replaced are discarded.
+          if (taskResult.generation !== settings.current.source?.generation)
+            return;
+          const merged = mergeResults(mode.id, kinds, latest, taskResult);
+          latest = merged.tasks;
+          setResult(merged);
+        },
+        onError: unavailable,
+      }),
+    );
+    // Hand one frame to a runner that asked for it. Each worker gets its own
+    // bitmap because a bitmap is transferred, not shared.
+    const feed = async (runner: TaskRunner, generation: number) => {
+      const state = settings.current;
       try {
-        const bitmap = await createImageBitmap(element);
+        const bitmap = await createImageBitmap(state.source!.element);
         if (stopped || generation !== settings.current.source?.generation) {
           bitmap.close();
-          busy = false;
+          runner.release();
           return;
         }
-        worker.postMessage(
-          {
-            type: "frame",
-            bitmap,
-            time: performance.now(),
-            generation,
-            confidence: state.confidence,
-          },
-          [bitmap],
-        );
+        runner.send(bitmap, performance.now(), generation, state.confidence);
       } catch {
-        busy = false;
+        runner.release();
         if (!stopped)
           setError(
             "Could not read this frame. Try another image, video or camera.",
           );
+      }
+    };
+    const tick = (time: number) => {
+      if (stopped) return;
+      raf = requestAnimationFrame(tick);
+      const state = settings.current,
+        element = state.source?.element;
+      if (state.paused || !element) return;
+      if (element instanceof HTMLVideoElement && element.readyState < 2) return;
+      for (let i = 0; i < runners.length; i++) {
+        const runner = runners[i];
+        if (!runner.wants(time)) continue;
+        runner.claim(time);
+        void feed(runner, state.source!.generation);
       }
     };
     raf = requestAnimationFrame(tick);
@@ -104,8 +104,7 @@ export function useVision(
       stopped = true;
       clearTimeout(timeout);
       cancelAnimationFrame(raf);
-      worker.terminate();
-      if (workerRef.current === worker) workerRef.current = null;
+      runners.forEach((runner) => runner.dispose());
     };
   }, [mode, restart]);
   return { result, status, error, retry: () => setRestart((n) => n + 1) };

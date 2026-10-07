@@ -6,7 +6,8 @@ import {
   Square,
   Upload,
 } from "lucide-react";
-import type { Mode } from "../vision/types";
+import { modes } from "../modes";
+import type { ModeDef } from "../modes";
 export default function Header({
   mode,
   onMode,
@@ -15,8 +16,8 @@ export default function Header({
   onUpload,
   pending,
 }: {
-  mode: Mode;
-  onMode: (m: Mode) => void;
+  mode: ModeDef;
+  onMode: (id: string) => void;
   cameraActive: boolean;
   onCamera: () => void;
   onUpload: (f: File) => void;
@@ -34,9 +35,13 @@ export default function Header({
           SPECTRA
         </a>
         <nav className="modes" aria-label="Vision mode">
-          {(["objects", "body", "hands"] as const).map((m) => (
-            <button key={m} aria-pressed={m === mode} onClick={() => onMode(m)}>
-              {m[0].toUpperCase() + m.slice(1)}
+          {modes.map((m) => (
+            <button
+              key={m.id}
+              aria-pressed={m.id === mode.id}
+              onClick={() => onMode(m.id)}
+            >
+              {m.short}
             </button>
           ))}
         </nav>

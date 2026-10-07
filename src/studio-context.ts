@@ -1,0 +1,36 @@
+import { createContext, useContext } from "react";
+import type { GameState } from "./games";
+import type { InspectorRow, ModeDef } from "./modes";
+import type { FrameData } from "./vision/frame";
+
+/** Everything a panel may read or change. Panels take no props; they call
+ * useStudio(), so a new panel never needs an edit to a shared component. */
+export type Studio = {
+  mode: ModeDef;
+  setMode(id: string): void;
+  /** Latest result, tracks, source and settings (the canvas-free frame state). */
+  frame: FrameData;
+  /** The current mode's inspector rows for this frame. */
+  rows: InspectorRow[];
+  paused: boolean;
+  /** "Ready", or what the stage is waiting for. */
+  status: string;
+  setConfidence(value: number): void;
+  toggleEffect(id: string): void;
+  select(id: number | null): void;
+  motionDemo: boolean;
+  toggleMotionDemo(): void;
+  /** Id of the running game, its live state, and how to start or stop one. */
+  game: string | null;
+  gameState: GameState | null;
+  setGame(id: string | null): void;
+  notice(text: string): void;
+};
+
+export const StudioContext = createContext<Studio | null>(null);
+
+export function useStudio(): Studio {
+  const studio = useContext(StudioContext);
+  if (!studio) throw new Error("useStudio must be used inside the app shell.");
+  return studio;
+}

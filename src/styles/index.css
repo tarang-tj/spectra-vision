@@ -1,0 +1,7 @@
+/* Shared stylesheet, split by area with the v1 rules unchanged. Plugins (modes,
+   effects, games, panels) import their own CSS file next to their module
+   instead of editing these. Order matters: later files win ties. */
+@import "./base.css";
+@import "./shell.css";
+@import "./stage.css";
+@import "./inspector.css";

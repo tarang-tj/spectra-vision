@@ -1,0 +1,30 @@
+.play-panel .game-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 2px;
+  border-top: 1px solid #31544d88;
+  font-size: 14px;
+}
+.play-panel .game-row > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.play-panel .game-row small {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.play-panel .game-row .button[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+@media (max-width: 760px) {
+  .play-panel {
+    grid-column: 1/3;
+  }
+}
