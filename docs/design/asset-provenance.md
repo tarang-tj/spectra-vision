@@ -49,3 +49,11 @@ Use case: photorealistic-natural. Asset type: genuine CV hand tracking demo phot
 `public/demo/studio-motion.mp4` and `hands-motion.mp4` are 12-second, silent H.264 clips made locally with FFmpeg from the generated photos above. Each translates an uncropped 920 × 576 photo slowly across a 1024 × 640 dark canvas at 24 fps, using sinusoidal horizontal and vertical offsets. They contain no changing human poses or baked model geometry. The UI labels them ANIMATED DEMO and still-photo pan.
 
 The v1.1 video demo captures the actual Chromium-rendered app with real model inference, then adds original title cards, captions and a locally synthesized voiceover. It uses no third-party music or footage. Video assets retain the same original-work rights reservation and third-party exclusions as the project.
+
+## Demo narration
+
+`public/demo/spectra-demo-v1.1.1.mp4` replaces the macOS Samantha narration with locally generated neural speech from [Kokoro-82M v1.0](https://huggingface.co/hexgrad/Kokoro-82M), using its stock American English `af_heart` voice at speed `0.96`. The voice is synthetic and is not a clone of Tarang or any project participant. The original script, app footage and 49-second scene structure are retained.
+
+Generation used `kokoro-onnx` 0.6.1 and the full-precision model from [the upstream model-files-v1.1 release](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.1). Phoneme timestamps from the model supply the sentence caption boundaries. FFmpeg normalizes the narration to a target of -16 LUFS with a -1.5 dBTP ceiling, resamples it to 48 kHz stereo and encodes AAC audio. The H.264 video stream is copied without re-encoding. There is no background music.
+
+The model is Apache-2.0 and the inference library is MIT; their rights remain with their respective authors. Model weights and inference tooling are used only during narration production and are not shipped with or required by the browser application. The prior system-voice video remains available in the [v1.1.0 release](https://github.com/tarang-tj/spectra-vision/releases/tag/v1.1.0).

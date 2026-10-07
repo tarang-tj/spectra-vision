@@ -1,6 +1,6 @@
 {
   "name": "spectra-vision",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "A camera-first computer vision playground with object, body and hand tracking.",
   "author": "Tarang Jammalamadaka",

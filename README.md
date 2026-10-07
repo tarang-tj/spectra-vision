@@ -2,9 +2,11 @@
 
 **Reality, augmented.** A camera-first computer vision studio by **Tarang Jammalamadaka**.
 
-[Open the live studio](https://tarang-tj.github.io/spectra-vision/) · [Watch the video demo](https://tarang-tj.github.io/spectra-vision/demo/) · [v1.1.0](https://github.com/tarang-tj/spectra-vision/releases/tag/v1.1.0) · [Ownership and license](LICENSE)
+[Open the live studio](https://tarang-tj.github.io/spectra-vision/) · [Watch the video demo](https://tarang-tj.github.io/spectra-vision/demo/) · [v1.1.1](https://github.com/tarang-tj/spectra-vision/releases/tag/v1.1.1) · [Ownership and license](LICENSE)
 
 Three real vision models turn your camera into an interactive canvas: tracked object boxes, a glowing body skeleton, and hand-controlled light painting. Everything runs in your browser.
+
+The 49-second, 1080p video demo includes neural narration and English captions timed to the speech. Version 1.1.1 replaces the original system voice; the footage shows the same real app and inference. Voice generation details are recorded in [asset provenance](docs/design/asset-provenance.md#demo-narration).
 
 ![SPECTRA desktop interface concept](docs/design/concept-desktop.png)
 

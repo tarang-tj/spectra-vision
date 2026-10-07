@@ -30,3 +30,7 @@ The COCO training dataset and its original photographs are not included in this 
 The lockfile is the exact dependency inventory. Setup collects the actual installed packages' LICENSE, COPYING and NOTICE files into `public/licenses/dependencies.txt`. That generated file is included in the deployed site and build archive, including transitive dependency notices. Original upstream headers and bundled notices are retained.
 
 Generated images, their tool mode and prompts are described in [asset provenance](docs/design/asset-provenance.md). Generated material is not presented as a photograph of an identified real person or as a manually captured app screenshot.
+
+## Demo narration production
+
+The v1.1.1 video narration is generated locally using [Kokoro-82M v1.0](https://huggingface.co/hexgrad/Kokoro-82M), provided by hexgrad under Apache-2.0, and [kokoro-onnx 0.6.1](https://github.com/thewh1teagle/kokoro-onnx), provided by its contributors under MIT. It uses the stock `af_heart` synthetic voice. The model weights and production tools are not distributed with the browser app. SPECTRA's rights reservation does not claim ownership of these tools, weights or voice styles. See [narration provenance](docs/design/asset-provenance.md#demo-narration).
