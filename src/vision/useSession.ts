@@ -1,12 +1,15 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useEffect, useRef, useState } from "react";
+import { tasksOf } from "../modes";
 import type { ModeDef } from "../modes";
+import { exportedSize, frameLimit } from "../session-export";
 import { Tracker } from "./tracker";
 import type { Source, Track, VisionResult } from "./types";
 
 const NO_TRACKS: Track[] = [];
-/** The latest processed frames kept for the session export. */
-const HISTORY_LIMIT = 1000;
+// How often a frame is measured to keep the history inside the export's
+// byte limit. Frames of one mode are close to one size.
+const MEASURE_EVERY = 100;
 
 /** What one mode on one source has produced so far: object tracks, the
  * measured result rate and the frames for the session export. All of it
@@ -27,16 +30,21 @@ export function useSession(
     }>({ key, tracks: NO_TRACKS, fps: null });
   const tracker = useRef(new Tracker()),
     history = useRef<unknown[]>([]),
+    counted = useRef(0),
+    limit = useRef(1),
     previous = useRef<number | null>(null);
   useEffect(() => {
     tracker.current.reset();
     previous.current = null;
     history.current = [];
+    counted.current = 0;
     setLive({ key, tracks: NO_TRACKS, fps: null });
   }, [key]);
   useEffect(() => {
     const r = result;
-    if (!r) return;
+    // In a multi-task mode a secondary model can answer first. The flat keys
+    // of a frame belong to the primary one, so nothing is counted before it.
+    if (!r || !r.tasks[tasksOf(mode)[0].kind]) return;
     let instant: number | null = null;
     if (previous.current !== null) {
       // In a multi-task mode a secondary task reports under the primary
@@ -70,8 +78,10 @@ export function useSession(
     if (extra)
       for (const name of Object.keys(extra))
         if (!(name in entry)) entry[name] = extra[name];
+    if (counted.current++ % MEASURE_EVERY === 0)
+      limit.current = frameLimit(exportedSize(entry));
     history.current.push(entry);
-    if (history.current.length > HISTORY_LIMIT) history.current.shift();
+    while (history.current.length > limit.current) history.current.shift();
     // `result` already belongs to this mode and source (see useVision), so
     // it is the only input that says a new frame was processed.
   }, [result]);

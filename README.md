@@ -65,7 +65,7 @@ The **Lab** tab in the right rail measures the app on your device. Nothing it sh
 - Processed and rendered frames per second, and dropped frames.
 - A CPU or GPU switch per model. The line under it says what is really running. A GPU request falls back to CPU, with the reason shown, when the browser draws WebGL in software, has no WebGL2, or does not start the GPU path in bounded time.
 - How long each model took to load, and a card for each model in use with its file, size, SHA-256 and license.
-- A benchmark you run yourself: choose modes and delegates, then **Run benchmark**. Each run measures 20 seconds after a 2-second warm-up on the mode's demo image and can be saved as `spectra-benchmark.json` or `spectra-benchmark.md`, with the device, browser, GPU name and protocol recorded in the file.
+- A benchmark you run yourself: choose modes and delegates, then **Run benchmark**. Each run measures 20 seconds after a 2-second warm-up on whatever source is on the stage (a demo source follows the mode being measured) and can be saved as `spectra-benchmark.json` or `spectra-benchmark.md`, with the device, browser, GPU name and protocol recorded in the file.
 
 No benchmark figures are published here: they depend on the device, its load and its power state. Run the benchmark on the machine you care about, idle and on mains power.
 
@@ -90,9 +90,9 @@ The production site registers a service worker. After one visit the studio opens
 
 **Recordings** capture the canvas at up to 24 fps, use a supported WebM/MP4 codec, and stop at 30 seconds or approximately 32 MB. Closing the app discards an unfinished recording. The exported clip includes source pixels and effects, without the surrounding interface. Recording stays in browser memory until downloaded.
 
-**Screenshots** save the rendered canvas as PNG. **Exports** save JSON containing the latest 1,000 processed frames of the current source and mode, model outputs and settings. They include no image/video data or local filename. Exports reset when source or mode changes. Light-paint strokes and effects are visual and are not included in JSON.
+**Screenshots** save the rendered canvas as PNG. **Exports** save JSON containing the latest processed frames of the current source and mode, model outputs and settings: at most 1,000 frames, and fewer when that many would pass about 8 MB (a Face or Fusion frame holds hundreds of landmarks, so those modes keep a few hundred frames). Non-integer numbers are rounded to five decimal places and the file is written without indentation. They include no image/video data or local filename. Exports reset when source or mode changes. Light-paint strokes and effects are visual and are not included in JSON.
 
-Every exported frame has the same five fields as in version 1: `elapsedMs`, `latencyMs`, `detections`, `landmarks` and `handedness`. Version 2 adds optional fields, present only in the mode that produces them:
+The file's `version` field is the version of this format, not of the app. It is `1.2.0`: version 1.1.0 files have the same fields, without the optional ones below, the size limit or the rounding. Every exported frame has the same five fields as in 1.1.0: `elapsedMs`, `latencyMs`, `detections`, `landmarks` and `handedness`. Format 1.2.0 adds optional fields, present only in the mode that produces them:
 
 | Field          | Mode     | Content                                                                                                                                            |
 | -------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -101,7 +101,7 @@ Every exported frame has the same five fields as in version 1: `elapsedMs`, `lat
 | `segmentation` | Segment  | `width` and `height` of the mask, and `classes`: all six classes with `label`, `pixels`, `share`, `score` and `box`. The masks are not exported    |
 | `tasks`        | Fusion   | The latest result of each model, keyed `pose`, `hand` and `face`: `elapsedMs`, `latencyMs`, `delegate`, `landmarks`, `handedness`                  |
 
-In Segment, each entry of `detections` also carries `share` and `pixels`. In Fusion the flat `landmarks` are the pose model's; the hand and face results are under `tasks`.
+In Segment, each entry of `detections` also carries `share` and `pixels`. In Fusion the flat `landmarks` are the pose model's, and a frame is recorded only once the pose model has answered; the hand and face results are under `tasks`.
 
 ## Privacy
 

@@ -188,7 +188,8 @@ test("segment: a real mask with per-class pixel counts, and cutouts that follow 
   for (const entry of classes) {
     expect(Number.isInteger(entry.pixels) && entry.pixels! > 0).toBe(true);
     // The mask is 256 x 256: the share is the pixel count over that.
-    expect(entry.share).toBeCloseTo(entry.pixels! / (256 * 256), 10);
+    // Exported numbers are rounded to five places.
+    expect(entry.share).toBeCloseTo(entry.pixels! / (256 * 256), 4);
     expect(entry.score).toBeGreaterThanOrEqual(0.45);
     expect(entry.score).toBeLessThanOrEqual(1);
     expect(inside(entry.box)).toBe(true);
@@ -209,7 +210,7 @@ test("segment: a real mask with per-class pixel counts, and cutouts that follow 
     "others",
   ]);
   expect(mask.classes.reduce((sum, c) => sum + c.pixels, 0)).toBe(256 * 256);
-  expect(mask.classes.reduce((sum, c) => sum + c.share, 0)).toBeCloseTo(1, 6);
+  expect(mask.classes.reduce((sum, c) => sum + c.share, 0)).toBeCloseTo(1, 4);
   const person = classes.reduce((sum, c) => sum + c.pixels!, 0);
   expect(person).toBeGreaterThan(256 * 256 * 0.1);
   expect(person).toBeLessThan(256 * 256 * 0.9);
