@@ -4,9 +4,9 @@
 
 [Open the live studio](https://tarang-tj.github.io/spectra-vision/) · [Watch the video demo](https://tarang-tj.github.io/spectra-vision/demo/) · [v1.1.1](https://github.com/tarang-tj/spectra-vision/releases/tag/v1.1.1) · [Ownership and license](LICENSE)
 
-Three real vision models turn your camera into an interactive canvas: tracked object boxes, a glowing body skeleton, and hand-controlled light painting. Everything runs in your browser.
+Seven modes run six real vision models on your camera: tracked object boxes, a body skeleton, hand-controlled light painting, a 478-point face mesh, a person cutout, gesture recognition, and body, hands and face together. Ten effects draw on what the models find, and a Lab tab measures how fast they run on your device. Everything runs in your browser.
 
-The 49-second, 1080p video demo includes neural narration and English captions timed to the speech. Version 1.1.1 replaces the original system voice; the footage shows the same real app and inference. Voice generation details are recorded in [asset provenance](docs/design/asset-provenance.md#demo-narration).
+The 49-second, 1080p video demo was recorded on version 1.1 and shows the three original modes (Objects, Body, Hands) only. It includes neural narration and English captions timed to the speech. Version 1.1.1 replaced the original system voice; the footage shows the same real app and inference. Voice generation details are recorded in [asset provenance](docs/design/asset-provenance.md#demo-narration).
 
 ![SPECTRA desktop interface concept](docs/design/concept-desktop.png)
 
@@ -16,30 +16,98 @@ _Interface design concept. The running app calculates its own detections, scores
 
 1. Open the [live studio](https://tarang-tj.github.io/spectra-vision/). The Objects demo starts automatically; allow the model a moment to load.
 2. Choose **Start camera**, or **Upload** a local image/video. Camera access requires HTTPS or localhost and browser permission.
-3. Switch between **Objects**, **Body** and **Hands**. For body tracking, step back until your entire body is visible. For hand painting, pinch thumb and index together, move your hand, then release.
-4. Try **Constellation** to isolate luminous tracking geometry. **Try motion demo** loads a labeled, animated pan of a generated still photo; it demonstrates tracking, not a real person changing pose.
-5. Use **Record** to save up to 30 seconds of the rendered canvas. No microphone or screen capture permission is needed. Stop saves the clip; changing source or mode also finalizes it.
-6. Use **Mirror**, **Trails**, **Pause**, **Screenshot**, **Fullscreen** or **Export session**. **Demo** restores the sample for the selected mode. **Stop camera** releases its media tracks.
+3. Switch between **Objects**, **Body**, **Hands**, **Face**, **Segment**, **Gestures** and **Fusion** with the switch at the top or the number keys 1 to 7. For body tracking, step back until your entire body is visible. For hand painting, pinch thumb and index together, move your hand, then release.
+4. Turn effects on in the tray under the stage. Each effect that is on and has a strength gets a slider beside its switch. **Constellation** isolates luminous tracking geometry. **Try motion demo**, where a mode has one, loads a labeled, animated pan of a generated still photo; it demonstrates tracking, not a real person changing pose.
+5. Use **Record** to save up to 30 seconds of the rendered canvas, effects included. No microphone or screen capture permission is needed. Stop saves the clip and shows it in a result card; changing source or mode also finalizes it.
+6. Use **Mirror**, **Pause**, **Screenshot**, **Fullscreen**, **Immersive** or **Export session**. **Demo** restores the sample for the selected mode. **Stop camera** releases its media tracks.
+7. Open the **Lab** tab in the right rail to see measured latency and frame rate, or press Ctrl K (Cmd K on a Mac) for the command palette.
 
-Use a current Chrome or Edge browser for the tested path. No account or API key is needed. Model downloads total about 21 MB, plus the WebAssembly runtime; each mode loads on demand.
+Use a current Chrome or Edge browser for the tested path. No account or API key is needed. The six model files total about 49 MB (49,355,063 bytes, the sum of the sizes pinned in [scripts/models.json](scripts/models.json)), plus the WebAssembly runtime. Each mode downloads only its own model, the first time you open it; the first mode, Objects, needs about 7 MB.
 
 ## What it does
 
-| Mode    | Actual inference                                                  | Visual interaction                                                              |
-| ------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Objects | EfficientDet-Lite0, common COCO categories                        | Class/score boxes, short-lived object IDs, motion trails, selectable detections |
-| Body    | BlazePose Lite, one person with 33 landmarks                      | Glowing skeleton, torso mesh, wrist and ankle motion trails                     |
-| Hands   | MediaPipe Hand Landmarker, up to two hands with 21 landmarks each | Finger skeletons, fingertip rings and pinch-to-paint light trails               |
+| Mode     | Actual inference                                                                                 | Visual interaction                                                                                          |
+| -------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Objects  | EfficientDet-Lite0, common COCO categories                                                       | Class/score boxes, short-lived object IDs, motion trails, selectable detections                             |
+| Body     | BlazePose Lite, one person with 33 landmarks                                                     | Glowing skeleton, torso mesh, wrist and ankle motion trails                                                 |
+| Hands    | MediaPipe Hand Landmarker, up to two hands with 21 landmarks each                                | Finger skeletons, fingertip rings and pinch-to-paint light trails                                           |
+| Face     | MediaPipe Face Landmarker, one face with 478 landmarks, blendshape scores and a head-pose matrix | Face mesh with contours and irises; meters for smile, jaw, brows and blinks; yaw, pitch and roll in degrees |
+| Segment  | MediaPipe multiclass selfie segmenter, six classes on a 256 x 256 mask                           | Person cut out from a darkened background; select Background to blur it instead, or a class to tint it      |
+| Gestures | MediaPipe Gesture Recognizer, up to two hands, seven named gestures or none                      | Hand skeleton with the gesture and its score; a count of the gestures seen on this source                   |
+| Fusion   | The body, hand and face models together, one worker each (one body, two hands, one face)         | One figure built from all three, with each model's own latency on the stage and in the inspector            |
 
-The inspector shows detections and image positions. Confidence controls the detection threshold; the motion map shows normalized image coordinates. Inference time and processed frame rate are measured, rather than illustrative counters.
+The inspector shows what is in the frame and where. Confidence controls the detection threshold; the motion map shows normalized image coordinates. Inference time, processed frame rate and the Tracked count are measured, rather than illustrative counters. Tracked counts objects, bodies, hands, faces, the segmentation classes found (not counting the background), or the parts Fusion found.
+
+### Effects
+
+Effects are optional layers over a mode's own drawing. The tray lists only the effects that have something to draw from in the current mode. Every effect is driven by model output: none of them plays a scripted animation.
+
+| Effect         | Drawn with | Modes                                  | What it draws from                                                                                           |
+| -------------- | ---------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Trails         | Canvas 2D  | Objects, Body, Hands, Fusion           | Object tracks, wrists and ankles, pinch-to-paint strokes. On by default                                      |
+| Constellation  | Canvas 2D  | All                                    | Dims the source to a dark sky; halos on fingertips                                                           |
+| Plasma hands   | WebGL2     | Hands, Gestures, Fusion                | Arcs between fingertips and palms                                                                            |
+| Ember trail    | WebGL2     | Body, Hands, Gestures, Fusion          | Particles shed along the measured path of wrists and ankles, or of a hand's wrist and index fingertip        |
+| Neon ribbons   | WebGL2     | Body, Hands, Gestures, Fusion          | Ribbons along the recent path of wrists, ankles or fingertips                                                |
+| Aura           | WebGL2     | Body, Hands, Gestures, Segment, Fusion | A glow around the segmentation mask, or around tracked bones                                                 |
+| Hologram       | WebGL2     | Body, Hands, Gestures, Segment, Fusion | A scanline cutout of the masked person, or of the skeleton                                                   |
+| Starfield pull | WebGL2     | Objects, Body, Hands, Gestures, Fusion | Stars drawn toward hands, wrists or tracked objects                                                          |
+| Echo           | WebGL2     | Body, Hands, Gestures, Fusion          | Delayed copies of past model results                                                                         |
+| Face light     | WebGL2     | Body, Face, Fusion                     | Light on the face mesh that follows the blendshape scores; in Body, on the pose model's eye and mouth points |
+
+The eight WebGL2 effects share one WebGL2 context, composite onto the stage canvas (so Record and Screenshot capture them), and hold still while paused or when reduced motion is requested. In a browser without WebGL2 their switches are disabled and the tray says why; the modes and the two canvas effects keep working. On a software renderer they run, slowly.
+
+### Lab
+
+The **Lab** tab in the right rail measures the app on your device. Nothing it shows is sent anywhere.
+
+- Inference latency of each running model over the last 10 seconds: p50, p95, maximum and sample count, with a chart.
+- Processed and rendered frames per second, and dropped frames.
+- A CPU or GPU switch per model. The line under it says what is really running. A GPU request falls back to CPU, with the reason shown, when the browser draws WebGL in software, has no WebGL2, or does not start the GPU path in bounded time.
+- How long each model took to load, and a card for each model in use with its file, size, SHA-256 and license.
+- A benchmark you run yourself: choose modes and delegates, then **Run benchmark**. Each run measures 20 seconds after a 2-second warm-up on the mode's demo image and can be saved as `spectra-benchmark.json` or `spectra-benchmark.md`, with the device, browser, GPU name and protocol recorded in the file.
+
+No benchmark figures are published here: they depend on the device, its load and its power state. Run the benchmark on the machine you care about, idle and on mains power.
+
+### Keyboard
+
+| Keys            | Action                                        |
+| --------------- | --------------------------------------------- |
+| 1 to 7          | Switch vision mode                            |
+| R               | Start or stop recording                       |
+| S               | Save a screenshot                             |
+| M               | Mirror the view                               |
+| E               | Open or close the effects tray                |
+| ?               | Open or close help                            |
+| Ctrl K or Cmd K | Open the command palette                      |
+| Esc             | Close the palette or leave the immersive view |
+
+Shortcuts are ignored while you type in a field and while the command palette is open. The palette lists every mode, every effect of the current mode and the studio actions. **Immersive** fills the window with the stage and keeps a small dock for mode, effects and exit.
+
+### Offline use
+
+The production site registers a service worker. After one visit the studio opens without a network connection: the browser keeps the app shell, the MediaPipe runtime and each model you have actually used. A model you never opened is not downloaded ahead of time and is not available offline. The site also ships a web app manifest and icons, so a browser that offers to install sites can install it; the install prompt itself has not been tested. The service worker is not registered by the development server.
 
 **Recordings** capture the canvas at up to 24 fps, use a supported WebM/MP4 codec, and stop at 30 seconds or approximately 32 MB. Closing the app discards an unfinished recording. The exported clip includes source pixels and effects, without the surrounding interface. Recording stays in browser memory until downloaded.
 
-**Screenshots** save the rendered canvas as PNG. **Exports** save JSON containing the latest 1,000 processed frames of the current source and mode, model outputs and settings. They include no image/video data or local filename. Exports reset when source or mode changes. Light-paint strokes are visual effects and are not included in JSON.
+**Screenshots** save the rendered canvas as PNG. **Exports** save JSON containing the latest 1,000 processed frames of the current source and mode, model outputs and settings. They include no image/video data or local filename. Exports reset when source or mode changes. Light-paint strokes and effects are visual and are not included in JSON.
+
+Every exported frame has the same five fields as in version 1: `elapsedMs`, `latencyMs`, `detections`, `landmarks` and `handedness`. Version 2 adds optional fields, present only in the mode that produces them:
+
+| Field          | Mode     | Content                                                                                                                                            |
+| -------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `face`         | Face     | `blendshapes`: one object per face mapping every blendshape name to its score, 0 to 1. `headPose`: one `{ yaw, pitch, roll }` per face, in degrees |
+| `gestures`     | Gestures | One `{ name, score, handedness }` per hand, in the order of `landmarks`. `name` is the model's category name, `None` when it sees no gesture       |
+| `segmentation` | Segment  | `width` and `height` of the mask, and `classes`: all six classes with `label`, `pixels`, `share`, `score` and `box`. The masks are not exported    |
+| `tasks`        | Fusion   | The latest result of each model, keyed `pose`, `hand` and `face`: `elapsedMs`, `latencyMs`, `delegate`, `landmarks`, `handedness`                  |
+
+In Segment, each entry of `detections` also carries `share` and `pixels`. In Fusion the flat `landmarks` are the pose model's; the hand and face results are under `tasks`.
 
 ## Privacy
 
-Camera frames and selected files stay in browser memory; SPECTRA has no image upload endpoint, account, analytics or face identification. The static host serves the app, fonts, runtime, models and demo assets and can receive normal HTTP request metadata. The build downloads models from Google's official storage, verifies their SHA-256 hashes, then serves them from the app's own origin.
+Camera frames and selected files stay in browser memory; SPECTRA has no image upload endpoint, account, analytics or face identification. Face mode measures the shape and expression of a face; it does not recognize who it is. The static host serves the app, fonts, runtime, models and demo assets and can receive normal HTTP request metadata. The build downloads models from Google's official storage, verifies their SHA-256 hashes, then serves them from the app's own origin.
+
+To open offline, the browser keeps a copy of the app and of each model you have used on this device; clear this site's data in your browser settings to remove them. That cache holds files the site served. It never holds camera frames, uploads, recordings, screenshots or exports.
 
 Camera access starts only after an explicit action. Pause stops inference and freezes playback while retaining camera access; Stop camera, choosing Demo, choosing another source or leaving the app releases the stream. Screenshots and exports download only when requested. Starting a recording authorizes its automatic download when stopped or when the source/mode changes; recordings never leave this device unless you share them.
 
@@ -56,54 +124,59 @@ pnpm run setup
 pnpm run dev
 ```
 
-Open the localhost URL printed by Vite. Run `pnpm run setup` explicitly: `pnpm setup` is a different, built-in pnpm command. Setup verifies the three models, copies the installed MediaPipe runtime, and assembles dependency license notices. Generated runtime/model files are deliberately excluded from Git.
+Open the localhost URL printed by Vite. Run `pnpm run setup` explicitly: `pnpm setup` is a different, built-in pnpm command. Setup verifies the six models, copies the installed MediaPipe runtime, and assembles dependency license notices. Generated runtime/model files are deliberately excluded from Git.
+
+The checks, in the order the workflow runs them:
 
 ```sh
+pnpm run format:check
 pnpm run check
 pnpm run test
-pnpm run test:e2e
-pnpm run build
-pnpm run preview
-```
-
-The browser tests use an installed macOS Chrome when available; otherwise install Playwright Chromium with `pnpm exec playwright install chromium`. Set `CHROME_PATH` to use another Chrome executable. Tests use a simulated camera, real model inference and real local file uploads. They do not open your physical camera. Browser-test artifacts go to the OS temporary directory.
-
-For the GitHub Pages subdirectory build:
-
-```sh
 PAGES_BUILD=1 pnpm run build
-PAGES_BUILD=1 pnpm run preview
+SPECTRA_TEST_PRODUCTION=1 pnpm run test:e2e
 ```
 
-The workflow runs type checking, unit tests, a production build and real browser tests against that build before deploying `main` to Pages. Pull requests run the same checks without deployment.
+`check` is the TypeScript build, `test` the unit tests, and `test:e2e` the browser tests. With `SPECTRA_TEST_PRODUCTION=1` they run against the production build served under `/spectra-vision/`, as on the live site, which is the only way the service worker and offline behavior are exercised. Without it, `pnpm run test:e2e` runs the same tests against the development server. `PAGES_BUILD=1 pnpm run preview` serves the production build by hand.
+
+The browser tests use an installed macOS Chrome when available; otherwise install Playwright Chromium with `pnpm exec playwright install chromium`. Set `CHROME_PATH` to use another Chrome executable. Tests use a simulated camera, real model inference and real local file uploads, with the GPU disabled. They do not open your physical camera. Browser-test artifacts go to the OS temporary directory.
+
+The workflow runs these checks before deploying `main` to Pages. Pull requests run the same checks without deployment.
 
 ## Architecture
 
 ```text
 Camera / local file / labeled still or animated demo
     → owned media source with generation token
-    → ImageBitmap (one inference frame in flight)
-    → dedicated vision worker / self-hosted MediaPipe WASM
-    → normalized detections / landmarks
-    → object association + canvas effects + inspector + JSON export
+    → ImageBitmap (one inference frame in flight per worker)
+    → one dedicated vision worker per model / self-hosted MediaPipe WASM
+    → normalized detections / landmarks / masks, merged per mode
+    → mode drawing + effects (canvas 2D and WebGL2) + inspector + Lab + JSON export
 ```
 
-React and TypeScript manage controls and source ownership. A dedicated worker performs synchronous model inference away from the UI thread; the main thread renders canvas overlays. Stale results from replaced sources are discarded. Model initialization has a timeout and retry path, and mode changes terminate the previous worker. Model inference is capped at roughly 15 updates/second; canvas rendering is capped at roughly 30 draws/second. Actual throughput depends on your device.
+React and TypeScript manage controls and source ownership. Modes, effects and inspector panels are plugins: one file in `src/modes`, `src/effects` or `src/panels` is one entry, found at build time. A dedicated worker per model performs synchronous inference away from the UI thread; the main thread renders the stage. Results from a replaced source or a previous mode are discarded and never reach a mode's drawing or inspector. Model initialization has a timeout and retry path, and mode changes terminate the previous workers. Model inference is capped at roughly 15 updates/second per model; canvas rendering is capped at roughly 30 draws/second. Actual throughput depends on your device. [docs/architecture.md](docs/architecture.md) has the plugin contracts.
 
-| Path                                                  | Responsibility                                                         |
-| ----------------------------------------------------- | ---------------------------------------------------------------------- |
-| `src/vision/useSource.ts`                             | Permission, file decoding, camera ownership, cancellation and cleanup  |
-| `src/vision/useVision.ts` / `public/vision-worker.js` | Model lifecycle, bounded frame transfer and stale-result guards        |
-| `src/vision/tracker.ts`                               | Class-aware object association, missed-frame expiry and bounded trails |
-| `src/vision/geometry.ts` / `render.ts`                | Letterboxing, mirroring, pinch geometry and overlays                   |
-| `src/vision/useRecording.ts`                          | Canvas-only video capture, time/size limits and stream cleanup         |
-| `scripts/models.json` / `setup-assets.mjs`            | Pinned model URLs, verified hashes, runtime and notices                |
-| `tests/`                                              | Association/geometry unit tests and real-model browser workflows       |
+| Path                                                                   | Responsibility                                                                    |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `src/modes/`, `src/effects/`, `src/panels/`                            | The seven modes, ten effects and the Inspect and Lab panels, one file each        |
+| `src/vision/useSource.ts`                                              | Permission, file decoding, camera ownership, cancellation and cleanup             |
+| `src/vision/useVision.ts`, `task-runner.ts`, `public/vision-worker.js` | Model lifecycle, bounded frame transfer, delegate fallback, stale-result guards   |
+| `src/vision/useSession.ts`, `tracker.ts`                               | Object association, measured frame rate and the frames kept for export            |
+| `src/stage/`                                                           | The render loop, draw order, effect lifecycle and the shared WebGL2 layer         |
+| `src/gl/`                                                              | WebGL2 kit for effects: shaders, targets, bloom, particles, line batches          |
+| `src/shell/`, `src/components/`                                        | Shortcuts, command palette, immersive view, recorder, service worker registration |
+| `src/telemetry/`                                                       | Measured events and the statistics the Lab shows                                  |
+| `public/sw.js`                                                         | Offline cache rules                                                               |
+| `scripts/models.json` / `setup-assets.mjs`                             | Pinned model URLs, verified hashes, runtime and notices                           |
+| `tests/`                                                               | Unit tests and real-model browser workflows                                       |
 
 ## Practical limits
 
 - This is an interactive vision demo, not a calibrated measurement or identity system. Scores are model outputs, not guarantees.
 - Lighting, occlusion, motion blur and model category coverage affect detection. Body mode follows one person. Hands can misclassify handedness; hand order can change after occlusion.
+- Face follows one face and needs it reasonably large in the frame. Expression meters are blendshape scores from the model, not emotions. The head-pose angles come from the model's transformation matrix and have not been checked against a head turned to known angles.
+- Segment uses a model trained on selfie-style framing; on a wide shot it can lose parts of a person. It asks for the GPU. On CPU or a software renderer it runs much slower, and the mask then trails a moving subject.
+- Gestures recognizes the model's own seven categories only. Its bundled hand detector is not the one Hands uses and can find fewer hands in the same picture: on the hands demo image it finds one of the two.
+- Fusion runs three models at once, each at its own rate, so the parts of the figure can be a few frames apart.
 - Object IDs use geometric association, not appearance-based re-identification, and can switch when similar objects cross. Trails retain only bounded recent history.
 - Pinching uses aspect-correct thumb–index distance relative to palm length, with hysteresis. It is a gesture heuristic. Reduce glare and keep fingers visible.
 - The motion map and exported `x/y` positions are image coordinates; they are not physical depth. Landmark `z` values are model estimates, not calibrated distances.

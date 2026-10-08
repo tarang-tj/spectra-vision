@@ -14,6 +14,27 @@ const pressed = (page: Page, name: string) =>
     .getByRole("button", { name, exact: true });
 const tips = (page: Page) =>
   page.getByRole("group", { name: "Getting started tips" });
+/** Names of the stage's own controls and labels that the tips card overlaps. */
+const coveredByTips = (page: Page) =>
+  page.evaluate(() => {
+    const card = document.querySelector(".coach")!.getBoundingClientRect(),
+      covered: string[] = [];
+    for (const el of document.querySelectorAll<HTMLElement>(
+      ".camera-stage button, .camera-stage .hud-badge, .camera-stage .playback span",
+    )) {
+      if (el.closest(".coach")) continue;
+      const box = el.getBoundingClientRect();
+      if (
+        box.width &&
+        box.left < card.right &&
+        box.right > card.left &&
+        box.top < card.bottom &&
+        box.bottom > card.top
+      )
+        covered.push(el.getAttribute("aria-label") || el.innerText.trim());
+    }
+    return covered;
+  });
 
 test("shortcuts switch modes and drive the stage, but never while typing", async ({
   page,
@@ -139,21 +160,25 @@ test("coach marks appear once, block nothing and are remembered", async ({
       () => !document.activeElement?.closest(".coach") && !document.body.inert,
     ),
   ).toBe(true);
-  await page.getByRole("button", { name: "Body", exact: true }).click();
+  // Hands has the fullest stage toolbar (it adds Clear).
+  await page.getByRole("button", { name: "Hands", exact: true }).click();
   await ready(page);
   await expect(card).toContainText("Tip 1 of 3");
+  expect(await coveredByTips(page)).toEqual([]);
   await expect(page.getByRole("navigation", { name: "Vision mode" })).toHaveCSS(
     "outline-style",
     "solid",
   );
   await card.getByRole("button", { name: "Next tip" }).click();
   await expect(card).toContainText("Tip 2 of 3");
+  expect(await coveredByTips(page)).toEqual([]);
   await expect(page.getByRole("navigation", { name: "Vision mode" })).toHaveCSS(
     "outline-style",
     "none",
   );
   await card.getByRole("button", { name: "Next tip" }).click();
   await expect(card).toContainText("Tip 3 of 3");
+  expect(await coveredByTips(page)).toEqual([]);
   await card.getByRole("button", { name: "Got it" }).click();
   await expect(card).toHaveCount(0);
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -164,6 +189,79 @@ test("coach marks appear once, block nothing and are remembered", async ({
   await page.keyboard.type("getting started");
   await page.keyboard.press("Enter");
   await expect(tips(page)).toContainText("Tip 1 of 3");
+});
+
+test("on a phone the tips sit under the stage and focus follows the page", async ({
+  page,
+}) => {
+  // 360 px is the narrowest common phone; the stage is 246 px tall there.
+  await page.setViewportSize({ width: 360, height: 740 });
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await ready(page);
+  await page.getByRole("button", { name: "Hands", exact: true }).click();
+  await ready(page);
+  const card = tips(page);
+  for (const tip of [1, 2, 3]) {
+    await expect(card).toContainText(`Tip ${tip} of 3`);
+    expect(await coveredByTips(page)).toEqual([]);
+    const stage = await page.locator(".camera-stage").boundingBox(),
+      box = await card.boundingBox();
+    expect(box!.y).toBeGreaterThanOrEqual(stage!.y + stage!.height);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(360);
+    if (tip < 3) await card.getByRole("button", { name: "Next tip" }).click();
+  }
+  // Reading order top to bottom: stage, tips, effects tray, inspector,
+  // metrics. Keyboard focus must visit them in that same order.
+  const order = await page.evaluate(() => {
+    const blocks = [
+      ".camera-stage",
+      ".coach",
+      ".deck",
+      ".inspector",
+      ".metrics",
+    ];
+    const focusable = [
+      ...document.querySelectorAll<HTMLElement>(
+        "main button:not(:disabled), main input, main select, main a[href]",
+      ),
+    ].filter((el) => el.getBoundingClientRect().width > 0);
+    const visited: string[] = [];
+    for (const el of focusable) {
+      const block = blocks.find((selector) => el.closest(selector));
+      if (block && visited.at(-1) !== block) visited.push(block);
+    }
+    const tops = blocks.map(
+      (selector) =>
+        document.querySelector(selector)!.getBoundingClientRect().top,
+    );
+    return { visited, tops };
+  });
+  expect(order.visited).toEqual([
+    ".camera-stage",
+    ".coach",
+    ".deck",
+    ".inspector",
+    ".metrics",
+  ]);
+  expect([...order.tops].sort((a, b) => a - b)).toEqual(order.tops);
+  // And by the keyboard itself: Tab leaves the stage's last tool for the
+  // tips, and the tips for the effects tray.
+  await page.getByRole("button", { name: "Fullscreen" }).focus();
+  await page.keyboard.press("Tab");
+  expect(
+    await page.evaluate(() => !!document.activeElement?.closest(".coach")),
+  ).toBe(true);
+  await card.getByRole("button", { name: "Close tips" }).focus();
+  await page.keyboard.press("Tab");
+  expect(
+    await page.evaluate(() => !!document.activeElement?.closest(".deck")),
+  ).toBe(true);
+  await card.getByRole("button", { name: "Got it" }).click();
+  await page.getByRole("button", { name: "Immersive" }).focus();
+  await page.keyboard.press("Tab");
+  expect(
+    await page.evaluate(() => !!document.activeElement?.closest(".inspector")),
+  ).toBe(true);
 });
 
 test("the command palette runs registry commands and returns focus", async ({
@@ -412,35 +510,86 @@ test("the service worker registers only in production and caches models on deman
           if (new RegExp(source).test(request.url)) found.push(key);
       return found;
     }, name.source);
-  const script = await page.evaluate(
-    async () => (await navigator.serviceWorker.ready).active!.scriptURL,
-  );
+  // The production build is served under the project path, as on the live
+  // site, and the worker's scope is exactly that folder.
+  expect(new URL(page.url()).pathname).toBe("/spectra-vision/");
+  const worker = await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    return {
+      script: registration.active!.scriptURL,
+      scope: registration.scope,
+    };
+  });
+  const script = worker.script;
+  expect(worker.scope).toBe(new URL("./", page.url()).href);
   expect(script).toBe(
     new URL("./sw.js", page.url()).href + new URL(script).search,
   );
-  expect(new URL(script).searchParams.get("v")).toMatch(/^[\w-]{6,}$/);
-  // The shell and the one model that was used are stored; other models are not.
-  await expect.poll(() => cached(/assets\/.*\.js$/)).not.toEqual([]);
-  await expect
-    .poll(() => cached(/models\/efficientdet_lite0\.tflite$/))
-    .toEqual(["spectra-assets-v1"]);
-  expect(await cached(/models\/hand_landmarker\.task$/)).toEqual([]);
-  expect(await cached(/models\/pose_landmarker/)).toEqual([]);
-  await page.getByRole("button", { name: "Hands", exact: true }).click();
-  await ready(page);
-  await expect
-    .poll(() => cached(/models\/hand_landmarker\.task$/))
-    .toEqual(["spectra-assets-v1"]);
-  await expect
-    .poll(() => cached(/runtime\/vision_bundle\.js$/))
-    .toEqual(["spectra-assets-v1"]);
-  // Offline, a reload still opens the studio and runs the cached model.
+  // The version is the content hash of the entry script this page loaded.
+  const version = new URL(script).searchParams.get("v")!;
+  expect(version).toMatch(/^[\w-]{6,}$/);
+  expect(
+    await page.evaluate(() =>
+      [...document.scripts].map((entry) => entry.src).join(" "),
+    ),
+  ).toContain(`-${version}.js`);
+  const shell = `spectra-shell-${version}`;
+  // First visit, nothing clicked. The shell, the MediaPipe runtime and the one
+  // model that ran are stored, although all of them were fetched before the
+  // worker took control. Models that were never used are not.
+  await expect.poll(() => cached(/\/spectra-vision\/$/)).toEqual([shell]);
+  await expect.poll(() => cached(/assets\/.*\.js$/)).toEqual([shell]);
+  await expect.poll(() => cached(/assets\/.*\.css$/)).toEqual([shell]);
+  await expect.poll(() => cached(/vision-worker\.js$/)).toEqual([shell]);
+  await expect.poll(() => cached(/demo\/studio\.png$/)).toEqual([shell]);
+  for (const file of [
+    /models\/efficientdet_lite0\.tflite$/,
+    /runtime\/vision_bundle\.js$/,
+    /runtime\/wasm\/vision_wasm[\w]*_internal\.js$/,
+    /runtime\/wasm\/vision_wasm[\w]*_internal\.wasm$/,
+  ])
+    await expect.poll(() => cached(file)).toEqual(["spectra-assets-v1"]);
+  const unused = [
+    /models\/hand_landmarker\.task$/,
+    /models\/pose_landmarker/,
+    /models\/face_landmarker/,
+    /models\/selfie_multiclass/,
+    /models\/gesture_recognizer/,
+    /\.(mp4|webm)$/,
+  ];
+  for (const file of unused) expect(await cached(file)).toEqual([]);
+  // Offline, that first-visit page reloads and runs its model again.
   await page.context().setOffline(true);
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "Reality, augmented.",
   );
+  await ready(page);
+  // The network really is down for the service worker too: a model that was
+  // never used cannot be fetched, so nothing above came from the network.
+  expect(
+    await page.evaluate(() =>
+      fetch("models/pose_landmarker_lite.task").then(
+        (response) => response.status,
+        () => "failed",
+      ),
+    ),
+  ).toBe("failed");
+  await page.getByRole("button", { name: "Body", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText(/model|worker/i);
+  // Back online, a second mode loads, and only then is its model stored.
+  await page.context().setOffline(false);
   await page.getByRole("button", { name: "Hands", exact: true }).click();
   await ready(page);
+  await expect
+    .poll(() => cached(/models\/hand_landmarker\.task$/))
+    .toEqual(["spectra-assets-v1"]);
+  expect(await cached(/models\/pose_landmarker/)).toEqual([]);
+  await page.context().setOffline(true);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await ready(page);
+  await page.getByRole("button", { name: "Hands", exact: true }).click();
+  await ready(page);
+  await expect(page.locator(".detection-row")).toHaveCount(2);
   await page.context().setOffline(false);
 });

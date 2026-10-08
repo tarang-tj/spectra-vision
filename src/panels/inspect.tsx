@@ -106,13 +106,17 @@ function Inspect() {
             } as React.CSSProperties
           }
         />
-        <button
-          className="motion-demo button compact"
-          aria-pressed={studio.motionDemo}
-          onClick={studio.toggleMotionDemo}
-        >
-          {studio.motionDemo ? "Use still demo" : "Try motion demo"}
-        </button>
+        {/* Only where the mode has a clip: otherwise the button would change
+            its own label and nothing on the stage. */}
+        {mode.demo.motion && (
+          <button
+            className="motion-demo button compact"
+            aria-pressed={studio.motionDemo}
+            onClick={studio.toggleMotionDemo}
+          >
+            {studio.motionDemo ? "Use still demo" : "Try motion demo"}
+          </button>
+        )}
       </div>
       <p className="mode-tip">
         <Lightbulb size={22} />

@@ -59,16 +59,21 @@ function boundsOf(points) {
 // What this worker fetched from the site to get ready: the runtime script,
 // the wasm files MediaPipe chose and the model. The page hands the list to the
 // service worker, so a file is kept for offline use only after it was used.
-function fetchedFiles(base, model) {
-  const files = new Set([
-    `${base}runtime/vision_bundle.js`,
-    `${base}models/${model}`,
-  ]);
+function fetchedFiles(base, model, wasm) {
+  // The first four are certain: the task would not be ready without them.
+  const files = new Set(
+    [
+      `${base}runtime/vision_bundle.js`,
+      `${base}models/${model}`,
+      wasm.wasmLoaderPath,
+      wasm.wasmBinaryPath,
+    ].filter((file) => typeof file === "string"),
+  );
   try {
     for (const entry of performance.getEntriesByType("resource"))
       if (entry.name.startsWith(base)) files.add(entry.name);
   } catch {
-    /* No resource timing here: the two files above are still certain. */
+    /* No resource timing here: the files above are still certain. */
   }
   return [...files];
 }
@@ -325,7 +330,7 @@ self.onmessage = async ({ data }) => {
       self.postMessage({
         type: "ready",
         delegate: spec.delegate,
-        files: fetchedFiles(data.base, spec.model),
+        files: fetchedFiles(data.base, spec.model, files),
       });
     } else if (data.type === "frame") {
       const { bitmap, generation, confidence } = data;

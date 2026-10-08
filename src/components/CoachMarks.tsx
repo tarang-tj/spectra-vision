@@ -22,8 +22,9 @@ export const COACH_STEPS = [
   },
 ] as const;
 
-/** A small card on the stage, shown on a first visit. It is not modal: it
- * takes no focus, blocks no control and can be ignored. The control each tip
+/** A small card shown on a first visit: on the stage, or under it in the
+ * one-column layout. It is not modal: it takes no focus, blocks no control
+ * and can be ignored. The control each tip
  * refers to is outlined with CSS only, so nothing is measured or repositioned. */
 export default function CoachMarks({
   step,

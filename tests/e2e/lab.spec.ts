@@ -132,8 +132,30 @@ test("delegate switch restarts the task, reports the delegate truthfully and lea
     gpu = page.getByRole("button", { name: "Run hand on GPU" });
   await expect(cpu).toHaveAttribute("aria-pressed", "true");
   await expect(line).toHaveText("Running on CPU.");
+  // Every time the stage shows its loading notice, with the text it showed.
+  await page.evaluate(() => {
+    const shown: string[] = [];
+    let visible = false;
+    Object.assign(window, { spectraLoading: shown });
+    new MutationObserver(() => {
+      const notice = document.querySelector(".camera-stage .loading");
+      if (notice && !visible) shown.push(notice.textContent ?? "");
+      visible = !!notice;
+    }).observe(document.querySelector(".camera-stage")!, {
+      childList: true,
+      subtree: true,
+    });
+  });
+  const loadings = () =>
+    page.evaluate(
+      () => (window as unknown as { spectraLoading: string[] }).spectraLoading,
+    );
   await gpu.click();
   await expect(gpu).toHaveAttribute("aria-pressed", "true");
+  // The model loads again on the new delegate, and the stage says so instead
+  // of going on showing Ready.
+  await expect.poll(loadings).toEqual(["Loading model…"]);
+  await expect(page.locator(".camera-stage .loading")).toHaveCount(0);
   // Either GPU really runs, or the fallback is spelled out. Never silence.
   await expect(line).toHaveText(
     /^(Running on GPU\.|GPU was requested but .+ Running on CPU\.)$/,
@@ -147,6 +169,8 @@ test("delegate switch restarts the task, reports the delegate truthfully and lea
   expect((await workers(page)).alive).toBe(1);
   await cpu.click();
   await expect(line).toHaveText("Running on CPU.");
+  await expect.poll(loadings).toEqual(["Loading model…", "Loading model…"]);
+  await expect(page.locator(".camera-stage .loading")).toHaveCount(0);
   expect((await workers(page)).alive).toBe(1);
   // Leaving the Lab and coming back keeps one worker and the same mode.
   await tab(page, "Inspect").click();

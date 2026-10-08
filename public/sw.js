@@ -11,7 +11,7 @@
  *   assets/*          cache first (file names carry a content hash)
  *   models/, runtime/ cache first, kept across deploys; a cached file is
  *                     checked against the server in the background and
- *                     dropped if it changed
+ *                     dropped if its size changed
  *   other files       network first with a cached fallback (worker script,
  *                     icons, manifest, demo stills)
  *   video, Range      never cached
@@ -39,23 +39,32 @@ self.addEventListener("install", (event) => {
   );
 });
 
-/** Delete every SPECTRA cache that does not belong to this version. */
-const purge = () =>
-  caches
+const shellOf = (worker) =>
+  `spectra-shell-${new URL(worker.scriptURL).searchParams.get("v") || "0"}`;
+
+/** Delete every SPECTRA cache that belongs to no worker of this registration.
+ * A newer worker that is still installing or waiting keeps its cache: the
+ * worker it is about to replace must not delete it. */
+const purge = () => {
+  const { installing, waiting, active } = self.registration,
+    keep = new Set([SHELL, ASSETS]);
+  for (const worker of [installing, waiting, active])
+    if (worker) keep.add(shellOf(worker));
+  return caches
     .keys()
     .then((names) =>
       Promise.all(
         names
-          .filter(
-            (name) =>
-              name.startsWith("spectra-") && name !== SHELL && name !== ASSETS,
-          )
+          .filter((name) => name.startsWith("spectra-") && !keep.has(name))
           .map((name) => caches.delete(name)),
       ),
     )
     .catch(() => {});
+};
 
 self.addEventListener("activate", (event) => {
+  // Active now: the worker this one replaced is no longer in the registration,
+  // so its shell cache goes.
   event.waitUntil(purge().then(() => self.clients.claim()));
 });
 
@@ -70,14 +79,32 @@ function classify(url) {
   return "other";
 }
 
+// Every file here is the same for every visitor, whatever request headers a
+// server lists under Vary. Some do list one (the preview server sends
+// "Vary: Origin"), and a page's own script and style requests then missed the
+// copies stored for them, so the offline page came up blank. Match by address.
+const ANY = { ignoreVary: true };
+
 const cacheable = (response) =>
   response && response.status === 200 && response.type === "basic";
 
 async function store(cacheName, request, response) {
   if (!cacheable(response)) return;
   try {
-    const cache = await caches.open(cacheName);
-    await cache.put(request, response);
+    // The body is read in full before it is handed to the cache. Putting
+    // the network stream itself stalled for files over about 8 MB (the wasm
+    // runtime, the segmenter) in Chrome with no DevTools attached, and a
+    // stalled put blocks every later cache operation of the site.
+    const body = await response.blob(),
+      cache = await caches.open(cacheName);
+    await cache.put(
+      request,
+      new Response(body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      }),
+    );
   } catch {
     /* Quota exceeded or storage blocked: the app still works online. */
   }
@@ -85,7 +112,7 @@ async function store(cacheName, request, response) {
 
 async function cacheFirst(cacheName, request, revalidate) {
   const cache = await caches.open(cacheName),
-    hit = await cache.match(request);
+    hit = await cache.match(request, ANY);
   if (hit) {
     if (revalidate) void dropIfChanged(cache, request, hit);
     return hit;
@@ -95,8 +122,12 @@ async function cacheFirst(cacheName, request, revalidate) {
   return response;
 }
 
-/** Compare a cached file with the server's headers. A changed file is removed
- * so the next load fetches it; offline or without validators nothing happens. */
+/** Compare a cached file's size with the server's. A file of another size is
+ * removed so the next load fetches it; offline nothing happens. Only the size
+ * is compared: a static host stamps ETag and Last-Modified with the deploy
+ * time (GitHub Pages does), so they change on every deploy for files whose
+ * bytes did not, and comparing them would empty this cache each time. A model
+ * replaced by one of exactly the same size needs the ASSETS suffix bumped. */
 async function dropIfChanged(cache, request, hit) {
   try {
     const head = await fetch(request.url, {
@@ -104,12 +135,10 @@ async function dropIfChanged(cache, request, hit) {
       cache: "no-store",
     });
     if (!head.ok) return;
-    const changed = ["etag", "last-modified", "content-length"].some((name) => {
-      const before = hit.headers.get(name),
-        now = head.headers.get(name);
-      return before !== null && now !== null && before !== now;
-    });
-    if (changed) await cache.delete(request);
+    const before = hit.headers.get("content-length"),
+      now = head.headers.get("content-length");
+    if (before !== null && now !== null && before !== now)
+      await cache.delete(request, ANY);
   } catch {
     /* Offline: keep what we have. */
   }
@@ -123,8 +152,8 @@ async function networkFirst(request, fallbackToShell) {
   } catch (error) {
     const cache = await caches.open(SHELL),
       hit =
-        (await cache.match(request)) ||
-        (fallbackToShell ? await cache.match(SCOPE) : undefined);
+        (await cache.match(request, ANY)) ||
+        (fallbackToShell ? await cache.match(SCOPE, ANY) : undefined);
     if (hit) return hit;
     throw error;
   }
@@ -166,7 +195,7 @@ self.addEventListener("message", (event) => {
           if (!kind) return;
           const name = kind === "models" ? ASSETS : SHELL,
             cache = await caches.open(name);
-          if (await cache.match(url.href)) return;
+          if (await cache.match(url.href, ANY)) return;
           await store(name, url.href, await fetch(url.href));
         } catch {
           /* One file failing must not stop the others. */

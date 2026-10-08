@@ -1,5 +1,6 @@
-/* First-run tips: a card on the stage plus an outline on the control each
-   tip is about. The card never covers a control and takes no focus. */
+/* First-run tips: a card plus an outline on the control each tip is about.
+   Beside the rail the card sits on the stage, clear of its controls; in one
+   column it sits under the stage. It never covers a control or takes focus. */
 .coach {
   position: absolute;
   top: 48px;
@@ -52,9 +53,11 @@
 }
 @media (max-width: 760px) {
   .coach {
-    top: 34px;
-    right: 9px;
-    width: min(280px, calc(100% - 18px));
+    position: relative;
+    top: auto;
+    right: auto;
+    width: auto;
+    margin-top: 12px;
     padding: 10px 40px 10px 12px;
   }
   .coach strong + p {

@@ -217,8 +217,18 @@ input[type="range"]::-moz-range-thumb {
   .panel-body {
     gap: 20px;
   }
+  /* The list takes the room left in the rail (the effect switches used to
+     sit here), and is never shorter than its three v1 rows. */
+  .frame-list {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
   .detections {
-    max-height: 140px;
+    flex: 1 1 140px;
+    min-height: 140px;
+    max-height: none;
   }
   .motion svg {
     height: 124px;

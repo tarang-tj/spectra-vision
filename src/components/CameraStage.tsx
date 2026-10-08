@@ -179,8 +179,11 @@ export default function CameraStage(props: {
               <span>Clear</span>
             </button>
           )}
+          {/* Below 1100 px the tool captions are hidden, so each tool carries
+              its name itself. */}
           <button
             className="tool"
+            aria-label="Mirror"
             aria-pressed={mirror}
             onClick={props.onMirror}
           >
@@ -189,6 +192,7 @@ export default function CameraStage(props: {
           </button>
           <button
             className="tool"
+            aria-label="Screenshot"
             onClick={shot}
             disabled={!source}
             aria-keyshortcuts="S"
@@ -206,7 +210,7 @@ export default function CameraStage(props: {
             {capture.recording ? <Square size={20} /> : <Circle size={20} />}
             <span>{capture.recording ? "Stop" : "Record"}</span>
           </button>
-          <button className="tool" onClick={expand}>
+          <button className="tool" aria-label="Fullscreen" onClick={expand}>
             <Expand size={20} />
             <span>Fullscreen</span>
           </button>

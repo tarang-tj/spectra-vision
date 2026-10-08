@@ -44,11 +44,17 @@ Prompt:
 Use case: photorealistic-natural. Asset type: genuine CV hand tracking demo photo for a camera app. Horizontal 16:10 composition, close-up photograph of two human hands held up against a simple matte dark teal studio backdrop. Hands fully visible including wrists, anatomically correct five fingers on each hand. Left side one right hand has thumb and index finger tips lightly pinching together, remaining three fingers open. Right side other left hand has palm facing camera and all five fingers comfortably spread. Crisp natural skin texture, soft daylight studio lighting, elegant neutral photo, no digital overlays, no text, no watermarks. Hands occupy most of picture and don't overlap. Realistic proportions, consistent lighting, clear knuckles, clear thumb. This asset is run through a real hand landmark model, so correct anatomy and unobstructed fingers are essential.
 ```
 
+## Portrait and upper-body crops (version 2)
+
+Files: [../../public/demo/face.png](../../public/demo/face.png) (1120 x 700, SHA-256 `59985e0e2cfc631b9fe438838ff69ac1f3d6abd0978c8e6289b46cb42c5d8904`) and [../../public/demo/face-and-hands.png](../../public/demo/face-and-hands.png) (1280 x 800, SHA-256 `724dcfdcb9e513c296ecc77caf2e40c7c5be8a5c5558b7d1199268bea3053279`).
+
+Both are crops of the studio demo photo above, cut locally with the macOS `sips` tool (the studio photo is 1586 x 992). Nothing new was generated and no real person is shown. `face.png` frames the head and shoulders, which the face model and the selfie-trained segmenter need: in the full photo the face is too small for the face model. `face-and-hands.png` is a wider upper-body crop in which the body, one hand and the face are all large enough for their models. They are the demo inputs of Face and Segment, and of Fusion. The app labels them "Demo studio · portrait crop" and "Demo studio · upper-body crop".
+
 ## Animated samples and video demo
 
 `public/demo/studio-motion.mp4` and `hands-motion.mp4` are 12-second, silent H.264 clips made locally with FFmpeg from the generated photos above. Each translates an uncropped 920 × 576 photo slowly across a 1024 × 640 dark canvas at 24 fps, using sinusoidal horizontal and vertical offsets. They contain no changing human poses or baked model geometry. The UI labels them ANIMATED DEMO and still-photo pan.
 
-The v1.1 video demo captures the actual Chromium-rendered app with real model inference, then adds original title cards, captions and a locally synthesized voiceover. It uses no third-party music or footage. Video assets retain the same original-work rights reservation and third-party exclusions as the project.
+The video demo was recorded on version 1.1 and has not been updated for version 2: it shows Objects, Body and Hands only. The v1.1 video demo captures the actual Chromium-rendered app with real model inference, then adds original title cards, captions and a locally synthesized voiceover. It uses no third-party music or footage. Video assets retain the same original-work rights reservation and third-party exclusions as the project.
 
 ## Demo narration
 

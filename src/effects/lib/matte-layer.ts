@@ -7,6 +7,8 @@ import type { Matte } from "./inputs";
 
 // The matte is in image space, rows from the top; the pass maps each stage
 // pixel back into it through the letterbox rectangle and the mirror setting.
+// The 0.5 to 0.8 step is the Segment mode's own display curve
+// (src/modes/lib/segment-layers.ts): under 50% the model calls it background.
 const MATTE_FRAGMENT = `#version 300 es
 precision highp float;
 in vec2 vUv;
@@ -19,7 +21,7 @@ void main() {
   vec2 q = (vec2(vUv.x, 1.0 - vUv.y) - uRect.xy) / uRect.zw;
   if (uMirror > 0.5) q.x = 1.0 - q.x;
   float inside = step(0.0, q.x) * step(q.x, 1.0) * step(0.0, q.y) * step(q.y, 1.0);
-  float a = smoothstep(0.3, 0.7, texture(uMatte, q).r) * inside;
+  float a = smoothstep(0.5, 0.8, texture(uMatte, q).r) * inside;
   o = vec4(uColor * a, 0.0);
 }`;
 

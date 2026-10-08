@@ -42,12 +42,14 @@ const DARK = [9, 14, 17],
   OUTLINE = [164, 255, 217],
   EDGE_GAIN = 1.4;
 
-// How the raw matte is shown: confidence under 30% reads as background, over
-// 70% as person, with a smooth step between. It keeps faint, uncertain patches
-// of a plain wall from showing up as haze. Shares and scores stay raw.
+// How the raw matte is shown: confidence under 50% reads as background, over
+// 80% as person, with a smooth step between. Under 50% the model itself calls
+// the pixel background; on a GPU it is 30 to 48% sure of a person in patches
+// of a plain wall (measured on the demo), which showed up as a striped ghost.
+// Shares and scores stay raw.
 const CURVE = new Uint8Array(256);
 for (let i = 0; i < 256; i++) {
-  const t = Math.min(1, Math.max(0, (i / 255 - 0.3) / 0.4));
+  const t = Math.min(1, Math.max(0, (i / 255 - 0.5) / 0.3));
   CURVE[i] = Math.round(t * t * (3 - 2 * t) * 255);
 }
 
