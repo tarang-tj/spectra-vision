@@ -12,15 +12,48 @@ export function workerUrl(base: string, version: string): string {
   return `${base}sw.js?v=${encodeURIComponent(version)}`;
 }
 
-/** Ask the service worker to keep files this page has already fetched. A
- * no-op in development and wherever service workers are unavailable. */
-export function adoptFetched(urls: readonly string[]): void {
-  if (!import.meta.env.PROD || !urls.length) return;
+/** A request that got its file. Failed requests are listed by the browser
+ * too (an offline attempt at a model, say) and must not be fetched again on
+ * the page's behalf. */
+const succeeded = (entry: PerformanceEntry): boolean => {
+  const timing = entry as PerformanceResourceTiming;
+  return typeof timing.responseStatus === "number"
+    ? timing.responseStatus === 200
+    : timing.decodedBodySize > 0;
+};
+
+/** Everything this page has really fetched from its own origin so far, with
+ * the page itself first. */
+const pageFiles = (): string[] => [
+  location.href.split(/[?#]/)[0],
+  ...performance
+    .getEntriesByType("resource")
+    .filter(
+      (entry) => entry.name.startsWith(location.origin) && succeeded(entry),
+    )
+    .map((entry) => entry.name),
+];
+
+/** Ask the service worker to keep files that were already fetched: the ones
+ * given (a vision worker's own list) and everything the page has loaded so
+ * far. It is sent again on every model load, so nothing rests on what had
+ * been fetched at the moment the worker became active. Every worker of the
+ * registration gets it: after a deploy the new one may still be waiting, and
+ * it is the one whose cache will be used. A no-op in development and wherever
+ * service workers are unavailable. */
+export function adoptFetched(urls: readonly string[] = []): void {
+  if (!import.meta.env.PROD) return;
   try {
     void navigator.serviceWorker?.ready
-      .then((registration) =>
-        registration.active?.postMessage({ type: "adopt", urls }),
-      )
+      .then((registration) => {
+        const message = { type: "adopt", urls: [...pageFiles(), ...urls] };
+        for (const worker of [
+          registration.installing,
+          registration.waiting,
+          registration.active,
+        ])
+          worker?.postMessage(message);
+      })
       .catch(() => {});
   } catch {
     /* No service worker support: the app simply stays online-only. */
@@ -41,8 +74,8 @@ const activated = (worker: ServiceWorker) =>
   });
 
 /** Register the service worker. Production only: in development it would
- * serve stale modules and fight hot reload. Failure is silent by design, the
- * studio works the same without it. */
+ * serve stale modules and fight hot reload. A failure is logged as one console
+ * warning and otherwise ignored: the studio works the same without it. */
 export function registerServiceWorker(): void {
   if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
   const start = async () => {
@@ -61,16 +94,9 @@ export function registerServiceWorker(): void {
       if (!worker) return;
       await activated(worker);
       // Everything this page loaded before the worker could see it: scripts,
-      // styles, fonts, the demo still. Model files are reported by the app as
-      // each mode becomes ready.
-      const fetched = performance
-        .getEntriesByType("resource")
-        .map((entry) => entry.name)
-        .filter((name) => name.startsWith(location.origin));
-      worker.postMessage({
-        type: "adopt",
-        urls: [location.href.split(/[?#]/)[0], ...fetched],
-      });
+      // styles, fonts, the demo still. The same list, grown, goes out again
+      // each time a model becomes ready (see useOfflineCache).
+      adoptFetched();
     } catch (error) {
       console.warn("[spectra] offline support is unavailable:", error);
     }

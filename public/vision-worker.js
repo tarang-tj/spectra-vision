@@ -56,13 +56,14 @@ function boundsOf(points) {
   };
 }
 
-// What this worker fetched from the site to get ready: the runtime script,
-// the wasm files MediaPipe chose and the model. The page hands the list to the
+// What was fetched from the site to get this worker ready: its own script,
+// the runtime script, the wasm files MediaPipe chose and the model. The page hands the list to the
 // service worker, so a file is kept for offline use only after it was used.
 function fetchedFiles(base, model, wasm) {
-  // The first four are certain: the task would not be ready without them.
+  // The first five are certain: the task would not be ready without them.
   const files = new Set(
     [
+      self.location.href,
       `${base}runtime/vision_bundle.js`,
       `${base}models/${model}`,
       wasm.wasmLoaderPath,

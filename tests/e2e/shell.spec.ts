@@ -477,6 +477,17 @@ test("a denied camera gets its own error state with a way forward", async ({
 test("the service worker registers only in production and caches models on demand", async ({
   page,
 }) => {
+  // The vision worker's script arrives late on this first visit, well after
+  // the service worker has taken control and been told what the page loaded.
+  // It must still be cached: nothing may depend on that timing.
+  let held = false;
+  await page.route(/vision-worker\.js$/, async (route) => {
+    if (!held) {
+      held = true;
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+    }
+    await route.continue();
+  });
   await page.goto("./", { waitUntil: "domcontentloaded" });
   await ready(page);
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
