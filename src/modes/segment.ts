@@ -80,6 +80,31 @@ const segment: ModeDef = {
     }
     frame.emit("after", "segment", 0);
   },
+  // The classes found, without the background, which is always there.
+  count(frame) {
+    const seg = segmentExtra(frame.result?.tasks.segment);
+    if (!seg) return 0;
+    return seg.classes.filter(
+      (entry, i) =>
+        i !== seg.background &&
+        entry.pixels > 0 &&
+        entry.score >= frame.settings.confidence,
+    ).length;
+  },
+  // All six classes with their share of the mask, whatever the Confidence
+  // setting hides. The masks themselves are not exported.
+  exportFrame(result) {
+    const seg = segmentExtra(result.tasks.segment);
+    return seg
+      ? {
+          segmentation: {
+            width: seg.width,
+            height: seg.height,
+            classes: seg.classes,
+          },
+        }
+      : {};
+  },
   // Per-class share of the mask's pixels. Background is always listed; the
   // Confidence slider hides classes the model was less sure about.
   inspector(frame) {

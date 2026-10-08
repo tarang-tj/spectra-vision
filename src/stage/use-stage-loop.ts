@@ -9,7 +9,7 @@ const MIN_DRAW_GAP = 32;
 /** Drives the stage canvas from requestAnimationFrame. The browser stops the
  * callbacks while the tab is hidden, so nothing runs then; while paused the
  * last frame is still redrawn (mirror, selection and resize must stay live)
- * but time stands still for effects and games. */
+ * but time stands still for effects. */
 export function useStageLoop(
   canvas: RefObject<HTMLCanvasElement | null>,
   stage: RefObject<HTMLDivElement | null>,
@@ -64,7 +64,7 @@ export function useStageLoop(
     return () => {
       stopped = true;
       cancelAnimationFrame(raf);
-      // Releases effect state, the game and the WebGL context, if one was made.
+      // Releases effect state and the WebGL context, if one was made.
       renderer.current?.dispose();
       renderer.current = null;
     };

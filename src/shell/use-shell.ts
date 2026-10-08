@@ -28,7 +28,7 @@ export function useShell() {
   // card is replaced or dismissed, and when the app goes away.
   useEffect(
     () => () => {
-      if (share?.kind === "clip") URL.revokeObjectURL(share.url);
+      if (share) URL.revokeObjectURL(share.url);
     },
     [share],
   );

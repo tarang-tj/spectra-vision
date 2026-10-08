@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved.
  * Original worker orchestration; MediaPipe runtime and models retain Apache-2.0 rights. */
 // One worker runs one vision task. Protocol (documented in docs/architecture.md):
-//   in  { type: "init", base, task: TaskSpec }                  out { type: "ready", delegate }
+//   in  { type: "init", base, task: TaskSpec }                  out { type: "ready", delegate, files }
 //   in  { type: "frame", bitmap, time, generation, confidence } out { type: "result", result: TaskResult }
 //   any failure                                                 out { type: "error", error }
 // A failed GPU start is not retried here: the page decides, and restarts this
@@ -54,6 +54,23 @@ function boundsOf(points) {
     w: Math.max(0, Math.min(1, x1) - x0),
     h: Math.max(0, Math.min(1, y1) - y0),
   };
+}
+
+// What this worker fetched from the site to get ready: the runtime script,
+// the wasm files MediaPipe chose and the model. The page hands the list to the
+// service worker, so a file is kept for offline use only after it was used.
+function fetchedFiles(base, model) {
+  const files = new Set([
+    `${base}runtime/vision_bundle.js`,
+    `${base}models/${model}`,
+  ]);
+  try {
+    for (const entry of performance.getEntriesByType("resource"))
+      if (entry.name.startsWith(base)) files.add(entry.name);
+  } catch {
+    /* No resource timing here: the two files above are still certain. */
+  }
+  return [...files];
 }
 
 // Face: 478 landmarks per face, plus every blendshape score by name and the
@@ -305,7 +322,11 @@ self.onmessage = async ({ data }) => {
         runningMode: "VIDEO",
         ...spec.options,
       });
-      self.postMessage({ type: "ready", delegate: spec.delegate });
+      self.postMessage({
+        type: "ready",
+        delegate: spec.delegate,
+        files: fetchedFiles(data.base, spec.model),
+      });
     } else if (data.type === "frame") {
       const { bitmap, generation, confidence } = data;
       if (!task) {

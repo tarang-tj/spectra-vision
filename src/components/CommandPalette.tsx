@@ -87,7 +87,7 @@ export default function CommandPalette({
               matches[index] ? `palette-${matches[index].id}` : undefined
             }
             aria-autocomplete="list"
-            placeholder="Search modes, effects, games and actions"
+            placeholder="Search modes, effects and actions"
             autoComplete="off"
             spellCheck={false}
             value={query}

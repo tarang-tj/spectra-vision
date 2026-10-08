@@ -14,6 +14,9 @@ export const MIN_FRAME_GAP = 65;
 
 export type RunnerEvents = {
   onReady(): void;
+  /** The worker is being started again (a delegate switch or a GPU to CPU
+   * fallback): the task is loading until the next onReady. */
+  onRestart?(): void;
   onResult(result: TaskResult): void;
   onError(message: string): void;
 };
@@ -104,6 +107,7 @@ export function createTaskRunner(
     stop();
     note = `${active} was requested but ${message.replace(/^Vision model failed: /, "")}. Running on ${retry}.`;
     active = retry;
+    events.onRestart?.();
     start();
   };
   // The bounded GPU start: checked on a timer only while a GPU task is still
@@ -149,6 +153,7 @@ export function createTaskRunner(
           delegate: active,
           loadMs: status.loadMs,
           note,
+          files: Array.isArray(message.files) ? message.files : undefined,
         });
         events.onReady();
       } else if (message.type === "result") {
@@ -187,6 +192,7 @@ export function createTaskRunner(
     stop();
     choose();
     ready = busy = produced = false;
+    events.onRestart?.();
     start();
   });
 

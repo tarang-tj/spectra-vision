@@ -3,6 +3,7 @@ import type { EffectDef, EffectInstance } from "../effects";
 import type { ModeDef } from "../modes";
 import type { Frame, FrameSlot } from "../vision/frame";
 import type { TaskKind } from "../vision/types";
+import { webgl2Missing } from "../vision/webgl-probe";
 import type { GlLayer } from "./gl-layer";
 
 type Entry = {
@@ -61,10 +62,22 @@ export class EffectHost {
 
   private create(entry: Entry) {
     if (!this.mode) return;
+    // No WebGL2 is not an effect failure. The probe has said so once on the
+    // console and the tray shows these effects as unavailable; a browser that
+    // has WebGL2 but refuses this context is told through the toast.
+    if (entry.def.kind === "gl" && webgl2Missing()) {
+      entry.failed = true;
+      return;
+    }
     try {
       const gl = entry.def.kind === "gl" ? this.layer.acquire() : null;
-      if (entry.def.kind === "gl" && !gl)
-        throw new Error("WebGL2 is not available.");
+      if (entry.def.kind === "gl" && !gl) {
+        entry.failed = true;
+        this.report(
+          `${entry.def.label} is unavailable: WebGL2 could not start.`,
+        );
+        return;
+      }
       entry.instance = entry.def.create({
         mode: this.mode,
         canvas: this.canvas,

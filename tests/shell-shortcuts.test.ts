@@ -10,7 +10,6 @@ import type { StudioActions } from "../src/shell/commands";
 import { modeColumns } from "../src/shell/layout";
 import { studioLink } from "../src/shell/share";
 import { buildVersion, workerUrl } from "../src/shell/register-sw";
-import { trayEffects } from "../src/shell/effect-controls";
 import type { EffectDef } from "../src/effects";
 import type { ModeDef } from "../src/modes";
 import type { TaskKind } from "../src/vision/types";
@@ -98,23 +97,6 @@ const effect = (id: string): EffectDef => ({
   create: () => ({ draw() {}, dispose() {} }),
 });
 
-describe("effects tray", () => {
-  it("hides Trails where no object, pose or hand task runs", () => {
-    const list = [effect("trails"), effect("constellation")];
-    const ids = (m: ModeDef) => trayEffects(m, list).map((e) => e.id);
-    expect(ids(mode("objects", ["object"]))).toEqual([
-      "trails",
-      "constellation",
-    ]);
-    expect(ids(mode("face", ["face"]))).toEqual(["constellation"]);
-    expect(ids(mode("segment", ["segment"]))).toEqual(["constellation"]);
-    expect(ids(mode("fusion", ["pose", "hand", "face"]))).toEqual([
-      "trails",
-      "constellation",
-    ]);
-  });
-});
-
 describe("command palette", () => {
   const calls: string[] = [];
   const actions = Object.fromEntries(
@@ -134,35 +116,20 @@ describe("command palette", () => {
   const commands = buildCommands({
     modes: [mode("objects", ["object"]), mode("hands", ["hand"])],
     effects: [effect("trails"), effect("constellation")],
-    games: [
-      {
-        id: "slice",
-        label: "Slice",
-        requires: "hands",
-        create: () => ({
-          update() {},
-          draw() {},
-          state: () => ({ score: 0, status: "" }),
-          dispose() {},
-        }),
-      },
-    ],
     effectsOn: { trails: true },
-    activeGame: null,
     paused: false,
     immersive: false,
     setMode: (id) => calls.push(`mode:${id}`),
     toggleEffect: (id) => calls.push(`effect:${id}`),
-    playGame: (id) => calls.push(`game:${id}`),
     actions,
   });
-  it("lists every registered mode, effect and game plus the studio actions", () => {
+  it("lists every registered mode and effect plus the studio actions", () => {
     expect(commands.map((c) => c.id).slice(0, 5)).toEqual([
       "mode:objects",
       "mode:hands",
       "effect:trails",
       "effect:constellation",
-      "game:slice",
+      "studio:record",
     ]);
     expect(commands.find((c) => c.id === "effect:trails")?.hint).toBe("On");
     expect(commands.find((c) => c.id === "mode:hands")?.hint).toBe("2");
@@ -171,22 +138,16 @@ describe("command palette", () => {
   it("runs what it lists", () => {
     commands.find((c) => c.id === "mode:hands")!.run();
     commands.find((c) => c.id === "effect:constellation")!.run();
-    commands.find((c) => c.id === "game:slice")!.run();
     commands.find((c) => c.id === "studio:record")!.run();
-    expect(calls).toEqual([
-      "mode:hands",
-      "effect:constellation",
-      "game:slice",
-      "record",
-    ]);
+    expect(calls).toEqual(["mode:hands", "effect:constellation", "record"]);
   });
   it("filters by every word and puts label prefixes first", () => {
     expect(filterCommands(commands, "")).toHaveLength(commands.length);
     expect(filterCommands(commands, "hands").map((c) => c.id)).toEqual([
       "mode:hands",
     ]);
-    expect(filterCommands(commands, "play sl").map((c) => c.id)).toEqual([
-      "game:slice",
+    expect(filterCommands(commands, "mirror view").map((c) => c.id)).toEqual([
+      "studio:mirror",
     ]);
     // "s" starts "Save a screenshot" and "Start or stop recording" before
     // labels that merely contain it.

@@ -1,15 +1,14 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useState } from "react";
 import { Check, Link, X } from "lucide-react";
-import { getGame } from "../games";
 import { getMode } from "../modes";
 import { copyText, studioLink } from "../shell/share";
 import type { ShareResult } from "../shell/share";
 import "../styles/share.css";
 
-/** Shown after a recording or when a game stops: the clip that was just saved
- * or the score the game reported, with a button that copies the address of
- * SPECTRA. Nothing is uploaded; the clip plays from this tab's memory. */
+/** Shown after a recording: the clip that was just saved, with a button that
+ * copies the address of SPECTRA. Nothing is uploaded; the clip plays from this
+ * tab's memory. */
 export default function ShareCard({
   result,
   onDismiss,
@@ -28,30 +27,19 @@ export default function ShareCard({
   };
   return (
     <section className="share-card" aria-label="Your result">
-      {result.kind === "clip" ? (
-        <video
-          src={result.url}
-          aria-label="Recorded clip"
-          controls
-          muted
-          loop
-          playsInline
-        />
-      ) : (
-        <p className="share-score" data-testid="share-score">
-          {result.score}
-        </p>
-      )}
+      <video
+        src={result.url}
+        aria-label="Recorded clip"
+        controls
+        muted
+        loop
+        playsInline
+      />
       <div className="share-text">
-        <strong>
-          {result.kind === "clip"
-            ? `${getMode(result.mode).short} clip saved`
-            : `${getGame(result.game)?.label ?? "Game"} score`}
-        </strong>
+        <strong>{getMode(result.mode).short} clip saved</strong>
         <p>
-          {result.kind === "clip"
-            ? `${result.seconds} s, saved to your downloads as ${result.file}. It never left this device.`
-            : `${result.status}. Scored from your tracked motion on this device.`}
+          {result.seconds} s, saved to your downloads as {result.file}. It never
+          left this device.
         </p>
       </div>
       <div className="share-actions">

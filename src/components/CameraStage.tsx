@@ -12,7 +12,6 @@ import {
   Circle,
   Square,
 } from "lucide-react";
-import type { GameDef, GameState } from "../games";
 import type { ModeDef } from "../modes";
 import { useStageLoop } from "../stage/use-stage-loop";
 import type { FrameData } from "../vision/frame";
@@ -36,8 +35,6 @@ export default function CameraStage(props: {
   retryLabel: string;
   onDemo: () => void;
   notice: (text: string) => void;
-  game: GameDef | null;
-  onGameState: (state: GameState | null) => void;
   /** Filled by the stage so the shell can trigger Record and Screenshot. */
   actions: RefObject<StageActions | null>;
   /** A finished recording, for the share card. */
@@ -58,7 +55,7 @@ export default function CameraStage(props: {
     props.onClip,
   );
   latest.current = props;
-  // All canvas drawing (mode, effects, games) happens in the stage loop.
+  // All canvas drawing (mode and effects) happens in the stage loop.
   const loop = useStageLoop(canvas, stage, latest, notice);
   useEffect(() => {
     const handler = () =>

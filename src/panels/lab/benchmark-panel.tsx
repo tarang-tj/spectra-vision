@@ -40,11 +40,9 @@ export default function BenchmarkPanel() {
       ? "Choose a source first."
       : studio.paused
         ? "Resume detection first."
-        : studio.game
-          ? "Stop the game first."
-          : !chosen.length || !delegates.length
-            ? "Pick at least one mode and one delegate."
-            : "";
+        : !chosen.length || !delegates.length
+          ? "Pick at least one mode and one delegate."
+          : "";
   const toggle = <T,>(list: T[], item: T) =>
     list.includes(item) ? list.filter((i) => i !== item) : [...list, item];
 

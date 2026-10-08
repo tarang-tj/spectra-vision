@@ -88,6 +88,12 @@ const gestures: ModeDef = {
       frame.emit("after", "gesture", index);
     });
   },
+  // The log rows are history, not hands in the frame.
+  count: (frame) => frame.result?.tasks.gesture?.landmarks.length ?? 0,
+  exportFrame(result) {
+    const extra = gestureExtra(result.tasks.gesture);
+    return extra ? { gestures: extra.gestures } : {};
+  },
   // The hands in the frame with what each is doing, then every gesture seen
   // on this source with how many times it was made.
   inspector(frame) {

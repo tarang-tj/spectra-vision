@@ -1,5 +1,4 @@
 import { createContext, useContext } from "react";
-import type { GameState } from "./games";
 import type { InspectorRow, ModeDef } from "./modes";
 import type { FrameData } from "./vision/frame";
 
@@ -12,6 +11,8 @@ export type Studio = {
   frame: FrameData;
   /** The current mode's inspector rows for this frame. */
   rows: InspectorRow[];
+  /** How many things the mode is following in this frame ("Tracked"). */
+  count: number;
   paused: boolean;
   /** "Ready", or what the stage is waiting for. */
   status: string;
@@ -20,14 +21,10 @@ export type Studio = {
   select(id: number | null): void;
   motionDemo: boolean;
   toggleMotionDemo(): void;
-  /** Id of the running game, its live state, and how to start or stop one. */
-  game: string | null;
-  gameState: GameState | null;
-  setGame(id: string | null): void;
   notice(text: string): void;
   /** Id of the inspector panel on show, or null for the first one. */
   panel: string | null;
-  /** Show a panel by id (a tab click, the games entry, the command palette). */
+  /** Show a panel by id (a tab click or the command palette). */
   openPanel(id: string): void;
   /** True in the stage-only view, where the rail and the page chrome are hidden. */
   immersive: boolean;

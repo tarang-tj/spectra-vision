@@ -70,19 +70,9 @@ const LABELS: Record<string, RegExp> = {
   Hands: /Hand tracking/,
 };
 /** Switch mode. `settle` waits for the mode's first model result; the leak
- * test skips that, because effects are built from the source, not a result.
- *
- * Body is entered by way of Objects. Going straight from Hands to Body
- * unmounts the whole app today: the inspector reads landmark 23 of the stale
- * 21-point hand result (src/panels/inspect.tsx, outside this lane). That is
- * reported in the lane report; this spec must not depend on it. */
+ * test skips that, because effects are built from the source, not a result. */
 async function mode(page: Page, name: string, settle = true) {
   const canvas = page.locator("canvas").first();
-  if (
-    name === "Body" &&
-    LABELS.Hands.test((await canvas.getAttribute("aria-label")) ?? "")
-  )
-    await mode(page, "Objects", true);
   await page.getByRole("button", { name, exact: true }).first().click();
   await expect(canvas).toHaveAttribute("aria-label", LABELS[name]);
   if (settle) await ready(page);
@@ -94,6 +84,35 @@ async function setEffect(page: Page, label: string, on: boolean) {
   if ((await control.getAttribute("aria-checked")) !== String(on))
     await control.click();
   await expect(control).toHaveAttribute("aria-checked", String(on));
+}
+/** Flip several switches in one step, by the same click event a user sends.
+ * Under a software renderer each Playwright click waits several slow frames;
+ * the leak test makes hundreds, and what it measures is the GL objects. */
+async function setEffects(page: Page, labels: string[], on: boolean) {
+  const states = () =>
+    page.evaluate(
+      (names) =>
+        names.map(
+          (name) =>
+            document
+              .querySelector(`[role="switch"][aria-label="${name}"]`)
+              ?.getAttribute("aria-checked") ?? "missing",
+        ),
+      labels,
+    );
+  await expect.poll(states).not.toContain("missing");
+  await page.evaluate(
+    ({ names, wanted }) => {
+      for (const name of names) {
+        const control = document.querySelector<HTMLElement>(
+          `[role="switch"][aria-label="${name}"]`,
+        )!;
+        if (control.getAttribute("aria-checked") !== wanted) control.click();
+      }
+    },
+    { names: labels, wanted: String(on) },
+  );
+  await expect.poll(states).toEqual(labels.map(() => String(on)));
 }
 const gl = (page: Page) =>
   page.evaluate(() => {
@@ -184,7 +203,10 @@ test("every GPU effect changes the stage on a demo input without a console error
 test("GL objects are released across 20 effect and mode switches, on one context", async ({
   page,
 }) => {
-  test.setTimeout(600_000);
+  test.setTimeout(300_000);
+  // What is counted here does not depend on the size of the stage, and a
+  // software renderer draws a small one several times faster.
+  await page.setViewportSize({ width: 800, height: 600 });
   const errors = watchErrors(page);
   await open(page);
   const hands = ["Plasma hands", "Ember trail", "Starfield pull"],
@@ -197,16 +219,16 @@ test("GL objects are released across 20 effect and mode switches, on one context
     await mode(page, even ? "Hands" : "Body", false);
     // Leaving the previous mode disposed its effects: nothing may be left.
     await expect.poll(async () => (await gl(page)).total).toBe(0);
-    for (const label of labels) await setEffect(page, label, true);
+    await setEffects(page, labels, true);
     await expect.poll(async () => (await gl(page)).total).toBeGreaterThan(0);
     await page.waitForTimeout(300);
     live.push((await gl(page)).total);
     // Off keeps state by contract; a second on must not build it again.
-    for (const label of labels) await setEffect(page, label, false);
-    for (const label of labels) await setEffect(page, label, true);
+    await setEffects(page, labels, false);
+    await setEffects(page, labels, true);
     await page.waitForTimeout(200);
     expect((await gl(page)).total).toBe(live[round]);
-    for (const label of labels) await setEffect(page, label, false);
+    await setEffects(page, labels, false);
     idle.push((await gl(page)).total);
   }
   console.log(`live GL objects per round: ${live.join(" ")}`);
@@ -216,10 +238,16 @@ test("GL objects are released across 20 effect and mode switches, on one context
   expect(idle.slice(2)).toEqual(idle.slice(0, -2));
   await mode(page, "Hands");
   await expect.poll(async () => (await gl(page)).total).toBe(0);
-  const contexts = await page.evaluate(
-    () => (window as unknown as Probed).__contexts.length,
+  // Every effect drew on the stage's one shared context. The only other
+  // context the page ever makes is the 1 x 1 capability probe, which is
+  // released as soon as it has been read.
+  const lost = await page.evaluate(() =>
+    (window as unknown as Probed).__contexts.map((context) =>
+      context.isContextLost(),
+    ),
   );
-  expect(contexts).toBe(1);
+  expect(lost.filter((gone) => !gone)).toHaveLength(1);
+  expect(lost.length).toBeLessThanOrEqual(2);
   expect(errors).toEqual([]);
 });
 
@@ -262,7 +290,10 @@ test("a lost WebGL context comes back and the effect draws again", async ({
   await page.waitForTimeout(300);
   const before = (await gl(page)).total;
   await page.evaluate(() => {
-    const context = (window as unknown as Probed).__contexts[0];
+    // The stage's context: the live one (the capability probe is released).
+    const context = (window as unknown as Probed).__contexts.find(
+      (made) => !made.isContextLost(),
+    )!;
     Object.assign(window, {
       __lose: context.getExtension("WEBGL_lose_context"),
     });

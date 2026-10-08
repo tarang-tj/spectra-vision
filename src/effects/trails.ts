@@ -15,7 +15,9 @@ const MAX_STROKES = 40;
 const trails: EffectDef = {
   id: "trails",
   label: "Trails",
-  modes: "*",
+  // The modes that give it something to follow: object tracks, pose joints
+  // or hand landmarks.
+  modes: ["objects", "body", "hands", "fusion"],
   kind: "2d",
   order: 10,
   defaultOn: true,

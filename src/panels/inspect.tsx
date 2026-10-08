@@ -7,14 +7,14 @@ import type { PanelDef } from "./types";
  * switches live in the tray under the stage (components/StudioDeck). */
 function Inspect() {
   const studio = useStudio(),
-    { rows, mode } = studio,
+    { rows, mode, count } = studio,
     { result, tracks, mirror, settings } = studio.frame,
     { confidence, selected } = settings;
   return (
     <>
       <div className="frame-list">
         <h2>
-          In the frame <span className="count">{rows.length || "—"}</span>
+          In the frame <span className="count">{count || "—"}</span>
         </h2>
         <div className="detections" aria-live="polite">
           {rows.length ? (
@@ -62,7 +62,7 @@ function Inspect() {
             </pattern>
           </defs>
           <rect width="240" height="132" fill="url(#grid)" />
-          {/* Tracks exist only in detection modes; their paths follow the Trails effect. */}
+          {/* Tracks exist only in a mode that follows objects; their paths follow the Trails effect. */}
           {settings.effects.trails &&
             tracks.map((t) => (
               <polyline

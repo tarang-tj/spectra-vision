@@ -1,4 +1,5 @@
 import type { Delegate, TaskKind, TaskSpec } from "./types";
+import { probeWebgl } from "./webgl-probe";
 
 /** Decide how to recover when a vision task fails. A GPU task that has not
  * produced a single result yet is retried once on CPU; anything else (a CPU
@@ -60,23 +61,15 @@ export function softwareRendererReason(name: string | null): string | null {
 let refusal: string | null | undefined;
 
 /** Why GPU cannot be used on this page, or null when it can be tried. Asked
- * only when a task requests GPU; the answer is kept. It opens one throwaway
- * WebGL context to read the renderer name and releases it at once. */
+ * only when a task requests GPU; the answer is kept. The renderer name comes
+ * from the page's one WebGL probe (webgl-probe.ts). */
 export function gpuUnavailable(): string | null {
   if (refusal !== undefined) return refusal;
-  refusal = null;
-  try {
-    // No document (unit tests, workers): nothing is known, so GPU is tried.
-    if (typeof document === "undefined") return refusal;
-    const gl = document.createElement("canvas").getContext("webgl2"),
-      info = gl?.getExtension("WEBGL_debug_renderer_info"),
-      name =
-        gl && info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
-    gl?.getExtension("WEBGL_lose_context")?.loseContext();
-    refusal = softwareRendererReason(gl ? name : null);
-  } catch {
-    /* The probe failing says nothing about the delegate: let it try. */
-  }
+  // Nothing known (no document, or the probe failed): GPU is tried.
+  const probe = probeWebgl();
+  refusal = probe
+    ? softwareRendererReason(probe.webgl2 ? probe.renderer : null)
+    : null;
   return refusal;
 }
 

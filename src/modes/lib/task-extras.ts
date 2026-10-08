@@ -8,7 +8,7 @@ import type {
 
 // `TaskResult.extra` is an open record, so every reader would otherwise repeat
 // the same cast. These return the typed payload, or null when the result is
-// missing or is not of that kind. Modes, effects and games can all use them:
+// missing or is not of that kind. Modes and effects can both use them:
 //   const seg = segmentExtra(frame.result?.tasks.segment);
 
 /** Blendshape scores and transformation matrices of a "face" result. */

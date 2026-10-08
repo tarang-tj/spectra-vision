@@ -13,10 +13,32 @@ type Detection = {
   share?: number;
   pixels?: number;
 };
+type Points = { x: number; y: number }[][];
 type Frame = {
   detections: Detection[];
-  landmarks: { x: number; y: number }[][];
+  landmarks: Points;
   handedness: string[];
+  // Optional keys a mode adds to its own frames.
+  face?: {
+    blendshapes: Record<string, number>[];
+    headPose: ({ yaw: number; pitch: number; roll: number } | null)[];
+  };
+  gestures?: { name: string; score: number; handedness: string }[];
+  segmentation?: {
+    width: number;
+    height: number;
+    classes: { label: string; pixels: number; share: number; score: number }[];
+  };
+  tasks?: Record<
+    string,
+    {
+      elapsedMs: number;
+      latencyMs: number;
+      delegate: string;
+      landmarks: Points;
+      handedness: string[];
+    }
+  >;
 };
 type Session = { mode: string; source: string; frames: Frame[] };
 
@@ -74,6 +96,9 @@ const sample = (page: Page, point: { x: number; y: number }, size: number[]) =>
     },
     { point, size },
   );
+/** Paths the motion map draws for tracked objects. A mode whose detections
+ * are not separate objects must never get one. */
+const trails = (page: Page) => page.locator(".motion polyline");
 const inside = (box: Box) =>
   box.x >= 0 &&
   box.y >= 0 &&
@@ -109,6 +134,25 @@ test("face: 478 real landmarks, measured expressions and head pose, mesh on the 
   expect(face[0]).toHaveLength(478);
   expect(face[0].every((p) => p.x > 0 && p.x < 1 && p.y > 0 && p.y < 1)).toBe(
     true,
+  );
+  // One face is one tracked thing, however many meters describe it.
+  await expect(page.getByTestId("tracked")).toHaveText("1");
+  // The export carries every blendshape score and the head pose in degrees.
+  const extra = data.frames.at(-1)!.face!,
+    scores = Object.entries(extra.blendshapes[0]);
+  expect(extra.blendshapes).toHaveLength(1);
+  expect(scores.length).toBeGreaterThanOrEqual(50);
+  expect(scores.map(([name]) => name)).toEqual(
+    expect.arrayContaining(["jawOpen", "mouthSmileLeft", "eyeBlinkRight"]),
+  );
+  expect(scores.every(([, score]) => score >= 0 && score <= 1)).toBe(true);
+  const pose = extra.headPose[0]!;
+  for (const angle of [pose.yaw, pose.pitch, pose.roll]) {
+    expect(Number.isFinite(angle)).toBe(true);
+    expect(Math.abs(angle)).toBeLessThanOrEqual(180);
+  }
+  await expect(row(page, "Head pose")).toContainText(
+    `roll ${Math.round(pose.roll) || 0}°`,
   );
   // Landmark 10 is on the face oval, which is drawn as a glowing contour.
   await expect
@@ -149,6 +193,23 @@ test("segment: a real mask with per-class pixel counts, and cutouts that follow 
     expect(entry.score).toBeLessThanOrEqual(1);
     expect(inside(entry.box)).toBe(true);
   }
+  // The classes found are what is tracked; Background is not one of them.
+  await expect(page.getByTestId("tracked")).toHaveText(String(classes.length));
+  // Classes are regions, not objects: no track ids, no motion-map trails.
+  await expect(trails(page)).toHaveCount(0);
+  // The export lists all six classes, and their shares cover the whole mask.
+  const mask = frame.segmentation!;
+  expect([mask.width, mask.height]).toEqual([256, 256]);
+  expect(mask.classes.map((c) => c.label)).toEqual([
+    "background",
+    "hair",
+    "body-skin",
+    "face-skin",
+    "clothes",
+    "others",
+  ]);
+  expect(mask.classes.reduce((sum, c) => sum + c.pixels, 0)).toBe(256 * 256);
+  expect(mask.classes.reduce((sum, c) => sum + c.share, 0)).toBeCloseTo(1, 6);
   const person = classes.reduce((sum, c) => sum + c.pixels!, 0);
   expect(person).toBeGreaterThan(256 * 256 * 0.1);
   expect(person).toBeLessThan(256 * 256 * 0.9);
@@ -212,6 +273,17 @@ test("gestures: hand landmarks, a recognized gesture with its score, and a count
     expect(inside(gesture.box)).toBe(true);
   }
   expect(frame.detections.map((d) => d.label)).toContain("Open_Palm");
+  // The export names each hand's gesture, in the order of the landmarks.
+  expect(frame.gestures!.map((g) => g.name)).toEqual(
+    frame.detections.map((d) => d.label),
+  );
+  expect(frame.gestures!.map((g) => g.handedness)).toEqual(frame.handedness);
+  // Hands are counted, not the log of gestures seen, and a hand is not an
+  // object: no track ids, no motion-map trails.
+  await expect(page.getByTestId("tracked")).toHaveText(
+    String(frame.landmarks.length),
+  );
+  await expect(trails(page)).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
@@ -290,6 +362,18 @@ test("fusion: three task kinds report with their own latency, one frame in fligh
   expect(data.mode).toBe("fusion");
   // The export keeps the flat fields, which belong to the primary task: pose.
   expect(data.frames.at(-1)!.landmarks[0]).toHaveLength(33);
+  // Every model's own latest result is exported next to them.
+  const tasks = data.frames.at(-1)!.tasks!;
+  expect(Object.keys(tasks).sort()).toEqual(["face", "hand", "pose"]);
+  expect(tasks.pose.landmarks[0]).toHaveLength(33);
+  expect(tasks.hand.landmarks[0]).toHaveLength(21);
+  expect(tasks.hand.handedness).toHaveLength(tasks.hand.landmarks.length);
+  expect(tasks.face.landmarks[0]).toHaveLength(478);
+  for (const task of Object.values(tasks)) {
+    expect(task.latencyMs).toBeGreaterThan(0);
+    expect(task.elapsedMs).toBeGreaterThan(0);
+    expect(task.delegate).toBe("CPU");
+  }
   // Ten mode changes later, only the last mode's single worker is alive.
   for (const mode of [
     "Face",

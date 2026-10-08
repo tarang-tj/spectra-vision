@@ -23,36 +23,52 @@ export function useVision(
   useEffect(() => {
     setResult(null);
   }, [source?.generation, mode]);
+  // State is cleared in an effect, which runs after the render that follows a
+  // mode or source change. In that render the stored result still belongs to
+  // the previous mode, so it is checked here: nothing that draws or lists ever
+  // receives a result made for another mode, task set or source.
+  const current =
+    result &&
+    result.mode === mode.id &&
+    result.generation === source?.generation
+      ? result
+      : null;
   useEffect(() => {
     const base = new URL(import.meta.env.BASE_URL, location.href).href,
       specs = tasksOf(mode),
       kinds = specs.map((spec) => spec.kind);
     let stopped = false,
       raf = 0,
-      pending = specs.length,
+      failed = false,
+      timeout: ReturnType<typeof setTimeout> | undefined,
       latest: Partial<Record<TaskKind, TaskResult>> = {};
-    setStatus("Loading model");
     setError("");
     setResult(null);
     const unavailable = (message: string) => {
       if (stopped) return;
+      failed = true;
       clearTimeout(timeout);
       setError(message);
       setStatus("Model unavailable");
     };
-    const timeout = setTimeout(() => {
-      if (pending > 0) {
-        setError("Model load timed out. Check your connection and retry.");
-        setStatus("Model unavailable");
-      }
-    }, 45000);
+    // The status is read from the runners, so it is "Ready" only while every
+    // task of the mode is loaded, including after a runner starts again.
+    const loaded = () => runners.every((runner) => runner.ready());
+    const report = () => {
+      if (stopped || failed) return;
+      clearTimeout(timeout);
+      if (loaded()) return setStatus("Ready");
+      setStatus("Loading model");
+      timeout = setTimeout(() => {
+        if (!loaded())
+          unavailable("Model load timed out. Check your connection and retry.");
+      }, 45000);
+    };
     const runners: TaskRunner[] = specs.map((spec) =>
       createTaskRunner(spec, base, {
-        onReady() {
-          if (stopped || --pending > 0) return;
-          clearTimeout(timeout);
-          setStatus("Ready");
-        },
+        onReady: report,
+        // A delegate switch or a GPU to CPU fallback loads the model again.
+        onRestart: report,
         onResult(taskResult) {
           if (stopped) return;
           // Results for a source that has since been replaced are discarded.
@@ -99,6 +115,7 @@ export function useVision(
         void feed(runner, state.source!.generation);
       }
     };
+    report();
     raf = requestAnimationFrame(tick);
     return () => {
       stopped = true;
@@ -107,5 +124,10 @@ export function useVision(
       runners.forEach((runner) => runner.dispose());
     };
   }, [mode, restart]);
-  return { result, status, error, retry: () => setRestart((n) => n + 1) };
+  return {
+    result: current,
+    status,
+    error,
+    retry: () => setRestart((n) => n + 1),
+  };
 }

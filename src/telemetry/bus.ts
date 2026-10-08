@@ -18,6 +18,9 @@ export type TelemetryEvents = {
     loadMs: number;
     /** Why `delegate` is not the one requested (a fallback), else empty. */
     note?: string;
+    /** Addresses the worker fetched from this site to load: the runtime, its
+     * wasm files and the model. */
+    files?: string[];
   };
   /** One per drawn stage frame, fed by the render loop. */
   frame: { time: number; dt: number; drawMs: number };

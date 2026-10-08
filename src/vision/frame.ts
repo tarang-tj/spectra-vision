@@ -22,7 +22,7 @@ export type Rect = { x: number; y: number; w: number; h: number };
 /** Where in a mode's base drawing an effect may interleave: just before or
  * just after one tracked item (a track, a body, a hand). */
 export type FrameSlot = "before" | "after";
-/** Everything a mode, effect or game needs to draw one frame. The stage owns a
+/** Everything a mode or effect needs to draw one frame. The stage owns a
  * single Frame and mutates it in place each frame, so never keep a reference to
  * one across frames and never rely on its identity changing. */
 export type Frame = FrameData & {

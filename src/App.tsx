@@ -11,141 +11,42 @@ import CommandPalette from "./components/CommandPalette";
 import ImmersiveDock from "./components/ImmersiveDock";
 import type { StageActions } from "./components/CameraStage";
 import { effects } from "./effects";
-import { games, getGame } from "./games";
-import type { GameState } from "./games";
-import { defaultMode, getMode, modes } from "./modes";
-import { buildCommands } from "./shell/commands";
-import { trayEffects } from "./shell/effect-controls";
-import { useOfflineCache, useScoreShare } from "./shell/use-studio-effects";
+import { getMode, modes } from "./modes";
+import { paletteCommands } from "./shell/palette-commands";
+import { useNarrow } from "./shell/use-narrow";
+import { useOfflineCache } from "./shell/use-studio-effects";
 import { useShell } from "./shell/use-shell";
 import { useShortcuts } from "./shell/use-shortcuts";
+import { useSourceControls } from "./shell/use-source-controls";
+import { useToast } from "./shell/use-toast";
 import { downloadSession } from "./session-export";
 import { StudioContext } from "./studio-context";
 import type { Studio } from "./studio-context";
-import { useSource } from "./vision/useSource";
+import { useSession } from "./vision/useSession";
 import { useVision } from "./vision/useVision";
-import { Tracker } from "./vision/tracker";
+import { webgl2Missing } from "./vision/webgl-probe";
 import type { FrameData } from "./vision/frame";
-import type { Track } from "./vision/types";
 export default function App() {
-  const [modeId, setModeId] = useState(defaultMode.id),
-    [paused, setPaused] = useState(false),
-    [mirror, setMirror] = useState(false),
-    // One switch per registered effect, starting from each effect's default.
-    [effectsOn, setEffectsOn] = useState<Record<string, boolean>>(() =>
+  // One switch per registered effect, starting from each effect's default.
+  const [effectsOn, setEffectsOn] = useState<Record<string, boolean>>(() =>
       Object.fromEntries(effects.map((e) => [e.id, !!e.defaultOn])),
     ),
-    [motionDemo, setMotionDemo] = useState(false),
     [confidence, setConfidence] = useState(0.45),
     [selected, setSelected] = useState<number | null>(null),
-    [tracks, setTracks] = useState<Track[]>([]),
-    [fps, setFps] = useState<number | null>(null),
-    [gameId, setGameId] = useState<string | null>(null),
-    [gameState, setGameState] = useState<GameState | null>(null),
-    [immersiveEffects, setImmersiveEffects] = useState(false),
-    [toast, setToast] = useState("");
+    [immersiveEffects, setImmersiveEffects] = useState(false);
   const shell = useShell(),
+    narrow = useNarrow(),
+    [toast, notice] = useToast(),
     stageActions = useRef<StageActions | null>(null);
-  const mode = getMode(modeId),
-    input = useSource(),
+  const controls = useSourceControls(notice),
+    { input, modeId, paused, mirror, motionDemo, onMode, onDemo } = controls,
+    mode = getMode(modeId),
     vision = useVision(mode, input.source, paused, confidence),
-    tracker = useRef(new Tracker()),
-    history = useRef<unknown[]>([]),
-    previous = useRef<number | null>(null),
-    toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // A game runs only in the mode it was written for.
-  const game = getGame(gameId)?.requires === mode.id ? getGame(gameId) : null;
-  const notice = (text: string) => {
-    setToast(text);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), 3200);
-  };
-  useEffect(
-    () => () => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-    },
-    [],
-  );
+    { tracks, fps, history } = useSession(mode, input.source, vision.result);
   useEffect(() => {
-    tracker.current.reset();
-    setTracks([]);
     setSelected(null);
-    setFps(null);
-    previous.current = null;
-    history.current = [];
   }, [modeId, input.source?.generation]);
-  useEffect(() => {
-    const r = vision.result;
-    if (!r) return;
-    if (previous.current !== null) {
-      // In a multi-task mode a secondary task reports under the primary
-      // frame's time: that is not a new frame, so nothing is counted twice.
-      if (r.time <= previous.current) return;
-      const instant = 1000 / (r.time - previous.current);
-      setFps((old) => (old === null ? instant : old * 0.8 + instant * 0.2));
-    }
-    previous.current = r.time;
-    setTracks(tracker.current.update(r.detections, r.time));
-    history.current.push({
-      elapsedMs: Math.round(r.time),
-      latencyMs: r.latency,
-      detections: r.detections,
-      landmarks: r.landmarks,
-      handedness: r.handedness,
-    });
-    if (history.current.length > 1000) history.current.shift();
-  }, [vision.result]);
-  useEffect(() => {
-    const video = input.source?.element;
-    if (video instanceof HTMLVideoElement) {
-      if (paused) video.pause();
-      else
-        void video
-          .play()
-          .catch(() =>
-            notice("Playback could not resume. Choose the file again."),
-          );
-    }
-  }, [paused, input.source]);
-  useScoreShare(game, gameState, shell.setShare);
-  useOfflineCache(mode, vision.status);
-  useEffect(() => {
-    if (!game) setGameState(null);
-  }, [game]);
-  const onMode = (next: string) => {
-    if (next === modeId) return;
-    setModeId(next);
-    setGameId(null);
-    setPaused(false);
-    if (input.source?.kind === "demo") void input.demo(next, motionDemo);
-  };
-  const onDemo = () => {
-    setPaused(false);
-    setMirror(false);
-    void input.demo(modeId, motionDemo);
-  };
-  const onMotionDemo = () => {
-    const next = !motionDemo;
-    setMotionDemo(next);
-    setPaused(false);
-    setMirror(false);
-    void input.demo(modeId, next);
-  };
-  const onCamera = () => {
-    setPaused(false);
-    if (input.source?.kind === "camera") onDemo();
-    else {
-      setMotionDemo(false);
-      setMirror(true);
-      void input.camera();
-    }
-  };
-  const onUpload = (file: File) => {
-    setPaused(false);
-    setMotionDemo(false);
-    setMirror(false);
-    void input.upload(file);
-  };
+  useOfflineCache();
   const exportSession = () => {
     downloadSession(
       modeId,
@@ -179,22 +80,31 @@ export default function App() {
       }),
       [vision.result, tracks, mirror, settings, input.source, aspect],
     ),
-    rows = useMemo(() => mode.inspector(data), [mode, data]);
+    rows = useMemo(() => mode.inspector(data), [mode, data]),
+    count = useMemo(
+      () => mode.count?.(data) ?? rows.length,
+      [mode, data, rows],
+    );
+  const toggleEffect = (id: string) => {
+    const effect = effects.find((e) => e.id === id);
+    // The tray disables these switches; the palette reaches this instead.
+    if (effect?.kind === "gl" && !effectsOn[id] && webgl2Missing())
+      return notice(`${effect.label} needs WebGL2, which is not available.`);
+    setEffectsOn((on) => ({ ...on, [id]: !on[id] }));
+  };
   const studio: Studio = {
     mode,
     setMode: onMode,
     frame: data,
     rows,
+    count,
     paused,
     status: input.pending ? "Opening source" : vision.status,
     setConfidence,
-    toggleEffect: (id) => setEffectsOn((on) => ({ ...on, [id]: !on[id] })),
+    toggleEffect,
     select: setSelected,
     motionDemo: motionDemo && input.source?.kind === "demo",
-    toggleMotionDemo: onMotionDemo,
-    game: game?.id ?? null,
-    gameState,
-    setGame: setGameId,
+    toggleMotionDemo: controls.onMotionDemo,
     notice,
     panel: shell.panel,
     openPanel: shell.openPanel,
@@ -208,50 +118,40 @@ export default function App() {
     shell.immersive
       ? setImmersiveEffects((open) => !open)
       : shell.toggleTray(fromKeyboard);
-  const playGame = (id: string | null) => {
-    const needs = getGame(id)?.requires;
-    if (needs && needs !== modeId) onMode(needs);
-    setGameId(id);
-  };
   useShortcuts(modes.length, shell.palette, (action) => {
     if (action.type === "palette") shell.setPalette(!shell.palette);
     else if (action.type === "mode") onMode(modes[action.index].id);
     else if (action.type === "record") stageActions.current?.record();
     else if (action.type === "screenshot") stageActions.current?.screenshot();
-    else if (action.type === "mirror") setMirror((m) => !m);
+    else if (action.type === "mirror") controls.toggleMirror();
     else if (action.type === "effects") toggleEffects(true);
     else if (action.type === "help") shell.setHelp(!shell.help);
     else if (action.type === "escape" && shell.immersive)
       shell.toggleImmersive();
   });
-  // Built only while the palette is open: it is not needed otherwise.
-  const commands = shell.palette
-    ? buildCommands({
-        modes,
-        // Only the effects the tray offers in this mode.
-        effects: trayEffects(mode),
-        games,
-        effectsOn,
-        activeGame: game?.id ?? null,
-        paused,
-        immersive: shell.immersive,
-        setMode: onMode,
-        toggleEffect: studio.toggleEffect,
-        playGame,
-        actions: {
-          record: () => stageActions.current?.record(),
-          screenshot: () => stageActions.current?.screenshot(),
-          mirror: () => setMirror((m) => !m),
-          pause: () => setPaused((p) => !p),
-          effects: () => toggleEffects(true),
-          immersive: shell.toggleImmersive,
-          help: () => shell.setHelp(!shell.help),
-          exportSession,
-          demo: onDemo,
-          tour: () => shell.setCoach(0),
-        },
-      })
-    : [];
+  const commands = paletteCommands(shell.palette, {
+    mode,
+    effectsOn,
+    paused,
+    immersive: shell.immersive,
+    setMode: onMode,
+    toggleEffect,
+    actions: {
+      record: () => stageActions.current?.record(),
+      screenshot: () => stageActions.current?.screenshot(),
+      mirror: () => controls.toggleMirror(),
+      pause: () => controls.togglePaused(),
+      effects: () => toggleEffects(true),
+      immersive: shell.toggleImmersive,
+      help: () => shell.setHelp(!shell.help),
+      exportSession,
+      demo: onDemo,
+      tour: () => shell.setCoach(0),
+    },
+  });
+  // In one column the rail comes after the tray and the result card, so it is
+  // also placed after them in the markup: focus then moves in reading order.
+  const rail = <Inspector key="rail" />;
   return (
     <StudioContext.Provider value={studio}>
       <main
@@ -262,49 +162,34 @@ export default function App() {
           mode={mode}
           onMode={onMode}
           cameraActive={input.source?.kind === "camera"}
-          onCamera={onCamera}
-          onUpload={onUpload}
+          onCamera={controls.onCamera}
+          onUpload={controls.onUpload}
           pending={input.pending}
           onPalette={() => shell.setPalette(true)}
         />
         <CameraPicker
           source={input.source}
           cameras={input.cameras}
-          onPick={(deviceId) => {
-            setPaused(false);
-            void input.camera(deviceId);
-          }}
+          onPick={controls.openCamera}
         />
         <div className="workspace">
           <CameraStage
+            key="stage"
             mode={mode}
             data={data}
             paused={paused}
-            onPause={() => setPaused((p) => !p)}
-            onMirror={() => setMirror((m) => !m)}
+            onPause={controls.togglePaused}
+            onMirror={controls.toggleMirror}
             status={studio.status}
             error={input.error || vision.error}
-            onRetry={
-              input.error
-                ? () => {
-                    setPaused(false);
-                    void input.camera();
-                  }
-                : vision.retry
-            }
+            onRetry={input.error ? () => controls.openCamera() : vision.retry}
             retryLabel={input.error ? "Retry camera" : "Retry model"}
             onDemo={onDemo}
             notice={notice}
-            game={game}
-            onGameState={setGameState}
             actions={stageActions}
-            onClip={(clip) =>
-              shell.setShare({ kind: "clip", mode: modeId, ...clip })
-            }
+            onClip={(clip) => shell.setShare({ mode: modeId, ...clip })}
           >
-            {/* The tips yield to a running game, whose own controls sit in
-                the same corner of the stage. */}
-            {shell.coach !== null && !shell.immersive && !game && (
+            {shell.coach !== null && !shell.immersive && (
               <CoachMarks
                 step={shell.coach}
                 onStep={shell.setCoach}
@@ -312,7 +197,23 @@ export default function App() {
               />
             )}
           </CameraStage>
-          <Inspector />
+          {!narrow && rail}
+          <StudioDeck
+            key="deck"
+            open={shell.tray}
+            focusTray={shell.trayFocus}
+            onToggle={() => shell.toggleTray(false)}
+            onImmersive={shell.toggleImmersive}
+          />
+          {shell.share && (
+            <ShareCard
+              key="share"
+              result={shell.share}
+              onDismiss={() => shell.setShare(null)}
+              notice={notice}
+            />
+          )}
+          {narrow && rail}
         </div>
         {shell.immersive && (
           <ImmersiveDock
@@ -321,23 +222,10 @@ export default function App() {
             onExit={shell.toggleImmersive}
           />
         )}
-        <StudioDeck
-          open={shell.tray}
-          focusTray={shell.trayFocus}
-          onToggle={() => shell.toggleTray(false)}
-          onImmersive={shell.toggleImmersive}
-        />
-        {shell.share && (
-          <ShareCard
-            result={shell.share}
-            onDismiss={() => shell.setShare(null)}
-            notice={notice}
-          />
-        )}
         <Footer
           latency={vision.result?.latency ?? null}
           fps={paused ? 0 : fps}
-          count={rows.length}
+          count={count}
           onExport={exportSession}
           help={shell.help}
           onHelp={() => shell.setHelp(!shell.help)}

@@ -18,6 +18,7 @@ const objects: ModeDef = {
     motion: "demo/studio-motion.mp4",
     label: "Demo studio",
   },
+  tracked: true,
   // Tracked boxes with corner brackets and a label. A selected track dims the rest.
   drawBase(ctx, frame) {
     const { rect, mirror } = frame,

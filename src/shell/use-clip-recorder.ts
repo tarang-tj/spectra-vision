@@ -6,8 +6,8 @@ import type { RefObject } from "react";
  * receiver must revoke. */
 export type Clip = { url: string; mime: string; seconds: number; file: string };
 
-// The stage's recorder: src/vision/useRecording.ts with one addition, the
-// finished clip is also handed to `onClip` so the share card can play it.
+// The stage's recorder. The finished clip is saved as a download and also
+// handed to `onClip`, so the share card can play it.
 // Record only the rendered canvas. No microphone, screen capture, or uploads.
 export function useClipRecorder(
   canvas: RefObject<HTMLCanvasElement | null>,

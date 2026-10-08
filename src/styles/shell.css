@@ -155,6 +155,15 @@
   gap: 12px;
   align-items: stretch;
 }
+/* Beside each other, the stage and the rail share the first row; the effects
+   tray and the result card run under both. The grid gap spaces them. */
+@media (min-width: 761px) {
+  .workspace > .deck,
+  .workspace > .share-card {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+}
 .icon-button {
   display: inline-flex;
   align-items: center;
@@ -430,7 +439,8 @@ kbd {
   }
   /* One column: stage, effects tray, result card, then the inspector. The
      tray sits right under the stage so an effect can be watched while it is
-     switched; `order` moves it there without changing the markup. */
+     switched. The markup is already in this order here (see App.tsx), so
+     keyboard focus follows it. */
   .app {
     display: flex;
     flex-direction: column;
@@ -440,12 +450,6 @@ kbd {
   }
   .inspector {
     margin-top: 12px;
-  }
-  .inspector,
-  .metrics,
-  .app > footer,
-  .help {
-    order: 1;
   }
   .metrics {
     flex-wrap: wrap;

@@ -1,4 +1,4 @@
-/* The strip under the stage: effects tray, games entry, immersive view. */
+/* The strip under the stage: effects tray and immersive view. */
 .deck {
   display: flex;
   align-items: flex-start;
@@ -48,6 +48,16 @@
   font-size: 12px;
   line-height: 42px;
   color: var(--muted);
+}
+/* Why some switches are disabled (no WebGL2): a full line under the chips. */
+.tray-note {
+  flex-basis: 100%;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.effect-switch:disabled {
+  cursor: not-allowed;
 }
 /* One effect: its switch, and its strength slider while it is on. */
 .effect-chip {

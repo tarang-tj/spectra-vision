@@ -1,14 +1,13 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useEffect, useRef } from "react";
-import { ChevronDown, Gamepad2, Maximize, Sparkles } from "lucide-react";
-import { games } from "../games";
-import { trayEffects } from "../shell/effect-controls";
+import { ChevronDown, Maximize, Sparkles } from "lucide-react";
+import { effectsFor } from "../effects";
 import { useStudio } from "../studio-context";
 import EffectsPicker from "./EffectsPicker";
 
 /** The strip under the stage: the effects tray on the left, the way into the
- * games and the immersive view on the right. Everything listed comes from the
- * registries, so it grows as plugins are added. */
+ * immersive view on the right. Every effect listed comes from the registry, so
+ * the tray grows as plugins are added. */
 export default function StudioDeck({
   open,
   focusTray,
@@ -24,7 +23,7 @@ export default function StudioDeck({
   const studio = useStudio(),
     tray = useRef<HTMLDivElement>(null),
     on = studio.frame.settings.effects,
-    active = trayEffects(studio.mode).filter((e) => on[e.id]).length;
+    active = effectsFor(studio.mode.id).filter((e) => on[e.id]).length;
   useEffect(() => {
     if (focusTray && open)
       tray.current?.querySelector<HTMLElement>("[role=switch]")?.focus();
@@ -32,7 +31,7 @@ export default function StudioDeck({
   return (
     <section
       className="deck"
-      aria-label="Effects and games"
+      aria-label="Effects and immersive view"
       data-coach="effects"
     >
       <button
@@ -59,15 +58,6 @@ export default function StudioDeck({
         {open && <EffectsPicker />}
       </div>
       <div className="deck-actions">
-        {games.length > 0 && (
-          <button
-            className="button compact"
-            onClick={() => studio.openPanel("play")}
-          >
-            <Gamepad2 size={18} />
-            {games.length} {games.length === 1 ? "game" : "games"}
-          </button>
-        )}
         <button className="button compact" onClick={onImmersive}>
           <Maximize size={18} />
           Immersive

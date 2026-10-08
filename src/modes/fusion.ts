@@ -156,6 +156,22 @@ const fusion: ModeDef = {
         "#f3f7f6",
       );
   },
+  // The latest result of each of the three models, with its own frame time,
+  // latency and delegate. The flat v1 keys carry the pose model's only.
+  exportFrame: (result) => ({
+    tasks: Object.fromEntries(
+      Object.entries(result.tasks).map(([kind, task]) => [
+        kind,
+        {
+          elapsedMs: Math.round(task.time),
+          latencyMs: task.latency,
+          delegate: task.delegate,
+          landmarks: task.landmarks,
+          handedness: task.handedness,
+        },
+      ]),
+    ),
+  }),
   // One row per part found, with the measured latency of the model behind it.
   inspector(frame) {
     const tasks = frame.result?.tasks;

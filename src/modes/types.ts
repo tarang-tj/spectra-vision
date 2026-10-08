@@ -1,6 +1,6 @@
 import { isRecord } from "../registry";
 import type { Frame, FrameData } from "../vision/frame";
-import type { Point, TaskSpec } from "../vision/types";
+import type { Point, TaskSpec, VisionResult } from "../vision/types";
 
 /** One row of the inspector's "In the frame" list and one dot on the motion map. */
 export type InspectorRow = {
@@ -28,8 +28,20 @@ export type ModeDef = {
   clearable?: boolean;
   /** Draw the mode's own geometry over the source image. Runs every frame. */
   drawBase(ctx: CanvasRenderingContext2D, frame: Frame): void;
-  /** Rows for the inspector. The row count is also the "Tracked" metric. */
+  /** Rows for the inspector. */
   inspector(frame: FrameData): InspectorRow[];
+  /** How many things the mode is following in this frame: the "Tracked"
+   * metric. Defaults to the number of inspector rows; a mode whose rows are
+   * not one per tracked thing (meters, a log) counts for itself. */
+  count?(frame: FrameData): number;
+  /** Follow this mode's detections over time: each gets a track id and a
+   * trail (frame.tracks, the motion map). Only for detections that are
+   * separate objects; off by default. */
+  tracked?: boolean;
+  /** Extra, optional keys for this result's entry in the exported session
+   * (blendshapes, gestures, per-task results). The v1 keys of an entry are
+   * fixed and cannot be replaced from here. */
+  exportFrame?(result: VisionResult): Record<string, unknown>;
 };
 
 export function isMode(value: unknown): value is ModeDef {

@@ -1,13 +1,12 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import type { EffectDef } from "../effects";
-import type { GameDef } from "../games";
 import type { ModeDef } from "../modes";
 import { MAX_MODE_KEYS } from "./shortcuts";
 
 export type Command = {
   id: string;
   label: string;
-  /** Section heading in the palette: "Mode", "Effect", "Game" or "Studio". */
+  /** Section heading in the palette: "Mode", "Effect" or "Studio". */
   group: string;
   /** Optional shortcut or state shown at the end of the row. */
   hint?: string;
@@ -28,19 +27,16 @@ export type StudioActions = {
   tour(): void;
 };
 
-/** Builds the palette from the registries, so a new mode, effect or game is
- * listed without an edit here. */
+/** Builds the palette from the registries, so a new mode or effect is listed
+ * without an edit here. */
 export function buildCommands(input: {
   modes: readonly ModeDef[];
   effects: readonly EffectDef[];
-  games: readonly GameDef[];
   effectsOn: Readonly<Record<string, boolean>>;
-  activeGame: string | null;
   paused: boolean;
   immersive: boolean;
   setMode(id: string): void;
   toggleEffect(id: string): void;
-  playGame(id: string | null): void;
   actions: StudioActions;
 }): Command[] {
   const { actions } = input;
@@ -59,15 +55,6 @@ export function buildCommands(input: {
       hint: input.effectsOn[effect.id] ? "On" : "Off",
       run: () => input.toggleEffect(effect.id),
     })),
-    ...input.games.map((game) => {
-      const active = input.activeGame === game.id;
-      return {
-        id: `game:${game.id}`,
-        label: `${active ? "Stop" : "Play"} ${game.label}`,
-        group: "Game",
-        run: () => input.playGame(active ? null : game.id),
-      };
-    }),
     studio("record", "Start or stop recording", "R", actions.record),
     studio("screenshot", "Save a screenshot", "S", actions.screenshot),
     studio("mirror", "Mirror the view", "M", actions.mirror),

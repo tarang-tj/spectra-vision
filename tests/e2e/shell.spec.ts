@@ -332,16 +332,6 @@ test("the rail matches the stage, tabs follow the registry and the tray hides ef
     expect(s!.width / s!.height).toBeCloseTo(1.6, 2);
     expect(Math.abs(r!.height - s!.height)).toBeLessThanOrEqual(1);
   }
-  // The games entry opens the Play panel when games are registered.
-  const games = page.getByRole("button", { name: /^\d+ games?$/ });
-  if (await games.count()) {
-    await games.click();
-    await expect(
-      tabs.getByRole("button", { name: "Play", exact: true }),
-    ).toHaveAttribute("aria-pressed", "true");
-    const rows = await page.locator(".game-row").count();
-    await expect(games).toHaveText(`${rows} ${rows === 1 ? "game" : "games"}`);
-  } else await expect(page.locator(".game-row")).toHaveCount(0);
   // The footer names the registered modes, not a fixed three.
   const modes = await page
     .getByRole("navigation", { name: "Vision mode" })

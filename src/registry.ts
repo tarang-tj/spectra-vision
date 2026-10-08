@@ -1,4 +1,4 @@
-/** Shared discovery for the plugin registries (modes, effects, games, panels).
+/** Shared discovery for the plugin registries (modes, effects, panels).
  * Each registry passes the result of an eager `import.meta.glob` here, so that
  * adding one file to its folder adds one entry and nothing else is edited. */
 export type Collected<T> = { items: T[]; problems: string[] };

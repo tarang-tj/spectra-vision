@@ -40,6 +40,19 @@ const face: ModeDef = {
       frame.emit("after", "face", index);
     }
   },
+  count: (frame) => frame.result?.tasks.face?.landmarks.length ?? 0,
+  // Every blendshape score and the head pose in degrees, one entry per face.
+  exportFrame(result) {
+    const extra = faceExtra(result.tasks.face);
+    return extra
+      ? {
+          face: {
+            blendshapes: extra.blendshapes,
+            headPose: extra.matrices.map((matrix) => headPose(matrix)),
+          },
+        }
+      : {};
+  },
   // Measured expression scores as meters, then the head pose. Nothing is
   // listed until the model has found a face.
   inspector(frame) {

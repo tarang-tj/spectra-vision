@@ -1,18 +1,15 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 
-/** What the share card shows: a clip the recorder just produced, or the score
- * a game reported when it stopped. Both come from this session only. */
-export type ShareResult =
-  | {
-      kind: "clip";
-      /** Object URL of the recorded blob. The card revokes it when dismissed. */
-      url: string;
-      mime: string;
-      seconds: number;
-      mode: string;
-      file: string;
-    }
-  | { kind: "score"; game: string; score: number; status: string };
+/** What the share card shows: a clip the recorder just produced in this
+ * session. */
+export type ShareResult = {
+  /** Object URL of the recorded blob. The card revokes it when dismissed. */
+  url: string;
+  mime: string;
+  seconds: number;
+  mode: string;
+  file: string;
+};
 
 /** The public address of this copy of SPECTRA: the site root, without any
  * query or hash. It is the only thing "Copy link" ever copies. */

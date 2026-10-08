@@ -5,7 +5,7 @@
   > *:not(.workspace):not(.immersive-dock):not(.toast):not(.palette-backdrop) {
   display: none;
 }
-.app.immersive .inspector {
+.app.immersive .workspace > :not(.camera-stage) {
   display: none;
 }
 .app.immersive .workspace {
