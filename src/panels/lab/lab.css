@@ -189,3 +189,10 @@
     min-height: 40px;
   }
 }
+/* Where a licence is stated, or that the model's own card states none. */
+.lab-licence-note {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  line-height: 1.5;
+}

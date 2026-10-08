@@ -268,7 +268,7 @@ Lifecycle: an instance is created the first time its switch is turned on in a mo
 
 **Intensity.** An effect that declares `intensity` gets a slider beside its switch while it is on (`src/components/EffectIntensity.tsx`). The value lives in `src/effects/lib/intensity.ts`: `effectIntensity(id, fallback)`, `setEffectIntensity(id, value)`, `onEffectIntensity(listener)`. Values are 0 to 1, kept in memory for the page session, and the effect reads its value each frame. The eight WebGL2 effects declare it; the two canvas effects do not.
 
-**WebGL2 effects** are built on `src/gl/` (programs, render targets, bloom, a transform-feedback particle system, a line batch, reference-counted through `kit.ts`) and wrapped by `glEffect` in `src/effects/lib/gl-effect.ts`. On a software renderer the kit lowers particle counts and the scene target size. `window.__spectraGl` exposes live GL object counts for the leak test.
+**WebGL2 effects** are built on `src/gl/` (programs, render targets, bloom, a transform-feedback particle system, a line batch, reference-counted through `kit.ts`) and wrapped by `glEffect` in `src/effects/lib/gl-effect.ts`. On a software renderer the kit lowers particle counts and the scene target size. `window.__spectraGl` exposes live GL object counts for the leak test, only on a page opened with `?spectra-test` (`src/test-hooks.ts`); the Lab's shortened-benchmark hook is read under the same flag.
 
 **No WebGL2.** When the probe finds none, the tray lists the `"gl"` effects with their switches disabled and a note saying why, the palette answers with a notice, and the host skips them without logging an error. If the probe passes but the stage's own context cannot be created, the effect is switched off and the user is told in a toast.
 
@@ -377,7 +377,7 @@ telemetry.on("frame", (e) => {}); // { time, dt, drawMs }  one per drawn stage f
 
 `src/shell/`, `src/components/`. The shell decides what is on screen; it never touches inference.
 
-- **Layout.** `App.tsx` composes the header, the workspace (stage, rail, effects tray, result card) and the footer. In the one-column layout (760 px and narrower, `use-narrow.ts`) the rail is placed after the tray in the markup as well, and the first-run tips go under the stage instead of on it, so keyboard focus follows the visual order and the tips never cover a stage control.
+- **Layout.** `App.tsx` composes the header, the workspace (stage, rail, effects tray, result card) and the footer. In the one-column layout (760 px and narrower, `use-narrow.ts`) the rail is placed after the tray in the markup as well, so keyboard focus follows the visual order. The first-run tips sit under the stage at every width, so they cover nothing on it.
 - **Effects tray** (`StudioDeck`, `EffectsPicker`, `EffectIntensity`): one chip per effect of the current mode.
 - **Shortcuts** (`shortcuts.ts`, `use-shortcuts.ts`): one `keydown` listener on `window`, ignored while typing, during IME composition, on key repeat and while the palette is open.
 - **Command palette** (`commands.ts`, `palette-commands.ts`, `CommandPalette`): built from the registries only while it is open.

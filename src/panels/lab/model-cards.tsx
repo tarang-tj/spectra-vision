@@ -89,7 +89,15 @@ export function ModelCards() {
                     : `${(card.bytes / 1e6).toFixed(2)} MB (${card.bytes.toLocaleString("en-US")} bytes)`}
                 </dd>
                 <dt>Licence</dt>
-                <dd>{card.license || "not recorded"}</dd>
+                <dd>
+                  {card.license || "not recorded"}
+                  {card.licenseNote && (
+                    <small className="lab-licence-note">
+                      {" "}
+                      {card.licenseNote}
+                    </small>
+                  )}
+                </dd>
                 <dt>Source</dt>
                 <dd>
                   {card.url ? (

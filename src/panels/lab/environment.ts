@@ -10,6 +10,8 @@ export type ModelCard = {
   sha256: string;
   bytes: number | null;
   license: string;
+  /** Where the licence is stated, or that the model's own card states none. */
+  licenseNote: string;
 };
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
@@ -27,6 +29,7 @@ export function modelCard(file: string): ModelCard | null {
     sha256: text(entry.sha256),
     bytes: typeof entry.bytes === "number" ? entry.bytes : null,
     license: text(entry.license),
+    licenseNote: text(entry.licenseNote),
   };
 }
 

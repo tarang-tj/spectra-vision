@@ -1,4 +1,5 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+import { testHooksEnabled } from "../test-hooks";
 
 /** Every GL object the kit makes is created and deleted through this file, so
  * one set of counters can prove that switching effects and modes leaks nothing.
@@ -102,10 +103,11 @@ export function forgetGlObjects() {
   for (const kind of Object.keys(counts) as Kind[]) counts[kind] = 0;
 }
 
-/** Make the counters readable from a test as `window.__spectraGl`. */
+/** Make the counters readable from a test as `window.__spectraGl`, on a page
+ * opened with `?spectra-test` only. */
 export function exposeGlStats() {
   try {
-    if (typeof window !== "undefined")
+    if (typeof window !== "undefined" && testHooksEnabled())
       Object.assign(window, { __spectraGl: glStats });
   } catch {
     /* A locked-down window only costs the test hook. */

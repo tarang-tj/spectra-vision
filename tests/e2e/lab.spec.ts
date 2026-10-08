@@ -44,7 +44,8 @@ const workers = (page: Page) =>
       ).spectraWorkers,
   );
 async function openLab(page: Page) {
-  await page.goto("./", { waitUntil: "domcontentloaded" });
+  // The shortened benchmark is honoured only on a page opened with this flag.
+  await page.goto("./?spectra-test", { waitUntil: "domcontentloaded" });
   await expect(page.getByTestId("latency")).toHaveText(/^\d+ ms$/);
   await page.getByRole("button", { name: "Lab", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Lab" })).toBeVisible();

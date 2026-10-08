@@ -34,3 +34,13 @@ describe("session export limits", () => {
     expect(frameLimit(EXPORT_BYTE_LIMIT * 3)).toBe(1);
   });
 });
+
+describe("lab model cards", () => {
+  it("carry the licence note, so an inferred licence is not shown bare", async () => {
+    const { modelCard } = await import("../src/panels/lab/environment");
+    const gesture = modelCard("gesture_recognizer.task")!;
+    expect(gesture.license).toBe("Apache-2.0");
+    expect(gesture.licenseNote).toMatch(/model card states no licence/);
+    expect(modelCard("efficientdet_lite0.tflite")!.licenseNote).toBe("");
+  });
+});

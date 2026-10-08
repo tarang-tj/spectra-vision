@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ReactNode, RefObject } from "react";
+import type { RefObject } from "react";
 import {
   Camera,
   Expand,
@@ -39,8 +39,6 @@ export default function CameraStage(props: {
   actions: RefObject<StageActions | null>;
   /** A finished recording, for the share card. */
   onClip: (clip: Clip) => void;
-  /** Shell overlays that belong on the stage (the first-run tips). */
-  children?: ReactNode;
 }) {
   const { mode, paused, status, error, onRetry, onDemo, notice } = props,
     { source, mirror } = props.data;
@@ -143,9 +141,7 @@ export default function CameraStage(props: {
             Try demo
           </button>
         </div>
-      ) : (
-        props.children
-      )}
+      ) : null}
       <div className="stage-bottom">
         <div className="playback">
           <button

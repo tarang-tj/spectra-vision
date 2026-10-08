@@ -9,12 +9,16 @@ import { toJson, toMarkdown } from "./benchmark-report";
 import type { BenchReport } from "./benchmark-report";
 import { describeDevice, downloadText, stageCanvasSize } from "./environment";
 import { figure } from "./live-charts";
+import { testHooksEnabled } from "../../test-hooks";
 
-// The e2e suite shortens the run through this hook. A shortened run says so
-// in the panel and in both exports; it is never presented as the standard one.
+// The e2e suite shortens the run through this hook, which is read only on a
+// page opened with `?spectra-test`. A shortened run says so in the panel and
+// in both exports; it is never presented as the standard one.
 type TestFlag = { measureMs?: number; warmupMs?: number };
 const testFlag = (): TestFlag =>
-  (window as Window & { __spectraLabTest?: TestFlag }).__spectraLabTest ?? {};
+  (testHooksEnabled() &&
+    (window as Window & { __spectraLabTest?: TestFlag }).__spectraLabTest) ||
+  {};
 
 // The last report survives closing and reopening the Lab tab.
 let lastReport: BenchReport | null = null;

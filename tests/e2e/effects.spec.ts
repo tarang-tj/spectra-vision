@@ -57,7 +57,8 @@ async function open(page: Page) {
       return context;
     } as typeof getContext;
   });
-  await page.goto("./", { waitUntil: "domcontentloaded" });
+  // The GL object counters exist only on a page opened with this flag.
+  await page.goto("./?spectra-test", { waitUntil: "domcontentloaded" });
   await ready(page);
 }
 async function ready(page: Page) {
