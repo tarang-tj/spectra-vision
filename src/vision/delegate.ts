@@ -45,6 +45,41 @@ export function gpuStartTimeout(progress: StartProgress): string | null {
     : null;
 }
 
+/** Why a renderer of this name cannot serve the GPU delegate, or null when it
+ * can. A software renderer (SwiftShader, llvmpipe) does run the GPU path, but
+ * so slowly that one abandoned start keeps the browser's GPU process busy long
+ * after the fallback (measured: 16 s to minutes), and a worker cannot be
+ * interrupted inside that call. So it is refused before it starts. */
+export function softwareRendererReason(name: string | null): string | null {
+  if (name === null) return "this browser gave no WebGL2 context";
+  return /swiftshader|llvmpipe|software|basic render/i.test(name)
+    ? `this browser draws WebGL in software (${name})`
+    : null;
+}
+
+let refusal: string | null | undefined;
+
+/** Why GPU cannot be used on this page, or null when it can be tried. Asked
+ * only when a task requests GPU; the answer is kept. It opens one throwaway
+ * WebGL context to read the renderer name and releases it at once. */
+export function gpuUnavailable(): string | null {
+  if (refusal !== undefined) return refusal;
+  refusal = null;
+  try {
+    // No document (unit tests, workers): nothing is known, so GPU is tried.
+    if (typeof document === "undefined") return refusal;
+    const gl = document.createElement("canvas").getContext("webgl2"),
+      info = gl?.getExtension("WEBGL_debug_renderer_info"),
+      name =
+        gl && info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
+    gl?.getExtension("WEBGL_lose_context")?.loseContext();
+    refusal = softwareRendererReason(gl ? name : null);
+  } catch {
+    /* The probe failing says nothing about the delegate: let it try. */
+  }
+  return refusal;
+}
+
 // The lab's delegate switch: one choice per task kind, kept for the page's
 // lifetime only. With no choice a task runs on the delegate its mode asks for.
 const choices = new Map<TaskKind, Delegate>(),

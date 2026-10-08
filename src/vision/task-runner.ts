@@ -3,6 +3,7 @@ import { beginStatus } from "../telemetry/task-status";
 import {
   fallbackDelegate,
   gpuStartTimeout,
+  gpuUnavailable,
   onDelegateChoice,
   requestedDelegate,
 } from "./delegate";
@@ -52,7 +53,7 @@ export function createTaskRunner(
   spawn: (url: string) => WorkerLike = (url) => new Worker(url),
 ): TaskRunner {
   let worker: WorkerLike | null = null,
-    requested: Delegate = requestedDelegate(spec),
+    requested: Delegate = spec.delegate,
     active: Delegate = requested,
     ready = false,
     busy = false,
@@ -62,8 +63,17 @@ export function createTaskRunner(
     started = 0,
     firstSent = 0,
     watchdog: ReturnType<typeof setTimeout> | undefined,
-    note = "",
-    status = beginStatus(spec.kind, spec.model, requested, active, note);
+    note = "";
+  // Settle what to run on: the requested delegate, unless GPU is requested
+  // where it is known not to be usable. Then it is CPU from the start.
+  const choose = () => {
+    requested = requestedDelegate(spec);
+    const refused = requested === "GPU" ? gpuUnavailable() : null;
+    active = refused ? "CPU" : requested;
+    note = refused ? `GPU was requested but ${refused}. Running on CPU.` : "";
+  };
+  choose();
+  let status = beginStatus(spec.kind, spec.model, requested, active, note);
 
   const stop = () => {
     clearTimeout(watchdog);
@@ -175,8 +185,7 @@ export function createTaskRunner(
     const next = requestedDelegate(spec);
     if (disposed || kind !== spec.kind || next === requested) return;
     stop();
-    requested = active = next;
-    note = "";
+    choose();
     ready = busy = produced = false;
     start();
   });

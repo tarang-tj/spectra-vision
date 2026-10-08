@@ -6,7 +6,9 @@ import {
   chosenDelegate,
   delegateWatchers,
   gpuStartTimeout,
+  gpuUnavailable,
   requestedDelegate,
+  softwareRendererReason,
 } from "../src/vision/delegate";
 import { createTaskRunner } from "../src/vision/task-runner";
 import { taskStatus } from "../src/telemetry/task-status";
@@ -66,6 +68,35 @@ describe("time-bounded GPU start: the decision", () => {
   it("keeps both bounds to a few seconds, far below the 45 s load timeout", () => {
     expect(GPU_READY_LIMIT_MS).toBeLessThanOrEqual(10_000);
     expect(GPU_FIRST_RESULT_LIMIT_MS).toBeLessThanOrEqual(10_000);
+  });
+});
+
+describe("GPU refused up front on a software renderer", () => {
+  it("refuses software renderers and a missing WebGL2 context, with the reason", () => {
+    expect(
+      softwareRendererReason(
+        "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)",
+      ),
+    ).toMatch(/draws WebGL in software \(ANGLE .*SwiftShader/);
+    expect(softwareRendererReason("llvmpipe (LLVM 15.0.7, 256 bits)")).toMatch(
+      /in software/,
+    );
+    expect(softwareRendererReason("Microsoft Basic Render Driver")).toMatch(
+      /in software/,
+    );
+    expect(softwareRendererReason(null)).toMatch(/no WebGL2 context/);
+  });
+  it("lets hardware renderers, and renderers with a withheld name, try GPU", () => {
+    expect(
+      softwareRendererReason(
+        "ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Version)",
+      ),
+    ).toBeNull();
+    expect(softwareRendererReason("Mali-G78")).toBeNull();
+    expect(softwareRendererReason("")).toBeNull();
+  });
+  it("knows nothing without a document, so GPU is tried", () => {
+    expect(gpuUnavailable()).toBeNull();
   });
 });
 

@@ -9,12 +9,6 @@ const catalogue = async () =>
     await readFile(resolve("scripts/models.json"), "utf8"),
   ) as Catalogue;
 
-// The GPU delegate is exercised only on request (SPECTRA_TEST_GPU=1). On a
-// software renderer under load, one GPU start can keep the browser's GPU
-// process busy for a minute, which stalls every later step of a test. The
-// decision logic and the restart path are covered by tests/lab-delegate.test.ts.
-const withGpu = process.env.SPECTRA_TEST_GPU === "1";
-
 // Counts vision workers, so a leaked one shows up as a number.
 async function watchWorkers(page: Page) {
   await page.addInitScript(() => {
@@ -127,9 +121,9 @@ test("lab shows measured, ordered latency figures, charts and model cards on the
 test("delegate switch restarts the task, reports the delegate truthfully and leaves one worker", async ({
   page,
 }) => {
-  test.skip(!withGpu, "GPU delegate runs only with SPECTRA_TEST_GPU=1");
-  // A software GPU can take its whole start bound before the fallback.
-  test.setTimeout(300_000);
+  // On a software renderer (this suite's flags, CI) GPU is refused with the
+  // reason shown; on real hardware it runs. Both are truthful outcomes.
+  test.setTimeout(240_000);
   await watchWorkers(page);
   await openLab(page);
   await tab(page, "Hands").click();
@@ -143,7 +137,6 @@ test("delegate switch restarts the task, reports the delegate truthfully and lea
   // Either GPU really runs, or the fallback is spelled out. Never silence.
   await expect(line).toHaveText(
     /^(Running on GPU\.|GPU was requested but .+ Running on CPU\.)$/,
-    { timeout: 150_000 },
   );
   await expect
     .poll(() => number(page, "lab-count-hand"), { timeout: 60_000 })
@@ -153,7 +146,7 @@ test("delegate switch restarts the task, reports the delegate truthfully and lea
   expect(p50).toBeLessThanOrEqual(await number(page, "lab-max-hand"));
   expect((await workers(page)).alive).toBe(1);
   await cpu.click();
-  await expect(line).toHaveText("Running on CPU.", { timeout: 150_000 });
+  await expect(line).toHaveText("Running on CPU.");
   expect((await workers(page)).alive).toBe(1);
   // Leaving the Lab and coming back keeps one worker and the same mode.
   await tab(page, "Inspect").click();
@@ -179,8 +172,7 @@ test("shortened benchmark exports reproducible JSON and Markdown and restores th
   // mode and put it back.
   await page.getByRole("checkbox", { name: "Objects" }).uncheck();
   await page.getByRole("checkbox", { name: "Hands" }).check();
-  if (!withGpu) await page.getByRole("checkbox", { name: "GPU" }).uncheck();
-  const delegates = withGpu ? ["CPU", "GPU"] : ["CPU"];
+  const delegates = ["CPU", "GPU"];
   await page.getByRole("button", { name: "Run benchmark" }).click();
   await expect(
     page.getByRole("button", { name: "Stop benchmark" }),
