@@ -16,20 +16,17 @@ export function contour(
   color: Rgb,
   strength: number,
 ) {
-  lines.ribbon();
+  const out = lines.path;
+  let n = 0;
   for (let i = 0; i < path.length; i++) {
     const p = face[path[i]];
-    if (p)
-      lines.point(
-        px(frame, p),
-        py(frame, p),
-        width,
-        color[0],
-        color[1],
-        color[2],
-        strength,
-      );
+    if (!p) continue;
+    out[n * 4] = px(frame, p);
+    out[n * 4 + 1] = py(frame, p);
+    out[n * 4 + 2] = width;
+    out[n++ * 4 + 3] = strength;
   }
+  lines.strip(n, color);
 }
 /** Batch the glow of one iris: `ring` is its centre and two opposite rim
  * points, `open` how open the eye is (0 puts it out), `wide` enlarges it. */
@@ -48,8 +45,8 @@ export function iris(
   const radius = Math.max(2, span(frame, a, b) / 2) * (1 + 0.5 * wide),
     x = px(frame, c),
     y = py(frame, c);
-  lines.dot(x, y, radius * 4.5, MINT[0], MINT[1], MINT[2], 0.55 * open);
-  lines.dot(x, y, radius * 1.6, WHITE[0], WHITE[1], WHITE[2], open);
+  lines.dot(x, y, radius * 4.5, MINT, 0.55 * open);
+  lines.dot(x, y, radius * 1.6, WHITE, open);
 }
 
 /** The face as the pose model sees it, for modes with no face mesh: a glow
@@ -65,8 +62,8 @@ export function poseFace(
   for (let i = 2; i <= 5; i += 3) {
     const x = px(frame, pose[i]),
       y = py(frame, pose[i]);
-    lines.dot(x, y, size * 0.55, MINT[0], MINT[1], MINT[2], 0.55);
-    lines.dot(x, y, size * 0.2, WHITE[0], WHITE[1], WHITE[2], 1);
+    lines.dot(x, y, size * 0.55, MINT, 0.55);
+    lines.dot(x, y, size * 0.2, WHITE, 1);
   }
   if (visible(pose[9]) && visible(pose[10]))
     lines.segment(
@@ -75,9 +72,7 @@ export function poseFace(
       px(frame, pose[10]),
       py(frame, pose[10]),
       size * 0.22,
-      LAVENDER[0],
-      LAVENDER[1],
-      LAVENDER[2],
+      LAVENDER,
       0.7,
     );
   return true;

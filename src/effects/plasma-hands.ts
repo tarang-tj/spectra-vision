@@ -32,20 +32,16 @@ function arc(
   const nx = -dy / length,
     ny = dx / length,
     sway = length * 0.16 + 2;
-  lines.ribbon();
+  const path = lines.path;
   for (let i = 0; i <= STEPS; i++) {
     const t = i / STEPS,
       off = arcOffset(t, seed, time) * sway;
-    lines.point(
-      ax + dx * t + nx * off,
-      ay + dy * t + ny * off,
-      width * (0.55 + 0.45 * Math.sin(Math.PI * t)),
-      color[0],
-      color[1],
-      color[2],
-      strength,
-    );
+    path[i * 4] = ax + dx * t + nx * off;
+    path[i * 4 + 1] = ay + dy * t + ny * off;
+    path[i * 4 + 2] = width * (0.55 + 0.45 * Math.sin(Math.PI * t));
+    path[i * 4 + 3] = strength;
   }
+  lines.strip(STEPS + 1, color);
 }
 
 /** Plasma hands: energy arcs between the fingertips of each hand and between
@@ -122,9 +118,7 @@ const plasmaHands: EffectDef = {
                 tips[base + 2 * k],
                 tips[base + 2 * k + 1],
                 size * 0.2,
-                MINT[0],
-                MINT[1],
-                MINT[2],
+                MINT,
                 0.8,
               );
             found++;
@@ -166,9 +160,7 @@ const plasmaHands: EffectDef = {
                 tips[h * 12 + 10],
                 tips[h * 12 + 11],
                 size * (0.5 + 0.5 * near),
-                LAVENDER[0],
-                LAVENDER[1],
-                LAVENDER[2],
+                LAVENDER,
                 0.5 * near,
               );
           }

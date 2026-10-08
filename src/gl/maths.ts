@@ -43,33 +43,40 @@ export function smoothPath(
   steps: number,
   out: Float32Array,
 ): number {
-  const room = out.length >> 1;
+  const room = out.length >> 1,
+    last = count - 1;
   let written = 0;
   if (count < 1 || room < 1) return 0;
-  const at = (i: number, axis: number) =>
-    points[2 * clamp(i, 0, count - 1) + axis];
-  for (let i = 0; i < count - 1; i++)
+  // No helper closure here: this runs per ribbon per frame.
+  for (let i = 0; i < last; i++) {
+    const a = 2 * Math.max(0, i - 1),
+      b = 2 * i,
+      c = 2 * (i + 1),
+      d = 2 * Math.min(last, i + 2);
     for (let s = 0; s < steps; s++) {
       if (written >= room - 1) break;
-      const t = s / steps;
-      out[2 * written] = catmullRom(
-        at(i - 1, 0),
-        at(i, 0),
-        at(i + 1, 0),
-        at(i + 2, 0),
-        t,
-      );
-      out[2 * written + 1] = catmullRom(
-        at(i - 1, 1),
-        at(i, 1),
-        at(i + 1, 1),
-        at(i + 2, 1),
-        t,
-      );
+      // catmullRom written out for both axes: a call here would box its
+      // arguments on the heap for every point of every ribbon.
+      const t = s / steps,
+        t2 = t * t,
+        t3 = t2 * t;
+      for (let axis = 0; axis < 2; axis++) {
+        const p0 = points[a + axis],
+          p1 = points[b + axis],
+          p2 = points[c + axis],
+          p3 = points[d + axis];
+        out[2 * written + axis] =
+          0.5 *
+          (2 * p1 +
+            (p2 - p0) * t +
+            (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+            (3 * p1 - p0 - 3 * p2 + p3) * t3);
+      }
       written++;
     }
-  out[2 * written] = at(count - 1, 0);
-  out[2 * written + 1] = at(count - 1, 1);
+  }
+  out[2 * written] = points[2 * last];
+  out[2 * written + 1] = points[2 * last + 1];
   return written + 1;
 }
 

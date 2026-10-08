@@ -1,4 +1,5 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+import type { Rgb } from "./color";
 import { LINE_FRAGMENT, LINE_VERTEX } from "./line-shaders";
 import {
   createBuffer,
@@ -10,13 +11,19 @@ import { createProgram } from "./shader";
 
 const MAX_QUADS = 4096,
   STRIDE = 9,
-  QUAD_FLOATS = 6 * STRIDE;
+  QUAD_FLOATS = 6 * STRIDE,
+  PATH_POINTS = 256;
+// The six corners of a quad as two triangles: which end, which side.
+const END = [0, 0, 1, 1, 0, 1],
+  SIDE = [1, -1, 1, 1, -1, -1];
 
 /** Batches glowing capsules, dots and ribbons into one draw call. Coordinates
  * and widths are CSS pixels; a width is the glow radius, and the bright core
- * is about a fifth of it. Colour is linear r, g, b plus a strength. The batch
- * reuses one array, so filling it every frame allocates nothing. Quads past
- * the capacity are dropped. */
+ * is about a fifth of it. The batch reuses its arrays and its inner loops
+ * call nothing, so filling it every frame allocates nothing (a number passed
+ * through a function call can cost a heap allocation each; a ribbon is
+ * therefore handed over as an array, not point by point). Quads past the
+ * capacity are dropped. */
 export type LineBatch = {
   segment(
     x0: number,
@@ -24,32 +31,16 @@ export type LineBatch = {
     x1: number,
     y1: number,
     width: number,
-    r: number,
-    g: number,
-    b: number,
+    color: Rgb,
     strength: number,
   ): void;
-  dot(
-    x: number,
-    y: number,
-    radius: number,
-    r: number,
-    g: number,
-    b: number,
-    strength: number,
-  ): void;
-  /** Start a ribbon: a strip with smooth joins and no round caps. */
-  ribbon(): void;
-  /** Add the next point of the ribbon started last. */
-  point(
-    x: number,
-    y: number,
-    width: number,
-    r: number,
-    g: number,
-    b: number,
-    strength: number,
-  ): void;
+  dot(x: number, y: number, radius: number, color: Rgb, strength: number): void;
+  /** Scratch for the next ribbon: x, y, width, strength per point. Fill the
+   * first points of it, then call strip(). Holds PATH_POINTS points. */
+  path: Float32Array;
+  /** Batch the first `count` points of `path` as one ribbon: a strip with
+   * smooth joins and no round caps. */
+  strip(count: number, color: Rgb): void;
   /** Draw what was batched into the bound target and empty the batch.
    * `solid` draws mattes; `core` is how white the hot centre is (0..1). */
   flush(width: number, height: number, solid?: boolean, core?: number): void;
@@ -87,72 +78,16 @@ export function createLineBatch(gl: WebGL2RenderingContext): LineBatch {
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
   let used = 0;
-  // A ribbon point is [x, y, width, r, g, b, strength]. The ribbon keeps its
-  // last two points and the normal at the older one; a piece is emitted once
-  // the point after it is known, so each join faces along its neighbours.
-  const older = new Float32Array(7),
-    newer = new Float32Array(7);
-  let count = 0,
-    olderNx = 0,
-    olderNy = 0;
-
-  // One corner: position, then (along, across, length) for the fragment shader.
-  const corner = (
-    x: number,
-    y: number,
-    along: number,
-    across: number,
-    length: number,
-    c: Float32Array,
-  ) => {
-    data[used++] = x;
-    data[used++] = y;
-    data[used++] = along;
-    data[used++] = across;
-    data[used++] = length;
-    data[used++] = c[3];
-    data[used++] = c[4];
-    data[used++] = c[5];
-    data[used++] = c[6];
-  };
-  const full = () => used + QUAD_FLOATS > data.length;
-  const piece = (
-    a: Float32Array,
-    b: Float32Array,
-    bnx: number,
-    bny: number,
-  ) => {
-    if (full()) return;
-    const ax = olderNx * a[2],
-      ay = olderNy * a[2],
-      bx = bnx * b[2],
-      by = bny * b[2];
-    corner(a[0] + ax, a[1] + ay, 0.5, 1, 1, a);
-    corner(a[0] - ax, a[1] - ay, 0.5, -1, 1, a);
-    corner(b[0] + bx, b[1] + by, 0.5, 1, 1, b);
-    corner(b[0] + bx, b[1] + by, 0.5, 1, 1, b);
-    corner(a[0] - ax, a[1] - ay, 0.5, -1, 1, a);
-    corner(b[0] - bx, b[1] - by, 0.5, -1, 1, b);
-  };
-  // Emit the last piece of the open ribbon, whose end has no further neighbour.
-  const finish = () => {
-    if (count >= 2) {
-      const dx = newer[0] - older[0],
-        dy = newer[1] - older[1],
-        span = Math.hypot(dx, dy) || 1;
-      piece(older, newer, -dy / span, dx / span);
-    }
-    count = 0;
-  };
-  const one = new Float32Array(7);
+  const path = new Float32Array(PATH_POINTS * 4);
 
   return {
-    segment(x0, y0, x1, y1, width, r, g, b, strength) {
-      finish();
-      if (full() || width <= 0 || strength <= 0) return;
+    path,
+    segment(x0, y0, x1, y1, width, color, strength) {
+      if (used + QUAD_FLOATS > data.length || width <= 0 || strength <= 0)
+        return;
       let dx = x1 - x0,
         dy = y1 - y0;
-      const length = Math.hypot(dx, dy);
+      const length = Math.sqrt(dx * dx + dy * dy);
       if (length > 1e-4) {
         dx /= length;
         dy /= length;
@@ -160,51 +95,73 @@ export function createLineBatch(gl: WebGL2RenderingContext): LineBatch {
         dx = 1;
         dy = 0;
       }
-      const ex = dx * width,
-        ey = dy * width,
-        nx = -dy * width,
-        ny = dx * width,
-        span = length / width;
-      one[3] = r;
-      one[4] = g;
-      one[5] = b;
-      one[6] = strength;
-      corner(x0 - ex + nx, y0 - ey + ny, -1, 1, span, one);
-      corner(x0 - ex - nx, y0 - ey - ny, -1, -1, span, one);
-      corner(x1 + ex + nx, y1 + ey + ny, span + 1, 1, span, one);
-      corner(x1 + ex + nx, y1 + ey + ny, span + 1, 1, span, one);
-      corner(x0 - ex - nx, y0 - ey - ny, -1, -1, span, one);
-      corner(x1 + ex - nx, y1 + ey - ny, span + 1, -1, span, one);
-    },
-    dot(x, y, radius, r, g, b, strength) {
-      this.segment(x, y, x, y, radius, r, g, b, strength);
-    },
-    ribbon: finish,
-    point(x, y, width, r, g, b, strength) {
-      if (count > 0 && Math.hypot(x - newer[0], y - newer[1]) < 0.01) return;
-      if (count > 0) {
-        const from = count > 1 ? older : newer,
-          dx = x - from[0],
-          dy = y - from[1],
-          span = Math.hypot(dx, dy) || 1,
-          nx = -dy / span,
-          ny = dx / span;
-        if (count > 1) piece(older, newer, nx, ny);
-        older.set(newer);
-        olderNx = nx;
-        olderNy = ny;
+      const span = length / width;
+      for (let k = 0; k < 6; k++) {
+        // Each end is pushed out by the width so the cap has room.
+        const end = END[k],
+          side = SIDE[k],
+          out = end ? width : -width;
+        data[used++] = (end ? x1 : x0) + dx * out - dy * width * side;
+        data[used++] = (end ? y1 : y0) + dy * out + dx * width * side;
+        data[used++] = end ? span + 1 : -1;
+        data[used++] = side;
+        data[used++] = span;
+        data[used++] = color[0];
+        data[used++] = color[1];
+        data[used++] = color[2];
+        data[used++] = strength;
       }
-      newer[0] = x;
-      newer[1] = y;
-      newer[2] = width;
-      newer[3] = r;
-      newer[4] = g;
-      newer[5] = b;
-      newer[6] = strength;
-      count++;
+    },
+    dot(x, y, radius, color, strength) {
+      this.segment(x, y, x, y, radius, color, strength);
+    },
+    strip(count, color) {
+      const n = Math.min(count, PATH_POINTS);
+      // Offsets of the previous point's two edges, and whether it has them.
+      let px = 0,
+        py = 0,
+        pnx = 0,
+        pny = 0,
+        ps = 0,
+        open = false;
+      for (let i = 0; i < n; i++) {
+        // The join at a point faces along its two neighbours.
+        const a = Math.max(0, i - 1) * 4,
+          b = Math.min(n - 1, i + 1) * 4,
+          x = path[i * 4],
+          y = path[i * 4 + 1],
+          w = path[i * 4 + 2],
+          s = path[i * 4 + 3],
+          tx = path[b] - path[a],
+          ty = path[b + 1] - path[a + 1],
+          length = Math.sqrt(tx * tx + ty * ty);
+        // Neighbours half a pixel apart give no usable direction.
+        if (length < 0.5) continue;
+        const nx = (-ty / length) * w,
+          ny = (tx / length) * w;
+        if (open && used + QUAD_FLOATS <= data.length)
+          for (let k = 0; k < 6; k++) {
+            const end = END[k],
+              side = SIDE[k];
+            data[used++] = end ? x + nx * side : px + pnx * side;
+            data[used++] = end ? y + ny * side : py + pny * side;
+            data[used++] = 0.5;
+            data[used++] = side;
+            data[used++] = 1;
+            data[used++] = color[0];
+            data[used++] = color[1];
+            data[used++] = color[2];
+            data[used++] = end ? s : ps;
+          }
+        px = x;
+        py = y;
+        pnx = nx;
+        pny = ny;
+        ps = s;
+        open = true;
+      }
     },
     flush(width, height, solid = false, core = 0.6) {
-      finish();
       if (!used) return;
       gl.useProgram(program.handle);
       gl.uniform2f(program.loc("uRes"), width, height);

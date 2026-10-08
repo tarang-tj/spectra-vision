@@ -156,9 +156,7 @@ export function drawBones(
         fx(frame, set, f, b),
         fy(frame, set, f, b),
         w,
-        color[0],
-        color[1],
-        color[2],
+        color,
         strength,
       );
     }
@@ -189,9 +187,7 @@ export function drawSilhouette(
         fx(frame, set, f, b),
         fy(frame, set, f, b),
         shape[e + 2] * unit * 1.25,
-        color[0],
-        color[1],
-        color[2],
+        color,
         strength,
       );
     }
@@ -201,9 +197,7 @@ export function drawSilhouette(
         fx(frame, set, f, 0),
         fy(frame, set, f, 0),
         unit * 52,
-        color[0],
-        color[1],
-        color[2],
+        color,
         strength,
       );
   }

@@ -125,9 +125,7 @@ const starfieldPull: EffectDef = {
                 rect.x + pulls[i * 3] * rect.h,
                 rect.y + pulls[i * 3 + 1] * rect.h,
                 rect.h * 0.07 * pulls[i * 3 + 2],
-                LAVENDER[0],
-                LAVENDER[1],
-                LAVENDER[2],
+                LAVENDER,
                 0.35,
               );
             kit.flush(false, 0.4);

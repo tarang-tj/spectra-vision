@@ -132,9 +132,7 @@ const faceLight: EffectDef = {
                 (px(frame, face[13]) + px(frame, face[14])) / 2,
                 (py(frame, face[13]) + py(frame, face[14])) / 2,
                 size * (0.12 + 0.3 * jaw),
-                lip[0],
-                lip[1],
-                lip[2],
+                lip,
                 jaw,
               );
             drawn++;

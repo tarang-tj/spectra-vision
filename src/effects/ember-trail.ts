@@ -172,9 +172,7 @@ const emberTrail: EffectDef = {
               rect.x + emit[i * 4] * rect.h,
               rect.y + emit[i * 4 + 1] * rect.h,
               scale * rect.h * 0.14,
-              MINT[0],
-              MINT[1],
-              MINT[2],
+              MINT,
               0.55,
             );
           kit.flush(false, 0.5);

@@ -83,23 +83,19 @@ const neonRibbons: EffectDef = {
               width = Math.max(4, widths[s]);
             let x = 0,
               y = 0;
-            lines.ribbon();
+            const path = lines.path;
             for (let i = 0; i < n; i++) {
               // 0 at the tail, 1 at the joint: the ribbon tapers and fades.
               const t = n > 1 ? i / (n - 1) : 1;
               x = rect.x + (mirror ? 1 - curve[2 * i] : curve[2 * i]) * rect.w;
               y = rect.y + curve[2 * i + 1] * rect.h;
-              lines.point(
-                x,
-                y,
-                width * (0.25 + 0.75 * t),
-                color[0],
-                color[1],
-                color[2],
-                t * t,
-              );
+              path[i * 4] = x;
+              path[i * 4 + 1] = y;
+              path[i * 4 + 2] = width * (0.25 + 0.75 * t);
+              path[i * 4 + 3] = t * t;
             }
-            lines.dot(x, y, width * 1.1, color[0], color[1], color[2], 0.6);
+            lines.strip(n, color);
+            lines.dot(x, y, width * 1.1, color, 0.6);
             drawn++;
           }
           if (!drawn) return null;
