@@ -1,17 +1,39 @@
-/* First-run tips: a card plus an outline on the control each tip is about.
-   Beside the rail the card sits on the stage, clear of its controls; in one
-   column it sits under the stage. It never covers a control or takes focus. */
-.coach {
+/* Tips: a pill in the heading band, a card that opens in the page flow under
+   that band, and an outline on the control each tip is about. The card takes
+   its own row above the workspace, so it never covers the stage, the rail or
+   any control, and it takes no focus. */
+.actions .button.tips-pill {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 0;
+  gap: 8px;
+  padding-left: 18px;
+  padding-right: 18px;
+}
+/* A first visit: the pill asks to be noticed. No motion, so nothing to pause. */
+.tips-pill[data-fresh] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.tips-pill[data-fresh]::after {
+  content: "";
   position: absolute;
-  top: 48px;
-  right: 12px;
-  z-index: 3;
-  width: min(300px, calc(100% - 24px));
+  top: -5px;
+  right: -5px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid #090e11;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.coach {
+  position: relative;
+  width: min(440px, 100%);
+  margin: 0 0 14px auto;
   padding: 14px 44px 14px 16px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #071016ee;
-  backdrop-filter: blur(12px);
+  background: #071016;
 }
 .coach-count {
   font-size: 11px;
@@ -51,13 +73,27 @@
   outline-offset: 5px;
   border-radius: 8px;
 }
+/* Between the phone layout and the full desktop one the heading and the
+   actions share a tight row: the pill keeps its icon and its name, not its
+   text. */
+@media (min-width: 761px) and (max-width: 1100px) {
+  .tips-pill span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .actions .button.tips-pill {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
 @media (max-width: 760px) {
   .coach {
-    position: relative;
-    top: auto;
-    right: auto;
     width: auto;
-    margin-top: 12px;
+    margin: 0 0 12px;
     padding: 10px 40px 10px 12px;
   }
   .coach strong + p {

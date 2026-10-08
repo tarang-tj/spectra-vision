@@ -1,6 +1,7 @@
 import {
   Aperture,
   Camera,
+  Lightbulb,
   Search,
   SquareArrowOutUpRight,
   ShieldCheck,
@@ -18,6 +19,7 @@ export default function Header({
   onUpload,
   pending,
   onPalette,
+  tips,
 }: {
   mode: ModeDef;
   onMode: (id: string) => void;
@@ -26,6 +28,8 @@ export default function Header({
   onUpload: (f: File) => void;
   pending: boolean;
   onPalette: () => void;
+  /** The Tips pill: whether its card is open, and whether it is a first visit. */
+  tips: { open: boolean; fresh: boolean; onToggle: () => void };
 }) {
   return (
     <>
@@ -70,6 +74,17 @@ export default function Header({
           <p>Your camera. A new way to see.</p>
         </div>
         <div className="actions" data-coach="source">
+          <button
+            className="button tips-pill"
+            data-fresh={tips.fresh || undefined}
+            aria-expanded={tips.open}
+            aria-controls="coach-card"
+            title={tips.fresh ? "New here? Three short tips" : undefined}
+            onClick={tips.onToggle}
+          >
+            <Lightbulb size={20} />
+            <span>Tips</span>
+          </button>
           <button
             className="button primary"
             onClick={onCamera}

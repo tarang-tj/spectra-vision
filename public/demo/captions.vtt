@@ -1,49 +1,71 @@
 WEBVTT
 
-00:00:00.519 --> 00:00:01.469
-Meet Spectra.
+00:00:00.600 --> 00:00:05.565
+This is Spectra version two, a computer
+vision studio that runs in your browser.
 
-00:00:01.489 --> 00:00:02.942
-Reality, augmented.
+00:00:05.665 --> 00:00:09.435
+Objects mode tracks each
+detected box with an ID.
 
-00:00:04.540 --> 00:00:06.540
-Find the objects in your frame.
+00:00:09.867 --> 00:00:13.402
+Body draws a skeleton from
+thirty-three pose landmarks.
 
-00:00:06.540 --> 00:00:12.447
-Real model detections, confidence scores, and motion trails, all
-processed on your device.
+00:00:13.833 --> 00:00:17.667
+In Hands, a pinch of thumb and
+index finger paints with light.
 
-00:00:14.519 --> 00:00:15.744
-Switch to Body.
+00:00:17.767 --> 00:00:21.985
+The inputs are the app's own demo
+photos, panned as short clips.
 
-00:00:15.744 --> 00:00:18.919
-Thirty-three landmarks form a glowing skeleton.
+00:00:22.400 --> 00:00:29.242
+New in version two: Face fits a mesh of four hundred
+seventy-eight points and scores smile, jaw and brows.
 
-00:00:18.919 --> 00:00:22.741
-Constellation strips away the scene so the movement takes center
-stage.
+00:00:29.667 --> 00:00:32.306
+Segment cuts the person out of the background.
 
-00:00:24.519 --> 00:00:26.719
-Hands turns a pinch into light.
+00:00:32.733 --> 00:00:36.482
+Gestures names the hand shape
+it sees, here an open palm.
 
-00:00:26.719 --> 00:00:30.519
-Thumb and index together draw a trail; release to stop.
+00:00:36.900 --> 00:00:40.499
+Fusion runs the pose, hand
+and face models together.
 
-00:00:30.519 --> 00:00:35.557
-This sample pans a generated still photo, with fresh inference on
-every frame.
+00:00:40.900 --> 00:00:43.326
+Effects are drawn from the model output.
 
-00:00:37.544 --> 00:00:40.079
-Record your canvas, then save it locally.
+00:00:43.426 --> 00:00:45.532
+Plasma arcs between fingertips.
 
-00:00:40.079 --> 00:00:41.054
-No microphone.
+00:00:45.933 --> 00:00:48.167
+Hologram is built from the cutout.
 
-00:00:41.294 --> 00:00:42.215
-No uploads.
+00:00:48.600 --> 00:00:50.578
+Aura glows around the body.
 
-00:00:44.494 --> 00:00:46.819
-Created by Tarang Jammalamadaka.
+00:00:51.000 --> 00:00:56.391
+The Lab charts measured latency and
+switches a model between CPU and GPU.
 
-00:00:46.819 --> 00:00:48.283
-Explore the live studio.
+00:00:56.800 --> 00:00:59.653
+Its benchmark measures twenty seconds per run.
+
+00:01:00.067 --> 00:01:03.368
+The video skips the wait
+and shows the real result.
+
+00:01:03.933 --> 00:01:06.210
+The same studio fits a phone screen.
+
+00:01:06.633 --> 00:01:08.718
+Everything runs in your browser.
+
+00:01:08.818 --> 00:01:10.391
+Nothing is uploaded.
+
+00:01:10.967 --> 00:01:12.604
+The link is on screen.

@@ -18,10 +18,11 @@ export function useShell() {
     [help, setHelp] = useState(false),
     [panel, setPanel] = useState<string | null>(null),
     [share, setShare] = useState<ShareResult | null>(null),
-    // Step of the first-run tips, or null once they were finished or skipped.
-    [coach, setCoach] = useState<number | null>(() =>
-      readFlag(COACH_KEY) ? null : 0,
-    );
+    // Step of the tips while their card is open, or null while it is closed.
+    [coach, setCoach] = useState<number | null>(null),
+    // True until the tips have been finished or closed once: the Tips pill
+    // draws attention to itself instead of the card opening over the page.
+    [coachFresh, setCoachFresh] = useState(() => !readFlag(COACH_KEY));
   const scroll = useRef(0);
 
   // The clip in the share card lives in this tab's memory: free it when the
@@ -61,8 +62,10 @@ export function useShell() {
   };
   const endCoach = () => {
     writeFlag(COACH_KEY, "done");
+    setCoachFresh(false);
     setCoach(null);
   };
+  const toggleCoach = () => (coach === null ? setCoach(0) : endCoach());
   return {
     palette,
     setPalette,
@@ -78,6 +81,8 @@ export function useShell() {
     share,
     setShare,
     coach,
+    coachFresh,
+    toggleCoach,
     coachTarget: coach === null ? undefined : COACH_STEPS[coach]?.target,
     setCoach,
     endCoach,

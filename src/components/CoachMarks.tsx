@@ -22,10 +22,12 @@ export const COACH_STEPS = [
   },
 ] as const;
 
-/** A small card shown on a first visit: on the stage, or under it in the
- * one-column layout. It is not modal: it takes no focus, blocks no control
- * and can be ignored. The control each tip
- * refers to is outlined with CSS only, so nothing is measured or repositioned. */
+/** The tips card, opened from the Tips pill in the heading band (which draws
+ * attention to itself on a first visit) or from the palette. It sits in the
+ * page flow between the heading band and the workspace, so it covers nothing:
+ * not the stage, not the rail. It is not modal: it takes no focus, blocks no
+ * control and can be ignored. The control each tip refers to is outlined with
+ * CSS only, so nothing is measured or repositioned. */
 export default function CoachMarks({
   step,
   onStep,
@@ -39,7 +41,12 @@ export default function CoachMarks({
     last = step === COACH_STEPS.length - 1;
   if (!tip) return null;
   return (
-    <div className="coach" role="group" aria-label="Getting started tips">
+    <div
+      id="coach-card"
+      className="coach"
+      role="group"
+      aria-label="Getting started tips"
+    >
       <p className="coach-count">
         Tip {step + 1} of {COACH_STEPS.length}
       </p>
