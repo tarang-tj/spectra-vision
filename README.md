@@ -6,7 +6,7 @@
 
 Seven modes run six real vision models on your camera: tracked object boxes, a body skeleton, hand-controlled light painting, a 478-point face mesh, a person cutout, gesture recognition, and body, hands and face together. Ten effects draw on what the models find, and a Lab tab measures how fast they run on your device. Everything runs in your browser.
 
-The 49-second, 1080p video demo was recorded on version 1.1 and shows the three original modes (Objects, Body, Hands) only. It includes neural narration and English captions timed to the speech. Version 1.1.1 replaced the original system voice; the footage shows the same real app and inference. Voice generation details are recorded in [asset provenance](docs/design/asset-provenance.md#demo-narration).
+The 74-second, 1080p video demo was recorded on version 2.0. It shows all seven modes, three effects, the Lab with a benchmark result from a real run, the phone layout and the immersive view, with synthetic neural narration and English captions timed to the speech. The footage is the real app with real inference at real speed; the one cut that skips time (the benchmark's wait) is said aloud and captioned. How it was made is recorded in [asset provenance](docs/design/asset-provenance.md#version-2-video-demo). The version 1.1.1 video stays at [its own address](https://tarang-tj.github.io/spectra-vision/demo/spectra-demo-v1.1.1.mp4).
 
 ![SPECTRA desktop interface concept](docs/design/concept-desktop.png)
 
