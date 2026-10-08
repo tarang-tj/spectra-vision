@@ -377,7 +377,7 @@ telemetry.on("frame", (e) => {}); // { time, dt, drawMs }  one per drawn stage f
 
 `src/shell/`, `src/components/`. The shell decides what is on screen; it never touches inference.
 
-- **Layout.** `App.tsx` composes the header, the workspace (stage, rail, effects tray, result card) and the footer. In the one-column layout (760 px and narrower, `use-narrow.ts`) the rail is placed after the tray in the markup as well, so keyboard focus follows the visual order. The first-run tips sit under the stage at every width, so they cover nothing on it.
+- **Layout.** `App.tsx` composes the header, the workspace (stage, rail, effects tray, result card) and the footer. In the one-column layout (760 px and narrower, `use-narrow.ts`) the rail is placed after the tray in the markup as well, and the first-run tips go under the stage instead of on it, so keyboard focus follows the visual order and the tips never cover a stage control. Beside the rail the tips sit on the stage, below the mode badge and clear of its controls: the desktop page has no free row for them without pushing the metrics strip off a 1536 x 1024 screen.
 - **Effects tray** (`StudioDeck`, `EffectsPicker`, `EffectIntensity`): one chip per effect of the current mode.
 - **Shortcuts** (`shortcuts.ts`, `use-shortcuts.ts`): one `keydown` listener on `window`, ignored while typing, during IME composition, on key repeat and while the palette is open.
 - **Command palette** (`commands.ts`, `palette-commands.ts`, `CommandPalette`): built from the registries only while it is open.

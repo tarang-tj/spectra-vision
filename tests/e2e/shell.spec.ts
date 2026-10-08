@@ -154,16 +154,13 @@ test("coach marks appear once, block nothing and are remembered", async ({
   await ready(page);
   const card = tips(page);
   await expect(card).toContainText("Tip 1 of 3");
-  // The card sits under the stage and covers none of it, at both desktop
+  // On the stage the card covers no control and no badge, at both desktop
   // sizes the layout is designed for.
   for (const size of [
     { width: 1280, height: 720 },
     { width: 1536, height: 1024 },
   ]) {
     await page.setViewportSize(size);
-    const stage = await page.locator(".camera-stage").boundingBox(),
-      box = await card.boundingBox();
-    expect(box!.y).toBeGreaterThanOrEqual(stage!.y + stage!.height);
     expect(await coveredByTips(page)).toEqual([]);
   }
   // Not modal: focus is left alone and the rest of the studio still works.
@@ -317,10 +314,6 @@ test("the immersive view fills the viewport, toggles off and leaves the page scr
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  // Without the first-run tips, which sit between the stage and the tray: with
-  // them the Immersive button is below the fold here, and scrolling to click
-  // it would change the scroll position this test restores.
-  await page.addInitScript(() => localStorage.setItem("spectra.coach.v1", "1"));
   await page.goto("./", { waitUntil: "domcontentloaded" });
   await ready(page);
   const stage = page.locator(".camera-stage");

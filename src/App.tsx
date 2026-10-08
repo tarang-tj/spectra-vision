@@ -152,9 +152,10 @@ export default function App() {
   // In one column the rail comes after the tray and the result card, so it is
   // also placed after them in the markup: focus then moves in reading order.
   const rail = <Inspector key="rail" />;
-  // The first-run tips sit under the stage, never on it: on the stage the
-  // card covered the picture, and on a phone the toolbar. They show while the
-  // stage has nothing more urgent to say.
+  // The first-run tips sit on the stage where it is tall enough to hold them
+  // clear of its controls. In one column it is not (the card covered the
+  // toolbar at 360 px), so there the card goes under the stage instead, while
+  // the stage has nothing more urgent to say.
   const tips = shell.coach !== null && !shell.immersive && (
       <CoachMarks
         key="tips"
@@ -204,9 +205,11 @@ export default function App() {
             notice={notice}
             actions={stageActions}
             onClip={(clip) => shell.setShare({ mode: modeId, ...clip })}
-          />
+          >
+            {!narrow && tips}
+          </CameraStage>
+          {narrow && stageClear && tips}
           {!narrow && rail}
-          {stageClear && tips}
           <StudioDeck
             key="deck"
             open={shell.tray}
