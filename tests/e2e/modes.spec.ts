@@ -220,7 +220,9 @@ test("fusion: three task kinds report with their own latency, one frame in fligh
 }) => {
   await page.addInitScript(() => {
     // Count frames handed to each vision worker against results received.
-    const stats = { created: 0, sent: 0, received: 0, maxInFlight: 0 };
+    // `open` is frames out with a worker that is still alive: a terminated
+    // worker never answers, so its frame is taken back off the count.
+    const stats = { created: 0, sent: 0, open: 0, maxInFlight: 0 };
     Object.assign(window, { spectraWorkerStats: stats });
     const Native = window.Worker;
     window.Worker = class extends Native {
@@ -235,16 +237,23 @@ test("fusion: three task kinds report with their own latency, one frame in fligh
         this.postMessage = (message: unknown, transfer?: unknown) => {
           if ((message as { type?: string })?.type === "frame") {
             stats.sent++;
+            stats.open++;
             stats.maxInFlight = Math.max(stats.maxInFlight, ++inFlight);
           }
           post(message, transfer as Transferable[]);
         };
         this.addEventListener("message", (event) => {
           if (event.data?.type === "result" || event.data?.type === "error") {
-            stats.received++;
+            stats.open--;
             inFlight--;
           }
         });
+        const terminate = this.terminate.bind(this);
+        this.terminate = () => {
+          stats.open -= inFlight;
+          inFlight = 0;
+          terminate();
+        };
       }
     };
   });
@@ -256,12 +265,14 @@ test("fusion: three task kinds report with their own latency, one frame in fligh
             spectraWorkerStats: {
               created: number;
               sent: number;
-              received: number;
+              open: number;
               maxInFlight: number;
             };
           }
         ).spectraWorkerStats,
     );
+  // Eleven model loads in one test: give it more than the default two minutes.
+  test.setTimeout(300_000);
   const errors = await open(page, "Fusion");
   // One row per part found, each with its own model's measured latency.
   await expect(row(page, "Body")).toContainText(/33 points · \d+ ms/);
@@ -272,7 +283,8 @@ test("fusion: three task kinds report with their own latency, one frame in fligh
   const running = await stats();
   expect(running.sent).toBeGreaterThan(6);
   expect(running.maxInFlight).toBe(1);
-  expect(running.sent - running.received).toBeLessThanOrEqual(3);
+  expect(running.open).toBeGreaterThanOrEqual(0);
+  expect(running.open).toBeLessThanOrEqual(3);
   await page.getByRole("button", { name: "Pause detection" }).click();
   const data = await session(page);
   expect(data.mode).toBe("fusion");
