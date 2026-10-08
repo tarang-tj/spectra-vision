@@ -559,7 +559,7 @@ test("the service worker registers only in production and caches models on deman
     /runtime\/wasm\/vision_wasm[\w]*_internal\.js$/,
     /runtime\/wasm\/vision_wasm[\w]*_internal\.wasm$/,
   ])
-    await expect.poll(() => cached(file)).toEqual(["spectra-assets-v1"]);
+    await expect.poll(() => cached(file)).toEqual(["spectra-assets-1.1.0"]);
   const unused = [
     /models\/hand_landmarker\.task$/,
     /models\/pose_landmarker/,
@@ -594,7 +594,7 @@ test("the service worker registers only in production and caches models on deman
   await ready(page);
   await expect
     .poll(() => cached(/models\/hand_landmarker\.task$/))
-    .toEqual(["spectra-assets-v1"]);
+    .toEqual(["spectra-assets-1.1.0"]);
   expect(await cached(/models\/pose_landmarker/)).toEqual([]);
   await page.context().setOffline(true);
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -603,4 +603,27 @@ test("the service worker registers only in production and caches models on deman
   await ready(page);
   await expect(page.locator(".detection-row")).toHaveCount(2);
   await page.context().setOffline(false);
+  // A worker for another build stores the page and its hashed script and
+  // style while it installs, before any page has told it anything: it can
+  // never take over with a shell it cannot serve.
+  const next = await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.register(
+      "sw.js?v=precache-check&r=1.1.0",
+      { scope: "./" },
+    );
+    const worker = registration.installing!;
+    await new Promise<void>((resolve) => {
+      const check = () => {
+        if (worker.state === "installed" || worker.state === "activated")
+          resolve();
+      };
+      worker.addEventListener("statechange", check);
+      check();
+    });
+    const cache = await caches.open("spectra-shell-precache-check");
+    return (await cache.keys()).map((request) => new URL(request.url).pathname);
+  });
+  expect(next).toContain("/spectra-vision/");
+  expect(next.some((path) => /assets\/index-.*\.js$/.test(path))).toBe(true);
+  expect(next.some((path) => /assets\/index-.*\.css$/.test(path))).toBe(true);
 });

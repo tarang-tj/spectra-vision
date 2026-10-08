@@ -181,9 +181,10 @@ describe("layout, links and the service worker address", () => {
     expect(buildVersion("http://127.0.0.1:5185/src/shell/register-sw.ts")).toBe(
       "0",
     );
-    expect(workerUrl("/", "abc123")).toBe("/sw.js?v=abc123");
-    expect(workerUrl("/spectra-vision/", "abc123")).toBe(
-      "/spectra-vision/sw.js?v=abc123",
+    expect(workerUrl("/", "abc123", "9.9.9")).toBe("/sw.js?v=abc123&r=9.9.9");
+    // The runtime version defaults to the pinned MediaPipe dependency.
+    expect(workerUrl("/spectra-vision/", "abc123")).toMatch(
+      /^\/spectra-vision\/sw\.js\?v=abc123&r=\d+\.\d+\.\d+$/,
     );
   });
 });

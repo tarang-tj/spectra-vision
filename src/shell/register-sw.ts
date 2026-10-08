@@ -1,4 +1,5 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+import pkg from "../../package.json";
 
 /** The content hash in a built script's file name ("index-B4x9kQ2p.js"), or
  * "0" when there is none. It changes with every deploy that changes the app,
@@ -7,9 +8,20 @@ export function buildVersion(scriptUrl: string): string {
   return /-([A-Za-z0-9_-]{6,})\.js(?:$|[?#])/.exec(scriptUrl)?.[1] ?? "0";
 }
 
-/** Address of the service worker for a base path ("/" or "/spectra-vision/"). */
-export function workerUrl(base: string, version: string): string {
-  return `${base}sw.js?v=${encodeURIComponent(version)}`;
+/** The MediaPipe runtime version this build was made with (pinned exactly in
+ * package.json). It names the cache of runtime and model files, so an upgrade
+ * of the dependency starts that cache afresh. */
+export const RUNTIME_VERSION: string =
+  pkg.dependencies["@mediapipe/tasks-vision"];
+
+/** Address of the service worker for a base path ("/" or "/spectra-vision/"):
+ * `v` is the shell version, `r` the runtime version. */
+export function workerUrl(
+  base: string,
+  version: string,
+  runtime = RUNTIME_VERSION,
+): string {
+  return `${base}sw.js?v=${encodeURIComponent(version)}&r=${encodeURIComponent(runtime)}`;
 }
 
 /** A request that got its file. Failed requests are listed by the browser

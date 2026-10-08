@@ -388,17 +388,17 @@ telemetry.on("frame", (e) => {}); // { time, dt, drawMs }  one per drawn stage f
 
 `public/sw.js`, `src/shell/register-sw.ts`, `src/shell/use-studio-effects.ts`.
 
-The service worker is registered in production builds only, after `load`, as `<base>sw.js?v=<content hash of the entry script>` with scope `<base>`. Every path inside the worker is derived from its own location, so the same file works at `/` and at `/spectra-vision/`.
+The service worker is registered in production builds only, after `load`, as `<base>sw.js?v=<content hash of the entry script>&r=<MediaPipe runtime version>` with scope `<base>`. The runtime version names the cache of runtime and model files, so upgrading `@mediapipe/tasks-vision` starts that cache afresh. Every path inside the worker is derived from its own location, so the same file works at `/` and at `/spectra-vision/`.
 
-| Request                                                    | Strategy                                          | Cache                                    |
-| ---------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------- |
-| Navigation to the app                                      | Network first; the cached page only if that fails | `spectra-shell-<v>`                      |
-| `assets/*` (hashed)                                        | Cache first                                       | `spectra-shell-<v>`                      |
-| `models/*`, `runtime/*`                                    | Cache first, stored on first fetch                | `spectra-assets-v1`, kept across deploys |
-| Other same-scope files (worker script, icons, demo stills) | Network first, cached fallback                    | `spectra-shell-<v>`                      |
-| Video, Range requests, non-GET, other origins              | Not handled                                       | none                                     |
+| Request                                                    | Strategy                                                       | Cache                                                   |
+| ---------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------- |
+| Navigation to the app                                      | Network first; the cached page if that fails or takes over 4 s | `spectra-shell-<v>`                                     |
+| `assets/*` (hashed)                                        | Cache first                                                    | `spectra-shell-<v>`                                     |
+| `models/*`, `runtime/*`                                    | Cache first, stored on first fetch                             | `spectra-assets-<runtime version>`, kept across deploys |
+| Other same-scope files (worker script, icons, demo stills) | Network first, cached fallback                                 | `spectra-shell-<v>`                                     |
+| Video, Range requests, non-GET, other origins              | Not handled                                                    | none                                                    |
 
-- Nothing is precached except the page itself. On a first visit the page, its assets, the runtime and the first model are fetched before the worker controls the page, so the page tells the worker what it already fetched (an `adopt` message): its own resource entries, and for each model load the files the vision worker reports. A model is therefore kept after its first real use and never before, and a first-visit user can reload offline.
+- At install the worker stores the page and the hashed script and style its markup names, so it never takes over with a shell it cannot serve. Models and the runtime are never fetched ahead of use. On a first visit the page, its assets, the runtime and the first model are fetched before the worker controls the page, so the page tells the worker what it already fetched (an `adopt` message): its own resource entries, and on every model load the files the vision worker reports (its own script included) together with everything the page has loaded so far. A model is therefore kept after its first real use and never before, and a first-visit user can reload offline.
 - Cached files are matched by address, ignoring `Vary`. A host that lists a request header under `Vary` (the preview server sends `Vary: Origin`, GitHub Pages `Vary: Accept-Encoding`) otherwise made the page's own script and style requests miss the stored copies.
 - A new deploy changes the entry hash, so a new worker URL is registered. It activates at once, deletes the shell caches of other versions and claims the page. Navigations are network first, so a reload never shows the previous shell.
 - The privacy copy in the app and the README says that the browser keeps the app and each used model on the device and how to remove them.

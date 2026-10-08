@@ -6,8 +6,9 @@
  * mode asks for it, never before.
  *
  * Cache rules
- *   navigation        network first, cached copy only when the network fails,
- *                     so a reload after a deploy never shows an old shell
+ *   navigation        network first, cached copy when the network fails or
+ *                     takes more than a few seconds, so a reload after a
+ *                     deploy never shows an old shell while online
  *   assets/*          cache first (file names carry a content hash)
  *   models/, runtime/ cache first, kept across deploys; a cached file is
  *                     checked against the server in the background and
@@ -22,18 +23,36 @@
 const VERSION = new URL(self.location.href).searchParams.get("v") || "0";
 const SHELL = `spectra-shell-${VERSION}`;
 // Models and the MediaPipe runtime are large and rarely change: one cache,
-// shared by every deploy. Bump the suffix to force everything to be refetched.
-const ASSETS = "spectra-assets-v1";
+// shared by every deploy. Its name carries the MediaPipe runtime version the
+// page was built with (the "r" parameter), so a runtime upgrade starts from an
+// empty cache and can never pair an old runtime with a new worker script.
+const assetsOf = (scriptURL) =>
+  `spectra-assets-${new URL(scriptURL).searchParams.get("r") || "v1"}`;
+const ASSETS = assetsOf(self.location.href);
 // The folder this file is served from: "/" or "/spectra-vision/".
 const SCOPE = new URL("./", self.location.href).href;
 
+/** The page and the hashed scripts and styles its markup names. With
+ * these stored before this worker can take over, it never controls a page it
+ * cannot serve: a visitor who leaves right after a deploy and comes back
+ * offline still gets the app. Models and the runtime are not fetched here. */
+async function precacheShell() {
+  const cache = await caches.open(SHELL),
+    response = await fetch(new Request(SCOPE, { cache: "reload" }));
+  if (!cacheable(response)) return;
+  const html = await response.clone().text();
+  await cache.put(SCOPE, response);
+  const assets = new Set();
+  for (const match of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
+    const url = new URL(match[1], SCOPE);
+    if (classify(url) === "assets") assets.add(url.href);
+  }
+  await cache.addAll([...assets]);
+}
+
 self.addEventListener("install", (event) => {
-  // Only the page itself is stored at install. Hashed assets are added as the
-  // page reports them (see "adopt"), models as modes load them.
   event.waitUntil(
-    caches
-      .open(SHELL)
-      .then((cache) => cache.add(new Request(SCOPE, { cache: "reload" })))
+    precacheShell()
       .catch(() => {})
       .then(() => self.skipWaiting()),
   );
@@ -49,7 +68,7 @@ const purge = () => {
   const { installing, waiting, active } = self.registration,
     keep = new Set([SHELL, ASSETS]);
   for (const worker of [installing, waiting, active])
-    if (worker) keep.add(shellOf(worker));
+    if (worker) keep.add(shellOf(worker)).add(assetsOf(worker.scriptURL));
   return caches
     .keys()
     .then((names) =>
@@ -144,11 +163,31 @@ async function dropIfChanged(cache, request, hit) {
   }
 }
 
+// How long a navigation waits for the network before the cached page is shown.
+const NAVIGATION_WAIT_MS = 4000;
+
 async function networkFirst(request, fallbackToShell) {
   try {
-    const response = await fetch(request);
-    void store(SHELL, request, response.clone());
-    return response;
+    const fetched = fetch(request).then((response) => {
+      void store(SHELL, request, response.clone());
+      return response;
+    });
+    if (!fallbackToShell) return await fetched;
+    // The app's own page: a connection that hangs must not hold the cached
+    // shell back until the browser gives up. The request keeps going and
+    // refreshes the cache if it ever answers.
+    const cached = new Promise((resolve) =>
+      setTimeout(
+        () =>
+          caches
+            .open(SHELL)
+            .then((cache) => cache.match(SCOPE, ANY))
+            .then(resolve, () => resolve(undefined)),
+        NAVIGATION_WAIT_MS,
+      ),
+    );
+    fetched.catch(() => {});
+    return (await Promise.race([fetched, cached])) || (await fetched);
   } catch (error) {
     const cache = await caches.open(SHELL),
       hit =

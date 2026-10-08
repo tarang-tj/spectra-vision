@@ -63,7 +63,7 @@ function fetchedFiles(base, model, wasm) {
   // The first five are certain: the task would not be ready without them.
   const files = new Set(
     [
-      self.location.href,
+      self.location && self.location.href,
       `${base}runtime/vision_bundle.js`,
       `${base}models/${model}`,
       wasm.wasmLoaderPath,
