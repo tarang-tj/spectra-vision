@@ -10,12 +10,17 @@ function Play() {
   const studio = useStudio();
   return (
     <div className="play-panel">
-      <h2>Play</h2>
+      <h2>
+        Play <span className="count">{games.length}</span>
+      </h2>
+      <p className="play-intro">
+        Games are played with your body and scored only from tracked motion.
+      </p>
       {games.map((game) => {
         const active = studio.game === game.id,
           needs = getMode(game.requires);
         return (
-          <div className="game-row" key={game.id}>
+          <div className="game-row" key={game.id} data-active={active}>
             <span>{game.label}</span>
             <small aria-live="polite">
               {active && studio.gameState

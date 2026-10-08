@@ -1,7 +1,9 @@
-/* Shared stylesheet, split by area with the v1 rules unchanged. Plugins (modes,
-   effects, games, panels) import their own CSS file next to their module
-   instead of editing these. Order matters: later files win ties. */
+/* Shared stylesheet, split by area. Plugins (modes, effects, games, panels)
+   import their own CSS file next to their module instead of editing these.
+   Overlays (palette, coach marks, share card, immersive view) are imported by
+   their components. Order matters: later files win ties. */
 @import "./base.css";
 @import "./shell.css";
 @import "./stage.css";
 @import "./inspector.css";
+@import "./deck.css";

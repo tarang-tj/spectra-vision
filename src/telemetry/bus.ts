@@ -16,6 +16,8 @@ export type TelemetryEvents = {
     requested: Delegate;
     delegate: Delegate;
     loadMs: number;
+    /** Why `delegate` is not the one requested (a fallback), else empty. */
+    note?: string;
   };
   /** One per drawn stage frame, fed by the render loop. */
   frame: { time: number; dt: number; drawMs: number };

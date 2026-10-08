@@ -1,6 +1,7 @@
 import {
   Aperture,
   Camera,
+  Search,
   SquareArrowOutUpRight,
   ShieldCheck,
   Square,
@@ -8,6 +9,7 @@ import {
 } from "lucide-react";
 import { modes } from "../modes";
 import type { ModeDef } from "../modes";
+import ModeSwitch from "./ModeSwitch";
 export default function Header({
   mode,
   onMode,
@@ -15,6 +17,7 @@ export default function Header({
   onCamera,
   onUpload,
   pending,
+  onPalette,
 }: {
   mode: ModeDef;
   onMode: (id: string) => void;
@@ -22,10 +25,11 @@ export default function Header({
   onCamera: () => void;
   onUpload: (f: File) => void;
   pending: boolean;
+  onPalette: () => void;
 }) {
   return (
     <>
-      <header className="topbar">
+      <header className="topbar" data-many={modes.length > 4}>
         <a
           className="brand"
           href={import.meta.env.BASE_URL}
@@ -34,22 +38,21 @@ export default function Header({
           <Aperture size={30} />
           SPECTRA
         </a>
-        <nav className="modes" aria-label="Vision mode">
-          {modes.map((m) => (
-            <button
-              key={m.id}
-              aria-pressed={m.id === mode.id}
-              onClick={() => onMode(m.id)}
-            >
-              {m.short}
-            </button>
-          ))}
-        </nav>
+        <ModeSwitch mode={mode} onMode={onMode} />
         <div className="top-right">
           <span className="privacy">
             <ShieldCheck size={21} />
             Processed on your device
           </span>
+          <button
+            className="icon-button"
+            aria-label="Open command palette"
+            aria-keyshortcuts="Control+K Meta+K"
+            title="Command palette (Ctrl K or ⌘ K)"
+            onClick={onPalette}
+          >
+            <Search size={20} />
+          </button>
           <a
             className="icon-button"
             href="https://github.com/tarang-tj/spectra-vision"
@@ -66,7 +69,7 @@ export default function Header({
           <h1>Reality, augmented.</h1>
           <p>Your camera. A new way to see.</p>
         </div>
-        <div className="actions">
+        <div className="actions" data-coach="source">
           <button
             className="button primary"
             onClick={onCamera}

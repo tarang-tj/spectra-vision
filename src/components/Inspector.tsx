@@ -1,15 +1,14 @@
-import { useState } from "react";
 import { panels } from "../panels";
 import { useStudio } from "../studio-context";
 import "../styles/panel-tabs.css";
 
 /** The right-hand rail. It shows the registered panels as tabs; with a single
- * panel there is no tab bar and the rail looks exactly as it did in v1. */
+ * panel there is no tab bar. The rail is as tall as the stage and the chosen
+ * panel scrolls inside it, so a long panel never stretches the stage. */
 export default function Inspector() {
   const studio = useStudio(),
     visible = panels.filter((panel) => panel.visible?.(studio) ?? true),
-    [chosen, setChosen] = useState<string | null>(null),
-    current = visible.find((panel) => panel.id === chosen) ?? visible[0];
+    current = visible.find((panel) => panel.id === studio.panel) ?? visible[0];
   return (
     <aside className="inspector">
       {visible.length > 1 && (
@@ -18,14 +17,16 @@ export default function Inspector() {
             <button
               key={panel.id}
               aria-pressed={panel.id === current.id}
-              onClick={() => setChosen(panel.id)}
+              onClick={() => studio.openPanel(panel.id)}
             >
               {panel.label}
             </button>
           ))}
         </nav>
       )}
-      {current && <current.Component />}
+      <div className="panel-body" data-panel={current?.id}>
+        {current && <current.Component />}
+      </div>
     </aside>
   );
 }

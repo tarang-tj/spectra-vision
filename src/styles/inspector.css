@@ -17,8 +17,33 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 16px;
   min-width: 0;
+}
+/* The chosen panel. It carries the column layout the rail itself had in v1,
+   and it is what scrolls when a panel is longer than the stage is tall. */
+.panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+@media (min-width: 761px) {
+  /* Beside the stage the rail takes the stage's height instead of setting it:
+     its own content no longer counts towards the row, so tabs, a long list or
+     the Lab cannot stretch the stage out of 16:10. */
+  .inspector {
+    contain: size;
+  }
+  .panel-body {
+    overflow-y: auto;
+    scrollbar-width: thin;
+    /* Room for focus rings, which the scroll box would otherwise clip. */
+    padding: 6px;
+    margin: -6px;
+  }
 }
 .inspector h2 {
   font-size: 20px;
@@ -102,9 +127,17 @@
   font-weight: 500;
   margin-bottom: 14px;
 }
+/* The slider is a 40 px tall target; the 7 px track is drawn inside it. The
+   negative top margin keeps the track where the v1 slider had it. */
 input[type="range"] {
   appearance: none;
   width: 100%;
+  height: 40px;
+  background: none;
+  margin: -16px 0 8px;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
   height: 7px;
   border-radius: 10px;
   background: linear-gradient(
@@ -112,13 +145,21 @@ input[type="range"] {
     var(--accent) var(--value),
     #273336 var(--value)
   );
-  margin: 0 0 24px;
-  cursor: pointer;
+}
+input[type="range"]::-moz-range-track {
+  height: 7px;
+  border-radius: 10px;
+  background: linear-gradient(
+    to right,
+    var(--accent) var(--value),
+    #273336 var(--value)
+  );
 }
 input[type="range"]::-webkit-slider-thumb {
   appearance: none;
   width: 18px;
   height: 18px;
+  margin-top: -5.5px;
   border-radius: 50%;
   background: white;
   box-shadow: 0 1px 4px #0004;
@@ -172,6 +213,8 @@ input[type="range"]::-moz-range-thumb {
 @media (min-width: 1400px) {
   .inspector {
     padding: 20px 22px;
+  }
+  .panel-body {
     gap: 20px;
   }
   .detections {
@@ -184,6 +227,8 @@ input[type="range"]::-moz-range-thumb {
 @media (max-width: 1100px) {
   .inspector {
     padding: 16px;
+  }
+  .panel-body {
     gap: 16px;
   }
   .inspector h2 {
@@ -207,9 +252,11 @@ input[type="range"]::-moz-range-thumb {
 }
 @media (max-width: 760px) {
   .inspector {
+    padding: 16px;
+  }
+  .panel-body {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    padding: 16px;
     gap: 18px;
   }
   .frame-list {
@@ -222,7 +269,7 @@ input[type="range"]::-moz-range-thumb {
     max-height: 108px;
   }
   .detection-row {
-    height: 36px;
+    height: 40px;
     font-size: 11px;
     gap: 7px;
     padding: 9px 1px;
@@ -254,7 +301,7 @@ input[type="range"]::-moz-range-thumb {
     margin-bottom: 12px;
   }
   input[type="range"] {
-    margin-bottom: 20px;
+    margin-bottom: 4px;
   }
   .switch-row {
     font-size: 12px;

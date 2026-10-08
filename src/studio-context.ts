@@ -25,6 +25,12 @@ export type Studio = {
   gameState: GameState | null;
   setGame(id: string | null): void;
   notice(text: string): void;
+  /** Id of the inspector panel on show, or null for the first one. */
+  panel: string | null;
+  /** Show a panel by id (a tab click, the games entry, the command palette). */
+  openPanel(id: string): void;
+  /** True in the stage-only view, where the rail and the page chrome are hidden. */
+  immersive: boolean;
 };
 
 export const StudioContext = createContext<Studio | null>(null);

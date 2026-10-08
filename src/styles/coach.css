@@ -1,0 +1,64 @@
+/* First-run tips: a card on the stage plus an outline on the control each
+   tip is about. The card never covers a control and takes no focus. */
+.coach {
+  position: absolute;
+  top: 48px;
+  right: 12px;
+  z-index: 3;
+  width: min(300px, calc(100% - 24px));
+  padding: 14px 44px 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #071016ee;
+  backdrop-filter: blur(12px);
+}
+.coach-count {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.coach strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.coach strong + p {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #cbd7db;
+  margin: 4px 0 12px;
+}
+.coach-actions {
+  display: flex;
+  gap: 8px;
+}
+.coach-actions .button {
+  min-height: 40px;
+  padding: 8px 14px;
+}
+.coach-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+/* The control the current tip points at. An outline changes no layout. */
+.app[data-coach-step="modes"] [data-coach="modes"],
+.app[data-coach-step="effects"] [data-coach="effects"],
+.app[data-coach-step="source"] [data-coach="source"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+  border-radius: 8px;
+}
+@media (max-width: 760px) {
+  .coach {
+    top: 34px;
+    right: 9px;
+    width: min(280px, calc(100% - 18px));
+    padding: 10px 40px 10px 12px;
+  }
+  .coach strong + p {
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+}

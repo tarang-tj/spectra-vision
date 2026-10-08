@@ -4,10 +4,21 @@ import CameraPicker from "./components/CameraPicker";
 import CameraStage from "./components/CameraStage";
 import Inspector from "./components/Inspector";
 import Footer from "./components/Footer";
+import StudioDeck from "./components/StudioDeck";
+import ShareCard from "./components/ShareCard";
+import CoachMarks from "./components/CoachMarks";
+import CommandPalette from "./components/CommandPalette";
+import ImmersiveDock from "./components/ImmersiveDock";
+import type { StageActions } from "./components/CameraStage";
 import { effects } from "./effects";
-import { getGame } from "./games";
+import { games, getGame } from "./games";
 import type { GameState } from "./games";
-import { defaultMode, getMode } from "./modes";
+import { defaultMode, getMode, modes } from "./modes";
+import { buildCommands } from "./shell/commands";
+import { trayEffects } from "./shell/effect-controls";
+import { useOfflineCache, useScoreShare } from "./shell/use-studio-effects";
+import { useShell } from "./shell/use-shell";
+import { useShortcuts } from "./shell/use-shortcuts";
 import { downloadSession } from "./session-export";
 import { StudioContext } from "./studio-context";
 import type { Studio } from "./studio-context";
@@ -31,8 +42,10 @@ export default function App() {
     [fps, setFps] = useState<number | null>(null),
     [gameId, setGameId] = useState<string | null>(null),
     [gameState, setGameState] = useState<GameState | null>(null),
-    [help, setHelp] = useState(false),
+    [immersiveEffects, setImmersiveEffects] = useState(false),
     [toast, setToast] = useState("");
+  const shell = useShell(),
+    stageActions = useRef<StageActions | null>(null);
   const mode = getMode(modeId),
     input = useSource(),
     vision = useVision(mode, input.source, paused, confidence),
@@ -94,6 +107,8 @@ export default function App() {
           );
     }
   }, [paused, input.source]);
+  useScoreShare(game, gameState, shell.setShare);
+  useOfflineCache(mode, vision.status);
   useEffect(() => {
     if (!game) setGameState(null);
   }, [game]);
@@ -181,10 +196,68 @@ export default function App() {
     gameState,
     setGame: setGameId,
     notice,
+    panel: shell.panel,
+    openPanel: shell.openPanel,
+    immersive: shell.immersive,
   };
+  // The immersive effects popover starts closed each time the view is entered.
+  useEffect(() => {
+    if (!shell.immersive) setImmersiveEffects(false);
+  }, [shell.immersive]);
+  const toggleEffects = (fromKeyboard: boolean) =>
+    shell.immersive
+      ? setImmersiveEffects((open) => !open)
+      : shell.toggleTray(fromKeyboard);
+  const playGame = (id: string | null) => {
+    const needs = getGame(id)?.requires;
+    if (needs && needs !== modeId) onMode(needs);
+    setGameId(id);
+  };
+  useShortcuts(modes.length, shell.palette, (action) => {
+    if (action.type === "palette") shell.setPalette(!shell.palette);
+    else if (action.type === "mode") onMode(modes[action.index].id);
+    else if (action.type === "record") stageActions.current?.record();
+    else if (action.type === "screenshot") stageActions.current?.screenshot();
+    else if (action.type === "mirror") setMirror((m) => !m);
+    else if (action.type === "effects") toggleEffects(true);
+    else if (action.type === "help") shell.setHelp(!shell.help);
+    else if (action.type === "escape" && shell.immersive)
+      shell.toggleImmersive();
+  });
+  // Built only while the palette is open: it is not needed otherwise.
+  const commands = shell.palette
+    ? buildCommands({
+        modes,
+        // Only the effects the tray offers in this mode.
+        effects: trayEffects(mode),
+        games,
+        effectsOn,
+        activeGame: game?.id ?? null,
+        paused,
+        immersive: shell.immersive,
+        setMode: onMode,
+        toggleEffect: studio.toggleEffect,
+        playGame,
+        actions: {
+          record: () => stageActions.current?.record(),
+          screenshot: () => stageActions.current?.screenshot(),
+          mirror: () => setMirror((m) => !m),
+          pause: () => setPaused((p) => !p),
+          effects: () => toggleEffects(true),
+          immersive: shell.toggleImmersive,
+          help: () => shell.setHelp(!shell.help),
+          exportSession,
+          demo: onDemo,
+          tour: () => shell.setCoach(0),
+        },
+      })
+    : [];
   return (
     <StudioContext.Provider value={studio}>
-      <main className="app">
+      <main
+        className={`app ${shell.immersive ? "immersive" : ""}`}
+        data-coach-step={shell.coachTarget}
+      >
         <Header
           mode={mode}
           onMode={onMode}
@@ -192,6 +265,7 @@ export default function App() {
           onCamera={onCamera}
           onUpload={onUpload}
           pending={input.pending}
+          onPalette={() => shell.setPalette(true)}
         />
         <CameraPicker
           source={input.source}
@@ -223,17 +297,57 @@ export default function App() {
             notice={notice}
             game={game}
             onGameState={setGameState}
-          />
+            actions={stageActions}
+            onClip={(clip) =>
+              shell.setShare({ kind: "clip", mode: modeId, ...clip })
+            }
+          >
+            {/* The tips yield to a running game, whose own controls sit in
+                the same corner of the stage. */}
+            {shell.coach !== null && !shell.immersive && !game && (
+              <CoachMarks
+                step={shell.coach}
+                onStep={shell.setCoach}
+                onDone={shell.endCoach}
+              />
+            )}
+          </CameraStage>
           <Inspector />
         </div>
+        {shell.immersive && (
+          <ImmersiveDock
+            effectsOpen={immersiveEffects}
+            onEffects={() => setImmersiveEffects((open) => !open)}
+            onExit={shell.toggleImmersive}
+          />
+        )}
+        <StudioDeck
+          open={shell.tray}
+          focusTray={shell.trayFocus}
+          onToggle={() => shell.toggleTray(false)}
+          onImmersive={shell.toggleImmersive}
+        />
+        {shell.share && (
+          <ShareCard
+            result={shell.share}
+            onDismiss={() => shell.setShare(null)}
+            notice={notice}
+          />
+        )}
         <Footer
           latency={vision.result?.latency ?? null}
           fps={paused ? 0 : fps}
           count={rows.length}
           onExport={exportSession}
-          help={help}
-          onHelp={() => setHelp((h) => !h)}
+          help={shell.help}
+          onHelp={() => shell.setHelp(!shell.help)}
         />
+        {shell.palette && (
+          <CommandPalette
+            commands={commands}
+            onClose={() => shell.setPalette(false)}
+          />
+        )}
         {toast && (
           <div role="status" className="toast">
             {toast}

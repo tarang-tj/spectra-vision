@@ -1,10 +1,10 @@
 import { ChevronRight, Lightbulb } from "lucide-react";
-import EffectsPicker from "../components/EffectsPicker";
 import { useStudio } from "../studio-context";
 import { COLORS } from "../vision/types";
 import type { PanelDef } from "./types";
 
-/** The v1 inspector: what is in the frame, the motion map, and the controls. */
+/** What is in the frame, the motion map, and the model controls. The effect
+ * switches live in the tray under the stage (components/StudioDeck). */
 function Inspect() {
   const studio = useStudio(),
     { rows, mode } = studio,
@@ -106,7 +106,6 @@ function Inspect() {
             } as React.CSSProperties
           }
         />
-        <EffectsPicker />
         <button
           className="motion-demo button compact"
           aria-pressed={studio.motionDemo}

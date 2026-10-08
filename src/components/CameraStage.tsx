@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode, RefObject } from "react";
 import {
   Camera,
   Expand,
@@ -15,7 +16,13 @@ import type { GameDef, GameState } from "../games";
 import type { ModeDef } from "../modes";
 import { useStageLoop } from "../stage/use-stage-loop";
 import type { FrameData } from "../vision/frame";
-import { useRecording } from "../vision/useRecording";
+import { useClipRecorder } from "../shell/use-clip-recorder";
+import type { Clip } from "../shell/use-clip-recorder";
+import StageMessage from "./StageMessage";
+
+/** What the keyboard shortcuts and the command palette may ask of the stage. */
+export type StageActions = { record(): void; screenshot(): void };
+
 export default function CameraStage(props: {
   mode: ModeDef;
   /** Source, latest result, tracks, mirror and settings for the renderer. */
@@ -31,6 +38,12 @@ export default function CameraStage(props: {
   notice: (text: string) => void;
   game: GameDef | null;
   onGameState: (state: GameState | null) => void;
+  /** Filled by the stage so the shell can trigger Record and Screenshot. */
+  actions: RefObject<StageActions | null>;
+  /** A finished recording, for the share card. */
+  onClip: (clip: Clip) => void;
+  /** Shell overlays that belong on the stage (the first-run tips). */
+  children?: ReactNode;
 }) {
   const { mode, paused, status, error, onRetry, onDemo, notice } = props,
     { source, mirror } = props.data;
@@ -38,10 +51,11 @@ export default function CameraStage(props: {
     stage = useRef<HTMLDivElement>(null),
     latest = useRef(props);
   const [fullscreen, setFullscreen] = useState(false);
-  const capture = useRecording(
+  const capture = useClipRecorder(
     canvas,
     `${mode.id}:${source?.generation ?? 0}`,
     notice,
+    props.onClip,
   );
   latest.current = props;
   // All canvas drawing (mode, effects, games) happens in the stage loop.
@@ -63,6 +77,16 @@ export default function CameraStage(props: {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       notice("Screenshot saved.");
     });
+  const canRecord = !!source && !capture.saving && status === "Ready";
+  // Same rules as the buttons: a shortcut never does what a disabled tool cannot.
+  props.actions.current = {
+    record: () => {
+      if (canRecord) capture.toggle();
+    },
+    screenshot: () => {
+      if (source) shot();
+    },
+  };
   const expand = async () => {
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
@@ -103,18 +127,12 @@ export default function CameraStage(props: {
         </div>
       )}
       {error ? (
-        <div className="stage-message error" role="alert">
-          <strong>Let’s get you seeing.</strong>
-          <p>{error}</p>
-          <div>
-            <button className="button primary compact" onClick={onRetry}>
-              {props.retryLabel}
-            </button>
-            <button className="button compact" onClick={onDemo}>
-              Try demo
-            </button>
-          </div>
-        </div>
+        <StageMessage
+          error={error}
+          retryLabel={props.retryLabel}
+          onRetry={onRetry}
+          onDemo={onDemo}
+        />
       ) : status !== "Ready" ? (
         <div className="loading">
           <LoaderCircle className="spin" size={24} />
@@ -128,7 +146,9 @@ export default function CameraStage(props: {
             Try demo
           </button>
         </div>
-      ) : null}
+      ) : (
+        props.children
+      )}
       <div className="stage-bottom">
         <div className="playback">
           <button
@@ -170,7 +190,12 @@ export default function CameraStage(props: {
             <FlipHorizontal size={20} />
             <span>Mirror</span>
           </button>
-          <button className="tool" onClick={shot} disabled={!source}>
+          <button
+            className="tool"
+            onClick={shot}
+            disabled={!source}
+            aria-keyshortcuts="S"
+          >
             <Camera size={20} />
             <span>Screenshot</span>
           </button>
@@ -179,7 +204,7 @@ export default function CameraStage(props: {
             aria-label={capture.recording ? "Stop recording" : "Record canvas"}
             aria-pressed={capture.recording}
             onClick={capture.toggle}
-            disabled={!source || capture.saving || status !== "Ready"}
+            disabled={!canRecord}
           >
             {capture.recording ? <Square size={20} /> : <Circle size={20} />}
             <span>{capture.recording ? "Stop" : "Record"}</span>

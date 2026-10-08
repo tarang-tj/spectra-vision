@@ -1,9 +1,15 @@
 import { telemetry } from "../telemetry/bus";
-import { fallbackDelegate } from "./delegate";
+import { beginStatus } from "../telemetry/task-status";
+import {
+  fallbackDelegate,
+  gpuStartTimeout,
+  onDelegateChoice,
+  requestedDelegate,
+} from "./delegate";
 import type { Delegate, TaskResult, TaskSpec } from "./types";
 
 // Inference is capped near 15 fps per task, as in v1.
-const MIN_FRAME_GAP = 65;
+export const MIN_FRAME_GAP = 65;
 
 export type RunnerEvents = {
   onReady(): void;
@@ -11,10 +17,11 @@ export type RunnerEvents = {
   onError(message: string): void;
 };
 /** Owns one vision worker for one task: start, one in-flight frame at a time,
- * a GPU to CPU restart when GPU never gets going, and teardown. */
+ * a GPU to CPU restart when GPU fails or does not get going in bounded time,
+ * a restart when the lab switches the delegate, and teardown. */
 export type TaskRunner = {
   readonly spec: TaskSpec;
-  /** The delegate in use right now (differs from spec.delegate after a fallback). */
+  /** The delegate in use right now (differs from the requested one after a fallback). */
   delegate(): Delegate;
   ready(): boolean;
   /** True when the worker can take a frame at this animation time. */
@@ -45,15 +52,21 @@ export function createTaskRunner(
   spawn: (url: string) => WorkerLike = (url) => new Worker(url),
 ): TaskRunner {
   let worker: WorkerLike | null = null,
-    active: Delegate = spec.delegate,
+    requested: Delegate = requestedDelegate(spec),
+    active: Delegate = requested,
     ready = false,
     busy = false,
     produced = false,
     disposed = false,
     lastFrame = 0,
-    started = 0;
+    started = 0,
+    firstSent = 0,
+    watchdog: ReturnType<typeof setTimeout> | undefined,
+    note = "",
+    status = beginStatus(spec.kind, spec.model, requested, active, note);
 
   const stop = () => {
+    clearTimeout(watchdog);
     if (!worker) return;
     worker.onmessage = null;
     worker.onerror = null;
@@ -69,6 +82,8 @@ export function createTaskRunner(
     ready = false;
     const retry = fallbackDelegate(active, produced);
     if (!retry) {
+      status.state = "failed";
+      status.note = message;
       events.onError(message);
       return;
     }
@@ -77,14 +92,35 @@ export function createTaskRunner(
       `[spectra vision] ${spec.kind}: ${active} failed (${message}); using ${retry}.`,
     );
     stop();
+    note = `${active} was requested but ${message.replace(/^Vision model failed: /, "")}. Running on ${retry}.`;
     active = retry;
     start();
   };
+  // The bounded GPU start: checked on a timer only while a GPU task is still
+  // loading or still owes its first result, never once it works or on CPU.
+  const watch = () => {
+    clearTimeout(watchdog);
+    if (disposed || active !== "GPU" || produced || (ready && !firstSent))
+      return;
+    const now = performance.now(),
+      reason = gpuStartTimeout({
+        active,
+        ready,
+        produced,
+        sinceStart: now - started,
+        sinceFirstFrame: firstSent ? now - firstSent : null,
+      });
+    if (reason) fail(reason);
+    else watchdog = setTimeout(watch, 250);
+  };
   const start = () => {
     started = performance.now();
+    firstSent = 0;
+    status = beginStatus(spec.kind, spec.model, requested, active, note);
     try {
       worker = spawn(`${base}vision-worker.js`);
     } catch {
+      status.state = "failed";
       events.onError(
         "Vision worker failed. Retry or use a current Chrome/Edge browser.",
       );
@@ -95,15 +131,19 @@ export function createTaskRunner(
       const message = event.data;
       if (message.type === "ready") {
         ready = true;
+        status.state = "ready";
+        status.loadMs = performance.now() - started;
         telemetry.emit("model", {
           kind: spec.kind,
-          requested: spec.delegate,
+          requested,
           delegate: active,
-          loadMs: performance.now() - started,
+          loadMs: status.loadMs,
+          note,
         });
         events.onReady();
       } else if (message.type === "result") {
         busy = false;
+        if (!produced) status.firstResultMs = performance.now() - started;
         produced = true;
         const result = message.result as TaskResult;
         // The runner, not the worker, is the authority on what it is running.
@@ -127,8 +167,19 @@ export function createTaskRunner(
       base,
       task: { ...spec, delegate: active },
     });
+    watch();
   };
   start();
+  // The lab's delegate switch: load this task again on the delegate chosen.
+  const unwatch = onDelegateChoice((kind) => {
+    const next = requestedDelegate(spec);
+    if (disposed || kind !== spec.kind || next === requested) return;
+    stop();
+    requested = active = next;
+    note = "";
+    ready = busy = produced = false;
+    start();
+  });
 
   return {
     spec,
@@ -143,10 +194,15 @@ export function createTaskRunner(
       busy = false;
     },
     send(bitmap, time, generation, confidence) {
-      if (!worker) {
+      // No worker, or one restarted since this frame was claimed: drop it.
+      if (!worker || !ready) {
         bitmap.close();
         busy = false;
         return;
+      }
+      if (!produced && !firstSent) {
+        firstSent = performance.now();
+        watch();
       }
       worker.postMessage(
         { type: "frame", bitmap, time, generation, confidence },
@@ -156,6 +212,7 @@ export function createTaskRunner(
     dispose() {
       disposed = true;
       ready = false;
+      unwatch();
       stop();
     },
   };

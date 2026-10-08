@@ -44,6 +44,10 @@ export type EffectDef = {
   /** Position in the picker and draw order. Defaults to 100. */
   order?: number;
   defaultOn?: boolean;
+  /** Present when the effect has a strength control: `default` is its
+   * starting value, 0..1. The shell may render a slider for it and store the
+   * value with setEffectIntensity (src/effects/lib/intensity.ts). */
+  intensity?: { default: number };
   /** Called the first time the effect is switched on in a mode, not at startup. */
   create(env: EffectEnv): EffectInstance;
 };

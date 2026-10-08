@@ -1,0 +1,122 @@
+/* The strip under the stage: effects tray, games entry, immersive view. */
+.deck {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 12px;
+}
+.deck-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  min-height: 42px;
+  padding: 0 8px 0 4px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.deck-toggle > svg:first-child {
+  color: var(--accent);
+}
+.deck-toggle small {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.deck-chevron {
+  color: var(--muted);
+  transition: transform 0.18s;
+}
+.deck-toggle[aria-expanded="false"] .deck-chevron {
+  transform: rotate(-90deg);
+}
+.effects-tray {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.effects-tray[hidden] {
+  display: none;
+}
+.tray-empty {
+  font-size: 12px;
+  line-height: 42px;
+  color: var(--muted);
+}
+/* One effect: its switch, and its strength slider while it is on. */
+.effect-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.effect-chip[data-on="true"] {
+  border-color: var(--accent);
+  background: #a4ffd910;
+}
+.effect-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  padding: 0 14px 0 12px;
+  border-radius: 5px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.effect-switch i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3b4b4f;
+}
+.effect-switch:hover {
+  background: #162723;
+}
+.effect-switch[aria-checked="true"] {
+  color: var(--accent);
+}
+.effect-switch[aria-checked="true"] i {
+  background: var(--accent);
+}
+input[type="range"].effect-intensity {
+  width: 84px;
+  margin: 0 12px 0 0;
+}
+.deck-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+@media (max-width: 760px) {
+  /* Toggle and actions share the first row; the tray wraps below them. */
+  .deck {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .deck-toggle {
+    min-height: 40px;
+  }
+  .effects-tray {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .deck-actions {
+    order: 4;
+    width: 100%;
+  }
+  .deck-actions .button {
+    flex: 1;
+  }
+  .effect-switch {
+    padding: 0 12px 0 10px;
+  }
+}
