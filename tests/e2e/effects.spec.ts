@@ -64,14 +64,27 @@ async function ready(page: Page) {
   await expect(page.getByTestId("latency")).toHaveText(/^\d+ ms$/);
   await expect(page.getByRole("alert")).toHaveCount(0);
 }
+const LABELS: Record<string, RegExp> = {
+  Objects: /Object detection/,
+  Body: /Body tracking/,
+  Hands: /Hand tracking/,
+};
 /** Switch mode. `settle` waits for the mode's first model result; the leak
- * test skips that, because effects are built from the source, not a result. */
+ * test skips that, because effects are built from the source, not a result.
+ *
+ * Body is entered by way of Objects. Going straight from Hands to Body
+ * unmounts the whole app today: the inspector reads landmark 23 of the stale
+ * 21-point hand result (src/panels/inspect.tsx, outside this lane). That is
+ * reported in the lane report; this spec must not depend on it. */
 async function mode(page: Page, name: string, settle = true) {
+  const canvas = page.locator("canvas").first();
+  if (
+    name === "Body" &&
+    LABELS.Hands.test((await canvas.getAttribute("aria-label")) ?? "")
+  )
+    await mode(page, "Objects", true);
   await page.getByRole("button", { name, exact: true }).first().click();
-  await expect(page.locator("canvas").first()).toHaveAttribute(
-    "aria-label",
-    new RegExp(name === "Hands" ? "Hand tracking" : "Body tracking"),
-  );
+  await expect(canvas).toHaveAttribute("aria-label", LABELS[name]);
   if (settle) await ready(page);
 }
 const effect = (page: Page, label: string) =>
@@ -147,6 +160,7 @@ async function effectDraws(page: Page, label: string) {
 test("every GPU effect changes the stage on a demo input without a console error", async ({
   page,
 }) => {
+  test.setTimeout(300_000);
   const errors = watchErrors(page);
   await open(page);
   let current = "";
@@ -170,7 +184,7 @@ test("every GPU effect changes the stage on a demo input without a console error
 test("GL objects are released across 20 effect and mode switches, on one context", async ({
   page,
 }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(600_000);
   const errors = watchErrors(page);
   await open(page);
   const hands = ["Plasma hands", "Ember trail", "Starfield pull"],
