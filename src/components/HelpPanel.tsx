@@ -20,7 +20,10 @@ export default function HelpPanel() {
         {modes.length} modes are available:{" "}
         {modes.map((m) => m.label).join(", ")}. Each loads its model the first
         time you open it. Objects detects common COCO categories; Body tracks
-        one person; Hands tracks up to two hands. Pinching is a geometric
+        one person; Hands tracks up to two hands; Face follows one face and does
+        not identify it; Segment labels each pixel as background, hair, skin,
+        clothes or accessories; Gestures recognizes seven hand gestures; Fusion
+        runs the body, hand and face models together. Pinching is a geometric
         thumb–index distance heuristic. Motion map shows image position, not
         physical distance. Confidence is a model threshold, not a guarantee of
         accuracy.
