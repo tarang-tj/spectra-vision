@@ -1,11 +1,19 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
+/** A finished recording, handed to the share card. `url` is an object URL the
+ * receiver must revoke. */
+export type Clip = { url: string; mime: string; seconds: number; file: string };
+
+// The stage's recorder. The finished clip is saved as a download and also
+// handed to `onClip`, so the share card can play it.
 // Record only the rendered canvas. No microphone, screen capture, or uploads.
-export function useRecording(
+export function useClipRecorder(
   canvas: RefObject<HTMLCanvasElement | null>,
   session: string,
   notice: (message: string) => void,
+  onClip: (clip: Clip) => void,
 ) {
   const [recording, setRecording] = useState(false),
     [seconds, setSeconds] = useState(0),
@@ -14,8 +22,10 @@ export function useRecording(
     stream = useRef<MediaStream | null>(null),
     timer = useRef<ReturnType<typeof setInterval> | null>(null),
     alive = useRef(true),
-    latestNotice = useRef(notice);
+    latestNotice = useRef(notice),
+    latestClip = useRef(onClip);
   latestNotice.current = notice;
+  latestClip.current = onClip;
   const stop = () => {
     if (recorder.current?.state === "recording") recorder.current.stop();
   };
@@ -83,15 +93,24 @@ export function useRecording(
         setRecording(false);
         setSaving(false);
         if (failed || !size) return;
-        const url = URL.createObjectURL(new Blob(chunks, { type: mimeType })),
-          link = document.createElement("a");
+        const blob = new Blob(chunks, { type: mimeType }),
+          url = URL.createObjectURL(blob),
+          link = document.createElement("a"),
+          file = `spectra-${session.split(":")[0]}-${Date.now()}.${mimeType.includes("mp4") ? "mp4" : "webm"}`;
         link.href = url;
-        link.download = `spectra-${session.split(":")[0]}-${Date.now()}.${mimeType.includes("mp4") ? "mp4" : "webm"}`;
+        link.download = file;
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
         latestNotice.current(
           "Recording saved. Your clip stayed on this device.",
         );
+        // A second URL for the share card, which outlives the download link.
+        latestClip.current({
+          url: URL.createObjectURL(blob),
+          mime: mimeType.split(";")[0],
+          seconds: Math.round((performance.now() - started) / 1000),
+          file,
+        });
       };
       capture.start(250);
       setSeconds(0);

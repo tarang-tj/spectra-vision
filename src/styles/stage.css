@@ -1,0 +1,296 @@
+.camera-stage {
+  width: 100%;
+  position: relative;
+  aspect-ratio: 16/10;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface);
+  min-width: 0;
+}
+.camera-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.stage-top {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+.hud-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #07101688;
+  backdrop-filter: blur(10px);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 6px 10px;
+}
+.mode-badge {
+  text-transform: uppercase;
+}
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 9px var(--accent);
+}
+.stage-bottom {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.playback {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 44%;
+  font-size: 12px;
+  color: #fff;
+  text-shadow: 0 1px 3px #000;
+}
+.playback > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.playback small {
+  display: block;
+  font-size: 10px;
+  color: var(--accent);
+}
+.playback .icon-button {
+  background: #071016c9;
+  border: 1px solid #b1bec366;
+}
+.stage-tools {
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border-radius: 5px;
+  background: #07101696;
+  backdrop-filter: blur(10px);
+}
+.tool {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+  min-width: 48px;
+  min-height: 45px;
+  border-radius: 3px;
+  padding: 3px 6px;
+}
+.tool:hover,
+.tool[aria-pressed="true"] {
+  background: #a4ffd925;
+  color: var(--accent);
+}
+.record-tool[aria-pressed="true"] {
+  color: #ffa1b2;
+  background: #ff5b7c22;
+}
+.recording-badge {
+  position: absolute;
+  top: 48px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: #150910dd;
+  color: #ffa1b2;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.recording-badge i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff718e;
+}
+.loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: #071016d9;
+  padding: 16px 22px;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+}
+.spin {
+  animation: spin 1.5s linear infinite;
+  color: var(--accent);
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.stage-message {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(440px, 85%);
+  padding: 24px;
+  background: #071016ee;
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-align: center;
+}
+.stage-message > svg {
+  display: block;
+  margin: 0 auto 10px;
+  color: #e2c79b;
+}
+.stage-message strong {
+  font-size: 22px;
+}
+.stage-message .stage-fix {
+  margin-top: -8px;
+  color: #cbd7db;
+}
+.stage-message p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+  margin: 12px 0 18px;
+}
+.stage-message > div {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.error {
+  border-color: #b89d75;
+}
+.camera-stage:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border: 0;
+  border-radius: 0;
+  aspect-ratio: auto;
+}
+.camera-stage:fullscreen canvas {
+  width: 100%;
+  height: 100%;
+}
+@media (min-width: 1400px) {
+  .tool {
+    min-width: 57px;
+  }
+  .stage-bottom {
+    bottom: 14px;
+    left: 20px;
+    right: 14px;
+  }
+}
+@media (max-width: 1100px) {
+  .tool span {
+    display: none;
+  }
+  .tool {
+    min-width: 35px;
+    min-height: 35px;
+    padding: 4px;
+  }
+  .stage-bottom {
+    left: 10px;
+    right: 10px;
+    gap: 5px;
+  }
+}
+@media (max-width: 760px) {
+  .camera-stage {
+    width: 100%;
+    aspect-ratio: 4/3;
+  }
+  .stage-top {
+    top: 9px;
+    left: 9px;
+    right: 9px;
+  }
+  .hud-badge {
+    font-size: 8px;
+    padding: 5px 7px;
+  }
+  .stage-bottom {
+    bottom: 9px;
+  }
+  .playback {
+    gap: 6px;
+    max-width: 32%;
+    font-size: 10px;
+  }
+  .playback .icon-button {
+    width: 40px;
+    height: 40px;
+  }
+  .stage-tools {
+    gap: 0;
+    padding: 2px;
+  }
+  .tool {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 3px;
+  }
+  .tool svg {
+    width: 17px;
+    height: 17px;
+  }
+  .stage-message {
+    padding: 12px 16px;
+    width: min(440px, 92%);
+  }
+  /* The stage is short on a phone: keep the heading, the reason and the two
+     ways forward, and leave the longer how-to for wider screens. */
+  .stage-message > svg,
+  .stage-message .stage-fix {
+    display: none;
+  }
+  .stage-message strong {
+    font-size: 18px;
+  }
+  .stage-message p {
+    font-size: 11px;
+    margin: 8px 0 12px;
+  }
+  .stage-message .button {
+    font-size: 12px;
+    padding: 8px 12px;
+    min-height: 40px;
+  }
+  .loading {
+    font-size: 11px;
+    padding: 12px;
+    white-space: nowrap;
+  }
+}

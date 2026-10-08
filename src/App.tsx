@@ -1,244 +1,259 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Header from "./components/Header";
+import CameraPicker from "./components/CameraPicker";
 import CameraStage from "./components/CameraStage";
 import Inspector from "./components/Inspector";
 import Footer from "./components/Footer";
-import { useSource } from "./vision/useSource";
+import StudioDeck from "./components/StudioDeck";
+import ShareCard from "./components/ShareCard";
+import CoachMarks from "./components/CoachMarks";
+import CommandPalette from "./components/CommandPalette";
+import ImmersiveDock from "./components/ImmersiveDock";
+import type { StageActions } from "./components/CameraStage";
+import { effects } from "./effects";
+import { getMode, modes } from "./modes";
+import { paletteCommands } from "./shell/palette-commands";
+import { useNarrow } from "./shell/use-narrow";
+import { useOfflineCache } from "./shell/use-studio-effects";
+import { useShell } from "./shell/use-shell";
+import { useShortcuts } from "./shell/use-shortcuts";
+import { useSourceControls } from "./shell/use-source-controls";
+import { useToast } from "./shell/use-toast";
+import { downloadSession } from "./session-export";
+import { StudioContext } from "./studio-context";
+import type { Studio } from "./studio-context";
+import { useSession } from "./vision/useSession";
 import { useVision } from "./vision/useVision";
-import { Tracker } from "./vision/tracker";
-import type { Mode, Track } from "./vision/types";
+import { webgl2Missing } from "./vision/webgl-probe";
+import type { FrameData } from "./vision/frame";
 export default function App() {
-  const [mode, setMode] = useState<Mode>("objects"),
-    [paused, setPaused] = useState(false),
-    [mirror, setMirror] = useState(false),
-    [trails, setTrails] = useState(true),
-    [constellation, setConstellation] = useState(false),
-    [motionDemo, setMotionDemo] = useState(false),
+  // One switch per registered effect, starting from each effect's default.
+  const [effectsOn, setEffectsOn] = useState<Record<string, boolean>>(() =>
+      Object.fromEntries(effects.map((e) => [e.id, !!e.defaultOn])),
+    ),
     [confidence, setConfidence] = useState(0.45),
     [selected, setSelected] = useState<number | null>(null),
-    [tracks, setTracks] = useState<Track[]>([]),
-    [fps, setFps] = useState<number | null>(null),
-    [help, setHelp] = useState(false),
-    [toast, setToast] = useState("");
-  const input = useSource(),
+    [immersiveEffects, setImmersiveEffects] = useState(false);
+  const shell = useShell(),
+    narrow = useNarrow(),
+    [toast, notice] = useToast(),
+    stageActions = useRef<StageActions | null>(null);
+  const controls = useSourceControls(notice),
+    { input, modeId, paused, mirror, motionDemo, onMode, onDemo } = controls,
+    mode = getMode(modeId),
     vision = useVision(mode, input.source, paused, confidence),
-    tracker = useRef(new Tracker()),
-    history = useRef<unknown[]>([]),
-    previous = useRef<number | null>(null),
-    toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const notice = (text: string) => {
-    setToast(text);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), 3200);
-  };
-  useEffect(
-    () => () => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-    },
-    [],
-  );
+    { tracks, fps, history } = useSession(mode, input.source, vision.result);
   useEffect(() => {
-    tracker.current.reset();
-    setTracks([]);
     setSelected(null);
-    setFps(null);
-    previous.current = null;
-    history.current = [];
-  }, [mode, input.source?.generation]);
-  useEffect(() => {
-    const r = vision.result;
-    if (!r) return;
-    if (previous.current !== null) {
-      const instant = 1000 / (r.time - previous.current);
-      setFps((old) => (old === null ? instant : old * 0.8 + instant * 0.2));
-    }
-    previous.current = r.time;
-    setTracks(tracker.current.update(r.detections, r.time));
-    history.current.push({
-      elapsedMs: Math.round(r.time),
-      latencyMs: r.latency,
-      detections: r.detections,
-      landmarks: r.landmarks,
-      handedness: r.handedness,
-    });
-    if (history.current.length > 1000) history.current.shift();
-  }, [vision.result]);
-  useEffect(() => {
-    const video = input.source?.element;
-    if (video instanceof HTMLVideoElement) {
-      if (paused) video.pause();
-      else
-        void video
-          .play()
-          .catch(() =>
-            notice("Playback could not resume. Choose the file again."),
-          );
-    }
-  }, [paused, input.source]);
-  const onMode = (next: Mode) => {
-    if (next === mode) return;
-    setMode(next);
-    setPaused(false);
-    if (input.source?.kind === "demo") void input.demo(next, motionDemo);
-  };
-  const onDemo = () => {
-    setPaused(false);
-    setMirror(false);
-    void input.demo(mode, motionDemo);
-  };
-  const onMotionDemo = () => {
-    const next = !motionDemo;
-    setMotionDemo(next);
-    setPaused(false);
-    setMirror(false);
-    void input.demo(mode, next);
-  };
-  const onCamera = () => {
-    setPaused(false);
-    if (input.source?.kind === "camera") onDemo();
-    else {
-      setMotionDemo(false);
-      setMirror(true);
-      void input.camera();
-    }
-  };
-  const onUpload = (file: File) => {
-    setPaused(false);
-    setMotionDemo(false);
-    setMirror(false);
-    void input.upload(file);
-  };
+  }, [modeId, input.source?.generation]);
+  useOfflineCache();
   const exportSession = () => {
-    const payload = {
-      app: "SPECTRA",
-      version: "1.1.0",
-      exportedAt: new Date().toISOString(),
-      mode,
-      source: input.source?.kind ?? null,
-      settings: { confidence, mirror, trails, constellation, motionDemo },
-      notes:
-        "Latest 1000 processed frames of this source and mode. Image-normalized coordinates; no media included. Timestamps are monotonic page time.",
-      frames: history.current,
-    };
-    const url = URL.createObjectURL(
-        new Blob([JSON.stringify(payload, null, 2)], {
-          type: "application/json",
-        }),
-      ),
-      a = document.createElement("a");
-    a.href = url;
-    a.download = `spectra-${mode}-session.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    downloadSession(
+      modeId,
+      input.source?.kind ?? null,
+      { confidence, mirror, ...effectsOn, motionDemo },
+      history.current,
+    );
     notice("Session exported.");
   };
-  const count =
-    mode === "objects" ? tracks.length : (vision.result?.landmarks.length ?? 0);
+  const element = input.source?.element,
+    aspect =
+      element instanceof HTMLVideoElement
+        ? element.videoWidth / element.videoHeight
+        : element instanceof HTMLImageElement
+          ? element.naturalWidth / element.naturalHeight
+          : 1;
+  // The canvas-free frame state shared by the stage, the inspector and panels.
+  // It is rebuilt only when one of its parts changes, never per drawn frame.
+  const settings = useMemo(
+      () => ({ confidence, selected, effects: effectsOn }),
+      [confidence, selected, effectsOn],
+    ),
+    data: FrameData = useMemo(
+      () => ({
+        result: vision.result,
+        tracks,
+        mirror,
+        settings,
+        source: input.source,
+        aspect,
+      }),
+      [vision.result, tracks, mirror, settings, input.source, aspect],
+    ),
+    rows = useMemo(() => mode.inspector(data), [mode, data]),
+    count = useMemo(
+      () => mode.count?.(data) ?? rows.length,
+      [mode, data, rows],
+    );
+  const toggleEffect = (id: string) => {
+    const effect = effects.find((e) => e.id === id);
+    // The tray disables these switches; the palette reaches this instead.
+    if (effect?.kind === "gl" && !effectsOn[id] && webgl2Missing())
+      return notice(`${effect.label} needs WebGL2, which is not available.`);
+    setEffectsOn((on) => ({ ...on, [id]: !on[id] }));
+  };
+  const studio: Studio = {
+    mode,
+    setMode: onMode,
+    frame: data,
+    rows,
+    count,
+    paused,
+    status: input.pending ? "Opening source" : vision.status,
+    setConfidence,
+    toggleEffect,
+    select: setSelected,
+    motionDemo: motionDemo && input.source?.kind === "demo",
+    toggleMotionDemo: controls.onMotionDemo,
+    notice,
+    panel: shell.panel,
+    openPanel: shell.openPanel,
+    immersive: shell.immersive,
+  };
+  // The immersive effects popover starts closed each time the view is entered.
+  useEffect(() => {
+    if (!shell.immersive) setImmersiveEffects(false);
+  }, [shell.immersive]);
+  const toggleEffects = (fromKeyboard: boolean) =>
+    shell.immersive
+      ? setImmersiveEffects((open) => !open)
+      : shell.toggleTray(fromKeyboard);
+  useShortcuts(modes.length, shell.palette, (action) => {
+    if (action.type === "palette") shell.setPalette(!shell.palette);
+    else if (action.type === "mode") onMode(modes[action.index].id);
+    else if (action.type === "record") stageActions.current?.record();
+    else if (action.type === "screenshot") stageActions.current?.screenshot();
+    else if (action.type === "mirror") controls.toggleMirror();
+    else if (action.type === "effects") toggleEffects(true);
+    else if (action.type === "help") shell.setHelp(!shell.help);
+    else if (action.type === "escape" && shell.immersive)
+      shell.toggleImmersive();
+  });
+  const commands = paletteCommands(shell.palette, {
+    mode,
+    effectsOn,
+    paused,
+    immersive: shell.immersive,
+    setMode: onMode,
+    toggleEffect,
+    actions: {
+      record: () => stageActions.current?.record(),
+      screenshot: () => stageActions.current?.screenshot(),
+      mirror: () => controls.toggleMirror(),
+      pause: () => controls.togglePaused(),
+      effects: () => toggleEffects(true),
+      immersive: shell.toggleImmersive,
+      help: () => shell.setHelp(!shell.help),
+      exportSession,
+      demo: onDemo,
+      tour: () => shell.setCoach(0),
+    },
+  });
+  // In one column the rail comes after the tray and the result card, so it is
+  // also placed after them in the markup: focus then moves in reading order.
+  const rail = <Inspector key="rail" />;
+  // The first-run tips sit on the stage where it is tall enough to hold them
+  // clear of its controls. In one column it is not (the card covered the
+  // toolbar at 360 px), so there the card goes under the stage instead, while
+  // the stage has nothing more urgent to say.
+  const tips = shell.coach !== null && !shell.immersive && (
+      <CoachMarks
+        key="tips"
+        step={shell.coach}
+        onStep={shell.setCoach}
+        onDone={shell.endCoach}
+      />
+    ),
+    stageClear =
+      !input.error &&
+      !vision.error &&
+      studio.status === "Ready" &&
+      !!input.source;
   return (
-    <main className="app">
-      <Header
-        mode={mode}
-        onMode={onMode}
-        cameraActive={input.source?.kind === "camera"}
-        onCamera={onCamera}
-        onUpload={onUpload}
-        pending={input.pending}
-      />
-      {input.source?.kind === "camera" && input.cameras.length > 1 && (
-        <label className="camera-picker">
-          Camera{" "}
-          <select
-            aria-label="Camera source"
-            value={
-              (input.source.element as HTMLVideoElement).srcObject instanceof
-              MediaStream
-                ? (
-                    (input.source.element as HTMLVideoElement)
-                      .srcObject as MediaStream
-                  )
-                    .getVideoTracks()[0]
-                    ?.getSettings().deviceId
-                : ""
-            }
-            onChange={(e) => {
-              setPaused(false);
-              void input.camera(e.target.value);
-            }}
-          >
-            {input.cameras.map((c, i) => (
-              <option value={c.deviceId} key={c.deviceId}>
-                {c.label || `Camera ${i + 1}`}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      <div className="workspace">
-        <CameraStage
+    <StudioContext.Provider value={studio}>
+      <main
+        className={`app ${shell.immersive ? "immersive" : ""}`}
+        data-coach-step={shell.coachTarget}
+      >
+        <Header
+          mode={mode}
+          onMode={onMode}
+          cameraActive={input.source?.kind === "camera"}
+          onCamera={controls.onCamera}
+          onUpload={controls.onUpload}
+          pending={input.pending}
+          onPalette={() => shell.setPalette(true)}
+        />
+        <CameraPicker
           source={input.source}
-          mode={mode}
-          result={vision.result}
-          tracks={tracks}
-          paused={paused}
-          onPause={() => setPaused((p) => !p)}
-          mirror={mirror}
-          onMirror={() => setMirror((m) => !m)}
-          trails={trails}
-          constellation={constellation}
-          selected={mode === "objects" ? selected : null}
-          status={input.pending ? "Opening source" : vision.status}
-          error={input.error || vision.error}
-          onRetry={
-            input.error
-              ? () => {
-                  setPaused(false);
-                  void input.camera();
-                }
-              : vision.retry
-          }
-          retryLabel={input.error ? "Retry camera" : "Retry model"}
-          onDemo={onDemo}
-          notice={notice}
+          cameras={input.cameras}
+          onPick={controls.openCamera}
         />
-        <Inspector
-          mode={mode}
-          tracks={tracks}
-          result={vision.result}
-          confidence={confidence}
-          onConfidence={setConfidence}
-          trails={trails}
-          onTrails={() => setTrails((t) => !t)}
-          selected={selected}
-          onSelect={setSelected}
-          mirror={mirror}
-          aspect={
-            input.source?.element instanceof HTMLVideoElement
-              ? input.source.element.videoWidth /
-                input.source.element.videoHeight
-              : input.source?.element instanceof HTMLImageElement
-                ? input.source.element.naturalWidth /
-                  input.source.element.naturalHeight
-                : 1
-          }
-          constellation={constellation}
-          onConstellation={() => setConstellation((value) => !value)}
-          motionDemo={motionDemo && input.source?.kind === "demo"}
-          onMotionDemo={onMotionDemo}
-        />
-      </div>
-      <Footer
-        latency={vision.result?.latency ?? null}
-        fps={paused ? 0 : fps}
-        count={count}
-        onExport={exportSession}
-        help={help}
-        onHelp={() => setHelp((h) => !h)}
-      />
-      {toast && (
-        <div role="status" className="toast">
-          {toast}
+        <div className="workspace">
+          <CameraStage
+            key="stage"
+            mode={mode}
+            data={data}
+            paused={paused}
+            onPause={controls.togglePaused}
+            onMirror={controls.toggleMirror}
+            status={studio.status}
+            error={input.error || vision.error}
+            onRetry={input.error ? () => controls.openCamera() : vision.retry}
+            retryLabel={input.error ? "Retry camera" : "Retry model"}
+            onDemo={onDemo}
+            notice={notice}
+            actions={stageActions}
+            onClip={(clip) => shell.setShare({ mode: modeId, ...clip })}
+          >
+            {!narrow && tips}
+          </CameraStage>
+          {narrow && stageClear && tips}
+          {!narrow && rail}
+          <StudioDeck
+            key="deck"
+            open={shell.tray}
+            focusTray={shell.trayFocus}
+            onToggle={() => shell.toggleTray(false)}
+            onImmersive={shell.toggleImmersive}
+          />
+          {shell.share && (
+            <ShareCard
+              key="share"
+              result={shell.share}
+              onDismiss={() => shell.setShare(null)}
+              notice={notice}
+            />
+          )}
+          {narrow && rail}
         </div>
-      )}
-    </main>
+        {shell.immersive && (
+          <ImmersiveDock
+            effectsOpen={immersiveEffects}
+            onEffects={() => setImmersiveEffects((open) => !open)}
+            onExit={shell.toggleImmersive}
+          />
+        )}
+        <Footer
+          latency={vision.result?.latency ?? null}
+          fps={paused ? 0 : fps}
+          count={count}
+          onExport={exportSession}
+          help={shell.help}
+          onHelp={() => shell.setHelp(!shell.help)}
+        />
+        {shell.palette && (
+          <CommandPalette
+            commands={commands}
+            onClose={() => shell.setPalette(false)}
+          />
+        )}
+        {toast && (
+          <div role="status" className="toast">
+            {toast}
+          </div>
+        )}
+      </main>
+    </StudioContext.Provider>
   );
 }

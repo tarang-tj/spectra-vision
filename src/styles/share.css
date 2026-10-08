@@ -1,0 +1,54 @@
+/* Result card: the clip just recorded. */
+.share-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.share-card video {
+  flex: 0 0 auto;
+  width: 176px;
+  aspect-ratio: 16/10;
+  border-radius: 4px;
+  background: var(--surface);
+  object-fit: cover;
+}
+.share-text {
+  flex: 1;
+  min-width: 0;
+}
+.share-text strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.share-text p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.share-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+@media (max-width: 760px) {
+  .share-card {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .share-card video {
+    width: 120px;
+  }
+  .share-actions {
+    width: 100%;
+  }
+  .share-actions .button {
+    flex: 1;
+  }
+}

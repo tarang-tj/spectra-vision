@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode, RefObject } from "react";
 import {
   Camera,
   Expand,
@@ -11,180 +12,51 @@ import {
   Circle,
   Square,
 } from "lucide-react";
-import type { Mode, Source, Track, VisionResult } from "../vision/types";
-import { MODE_LABELS, COLORS } from "../vision/types";
-import { isPinching } from "../vision/geometry";
-import { draw } from "../vision/render";
-import type { Stroke } from "../vision/render";
-import { useRecording } from "../vision/useRecording";
+import type { ModeDef } from "../modes";
+import { useStageLoop } from "../stage/use-stage-loop";
+import type { FrameData } from "../vision/frame";
+import { useClipRecorder } from "../shell/use-clip-recorder";
+import type { Clip } from "../shell/use-clip-recorder";
+import StageMessage from "./StageMessage";
+
+/** What the keyboard shortcuts and the command palette may ask of the stage. */
+export type StageActions = { record(): void; screenshot(): void };
+
 export default function CameraStage(props: {
-  source: Source | null;
-  mode: Mode;
-  result: VisionResult | null;
-  tracks: Track[];
+  mode: ModeDef;
+  /** Source, latest result, tracks, mirror and settings for the renderer. */
+  data: FrameData;
   paused: boolean;
   onPause: () => void;
-  mirror: boolean;
   onMirror: () => void;
-  trails: boolean;
-  constellation: boolean;
-  selected: number | null;
   status: string;
   error: string;
   onRetry: () => void;
   retryLabel: string;
   onDemo: () => void;
   notice: (text: string) => void;
+  /** Filled by the stage so the shell can trigger Record and Screenshot. */
+  actions: RefObject<StageActions | null>;
+  /** A finished recording, for the share card. */
+  onClip: (clip: Clip) => void;
+  /** Shell overlays that belong on the stage (the first-run tips). */
+  children?: ReactNode;
 }) {
-  const {
-    source,
-    mode,
-    result,
-    paused,
-    mirror,
-    trails,
-    status,
-    error,
-    onRetry,
-    onDemo,
-    notice,
-  } = props;
+  const { mode, paused, status, error, onRetry, onDemo, notice } = props,
+    { source, mirror } = props.data;
   const canvas = useRef<HTMLCanvasElement>(null),
     stage = useRef<HTMLDivElement>(null),
-    latest = useRef(props),
-    strokes = useRef<Stroke[]>([]),
-    pinches = useRef<boolean[]>([]),
-    active = useRef<(Stroke | null)[]>([]);
+    latest = useRef(props);
   const [fullscreen, setFullscreen] = useState(false);
-  const capture = useRecording(
+  const capture = useClipRecorder(
     canvas,
-    `${mode}:${source?.generation ?? 0}`,
+    `${mode.id}:${source?.generation ?? 0}`,
     notice,
+    props.onClip,
   );
   latest.current = props;
-  useEffect(() => {
-    strokes.current = [];
-    pinches.current = [];
-    active.current = [];
-  }, [mode, source?.generation]);
-  useEffect(() => {
-    if (!result || !trails) return;
-    if (mode === "body") {
-      const points = result.landmarks[0];
-      if (!points) {
-        active.current = [];
-        return;
-      }
-      [15, 16, 27, 28].forEach((joint, i) => {
-        const p = points[joint];
-        if (!p || (p.visibility ?? 1) < 0.4) {
-          active.current[i] = null;
-          return;
-        }
-        if (!active.current[i]) {
-          const stroke = { points: [], color: COLORS[i % COLORS.length] };
-          strokes.current.push(stroke);
-          active.current[i] = stroke;
-        }
-        const stroke = active.current[i]!;
-        const last = stroke.points.at(-1);
-        if (!last || Math.hypot(p.x - last.x, p.y - last.y) > 0.002)
-          stroke.points.push({ ...p });
-        if (stroke.points.length > 64) stroke.points.shift();
-      });
-      if (strokes.current.length > 40)
-        strokes.current.splice(0, strokes.current.length - 40);
-      return;
-    }
-    if (mode !== "hands") return;
-    const e = source?.element,
-      aspect =
-        e instanceof HTMLVideoElement
-          ? e.videoWidth / e.videoHeight
-          : e instanceof HTMLImageElement
-            ? e.naturalWidth / e.naturalHeight
-            : 1;
-    result.landmarks.forEach((points, i) => {
-      const pinching = isPinching(points, pinches.current[i] ?? false, aspect);
-      if (pinching) {
-        if (!pinches.current[i] || !active.current[i]) {
-          const stroke = { points: [], color: COLORS[i % COLORS.length] };
-          strokes.current.push(stroke);
-          active.current[i] = stroke;
-        }
-        const tip = points[8],
-          stroke = active.current[i]!;
-        const last = stroke.points.at(-1);
-        if (!last || Math.hypot(tip.x - last.x, tip.y - last.y) > 0.002)
-          stroke.points.push({ ...tip });
-        if (stroke.points.length > 500) stroke.points.shift();
-      } else active.current[i] = null;
-      pinches.current[i] = pinching;
-    });
-    for (let i = result.landmarks.length; i < pinches.current.length; i++) {
-      pinches.current[i] = false;
-      active.current[i] = null;
-    }
-    if (strokes.current.length > 40) strokes.current.shift();
-  }, [result, mode, source, trails]);
-  useEffect(() => {
-    if (!trails) {
-      active.current = [];
-      pinches.current = [];
-    }
-  }, [trails]);
-  useEffect(() => {
-    let raf = 0,
-      stopped = false,
-      lastDraw = 0;
-    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-    const render = (time: number) => {
-      if (stopped) return;
-      if (time - lastDraw < 32) {
-        raf = requestAnimationFrame(render);
-        return;
-      }
-      lastDraw = time;
-      const c = canvas.current,
-        el = stage.current;
-      if (c && el) {
-        const rect = el.getBoundingClientRect(),
-          dpr = Math.min(2, devicePixelRatio),
-          width = Math.round(rect.width * dpr),
-          height = Math.round(rect.height * dpr);
-        if (c.width !== width || c.height !== height) {
-          c.width = width;
-          c.height = height;
-        }
-        const context = c.getContext("2d");
-        if (context) {
-          context.setTransform(dpr, 0, 0, dpr, 0, 0);
-          const p = latest.current;
-          draw(
-            context,
-            rect.width,
-            rect.height,
-            p.source,
-            p.mode,
-            p.result,
-            p.tracks,
-            p.mirror,
-            p.trails,
-            strokes.current,
-            p.selected,
-            p.paused || reducedMotion.matches ? 0 : time,
-            p.constellation,
-          );
-        }
-      }
-      raf = requestAnimationFrame(render);
-    };
-    raf = requestAnimationFrame(render);
-    return () => {
-      stopped = true;
-      cancelAnimationFrame(raf);
-    };
-  }, []);
+  // All canvas drawing (mode and effects) happens in the stage loop.
+  const loop = useStageLoop(canvas, stage, latest, notice);
   useEffect(() => {
     const handler = () =>
       setFullscreen(document.fullscreenElement === stage.current);
@@ -197,11 +69,21 @@ export default function CameraStage(props: {
       const url = URL.createObjectURL(blob),
         a = document.createElement("a");
       a.href = url;
-      a.download = `spectra-${mode}-${Date.now()}.png`;
+      a.download = `spectra-${mode.id}-${Date.now()}.png`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       notice("Screenshot saved.");
     });
+  const canRecord = !!source && !capture.saving && status === "Ready";
+  // Same rules as the buttons: a shortcut never does what a disabled tool cannot.
+  props.actions.current = {
+    record: () => {
+      if (canRecord) capture.toggle();
+    },
+    screenshot: () => {
+      if (source) shot();
+    },
+  };
   const expand = async () => {
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
@@ -227,17 +109,13 @@ export default function CameraStage(props: {
       className={`camera-stage ${fullscreen ? "is-fullscreen" : ""}`}
       ref={stage}
     >
-      <canvas
-        ref={canvas}
-        aria-label={`${MODE_LABELS[mode]} canvas`}
-        role="img"
-      />
+      <canvas ref={canvas} aria-label={`${mode.label} canvas`} role="img" />
       <div className="stage-top">
         <span className="hud-badge">
           <i className={source?.kind === "camera" ? "live-dot" : ""} />
           {source ? badge : "NO SOURCE"}
         </span>
-        <span className="hud-badge mode-badge">{MODE_LABELS[mode]}</span>
+        <span className="hud-badge mode-badge">{mode.label}</span>
       </div>
       {capture.recording && (
         <div className="recording-badge" role="status">
@@ -246,18 +124,12 @@ export default function CameraStage(props: {
         </div>
       )}
       {error ? (
-        <div className="stage-message error" role="alert">
-          <strong>Let’s get you seeing.</strong>
-          <p>{error}</p>
-          <div>
-            <button className="button primary compact" onClick={onRetry}>
-              {props.retryLabel}
-            </button>
-            <button className="button compact" onClick={onDemo}>
-              Try demo
-            </button>
-          </div>
-        </div>
+        <StageMessage
+          error={error}
+          retryLabel={props.retryLabel}
+          onRetry={onRetry}
+          onDemo={onDemo}
+        />
       ) : status !== "Ready" ? (
         <div className="loading">
           <LoaderCircle className="spin" size={24} />
@@ -271,7 +143,9 @@ export default function CameraStage(props: {
             Try demo
           </button>
         </div>
-      ) : null}
+      ) : (
+        props.children
+      )}
       <div className="stage-bottom">
         <div className="playback">
           <button
@@ -292,13 +166,11 @@ export default function CameraStage(props: {
             <RotateCcw size={20} />
             <span>Demo</span>
           </button>
-          {mode === "hands" && (
+          {mode.clearable && (
             <button
               className="tool"
               onClick={() => {
-                strokes.current = [];
-                active.current = [];
-                pinches.current = [];
+                loop.clear();
                 notice("Light trails cleared.");
               }}
               aria-label="Clear light trails"
@@ -307,15 +179,24 @@ export default function CameraStage(props: {
               <span>Clear</span>
             </button>
           )}
+          {/* Below 1100 px the tool captions are hidden, so each tool carries
+              its name itself. */}
           <button
             className="tool"
+            aria-label="Mirror"
             aria-pressed={mirror}
             onClick={props.onMirror}
           >
             <FlipHorizontal size={20} />
             <span>Mirror</span>
           </button>
-          <button className="tool" onClick={shot} disabled={!source}>
+          <button
+            className="tool"
+            aria-label="Screenshot"
+            onClick={shot}
+            disabled={!source}
+            aria-keyshortcuts="S"
+          >
             <Camera size={20} />
             <span>Screenshot</span>
           </button>
@@ -324,12 +205,12 @@ export default function CameraStage(props: {
             aria-label={capture.recording ? "Stop recording" : "Record canvas"}
             aria-pressed={capture.recording}
             onClick={capture.toggle}
-            disabled={!source || capture.saving || status !== "Ready"}
+            disabled={!canRecord}
           >
             {capture.recording ? <Square size={20} /> : <Circle size={20} />}
             <span>{capture.recording ? "Stop" : "Record"}</span>
           </button>
-          <button className="tool" onClick={expand}>
+          <button className="tool" aria-label="Fullscreen" onClick={expand}>
             <Expand size={20} />
             <span>Fullscreen</span>
           </button>

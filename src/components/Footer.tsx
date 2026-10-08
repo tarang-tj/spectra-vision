@@ -1,4 +1,7 @@
+import { Fragment } from "react";
 import { CircleHelp, Download, X } from "lucide-react";
+import { modes } from "../modes";
+import HelpPanel from "./HelpPanel";
 export default function Footer({
   latency,
   fps,
@@ -40,8 +43,13 @@ export default function Footer({
       </section>
       <footer>
         <span>
-          Objects <i>·</i> Body <i>·</i> Hands
-          <i>·</i> <a href={`${import.meta.env.BASE_URL}demo/`}>Watch demo</a>
+          {/* The registered modes, so the line is true for any number of them. */}
+          {modes.map((mode) => (
+            <Fragment key={mode.id}>
+              {mode.short} <i>·</i>{" "}
+            </Fragment>
+          ))}
+          <a href={`${import.meta.env.BASE_URL}demo/`}>Watch demo</a>
         </span>
         <div>
           <span>No account. No uploads.</span>
@@ -49,47 +57,15 @@ export default function Footer({
             className="icon-button"
             aria-label={help ? "Close help" : "About privacy and controls"}
             aria-expanded={help}
+            aria-controls="help"
+            aria-keyshortcuts="?"
             onClick={onHelp}
           >
             {help ? <X size={21} /> : <CircleHelp size={21} />}
           </button>
         </div>
       </footer>
-      {help && (
-        <section className="help">
-          <h2>Your view stays yours.</h2>
-          <p>
-            Camera frames and local files are processed in this browser. There
-            is no image upload service, account, analytics, or face
-            identification. Model files load from this site. Screenshots and
-            JSON exports download only when you request them.
-          </p>
-          <p>
-            Objects detects common COCO categories; Body tracks one person;
-            Hands tracks up to two hands. Pinching is a geometric thumb–index
-            distance heuristic. Motion map shows image position, not physical
-            distance. Confidence is a model threshold, not a guarantee of
-            accuracy.
-          </p>
-          <p>
-            Use HTTPS or localhost for camera access. Start with good light;
-            keep your full body visible in Body mode and your fingers
-            unobstructed in Hands. Video uploads loop and are muted. Pause stops
-            inference; Stop camera releases the camera. Demo images are still
-            photos with real model inference. Motion demos pan those photos;
-            Constellation isolates the tracking geometry. Record saves up to 30
-            seconds of canvas video locally and stops when source or mode
-            changes. For best results use a current Chrome or Edge browser.
-          </p>
-          <a
-            href="https://github.com/tarang-tj/spectra-vision/blob/main/THIRD_PARTY_NOTICES.md"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Third-party notices
-          </a>
-        </section>
-      )}
+      {help && <HelpPanel />}
     </>
   );
 }

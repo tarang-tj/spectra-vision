@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { defaultMode, getMode } from "../modes";
 import type { Mode, Source } from "./types";
 export function useSource() {
   const [source, setSource] = useState<Source | null>(null),
@@ -64,15 +65,18 @@ export function useSource() {
     [dispose],
   );
   const demo = useCallback(
-    async (mode: Mode = "objects", motion = false) => {
+    async (mode: Mode = defaultMode.id, motion = false) => {
       const token = begin();
+      // Each mode names its own demo inputs; a mode without a clip stays still.
+      const spec = getMode(mode).demo,
+        clip = motion ? spec.motion : undefined;
       try {
-        if (motion) {
+        if (clip) {
           const video = document.createElement("video");
           video.muted = true;
           video.loop = true;
           video.playsInline = true;
-          video.src = `${import.meta.env.BASE_URL}demo/${mode === "hands" ? "hands" : "studio"}-motion.mp4`;
+          video.src = `${import.meta.env.BASE_URL}${clip}`;
           current.current = {
             element: video,
             kind: "demo",
@@ -84,14 +88,9 @@ export function useSource() {
           return;
         }
         const image = new Image();
-        image.src = `${import.meta.env.BASE_URL}demo/${mode === "hands" ? "hands" : "studio"}.png`;
+        image.src = `${import.meta.env.BASE_URL}${spec.still}`;
         await image.decode();
-        commit(
-          image,
-          "demo",
-          mode === "hands" ? "Demo hands" : "Demo studio",
-          token,
-        );
+        commit(image, "demo", spec.label, token);
       } catch {
         fail(
           new Error("Demo image could not load. Try reloading the page."),

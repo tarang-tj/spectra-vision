@@ -1,0 +1,94 @@
+/* Command palette: a modal list over a dimmed page. */
+.palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 14vh 16px 16px;
+  background: #05090bb8;
+}
+.palette {
+  width: min(620px, 100%);
+  max-height: min(520px, 72vh);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 24px 80px #000a;
+  overflow: hidden;
+}
+.palette-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+}
+.palette-field input {
+  flex: 1;
+  min-width: 0;
+  height: 54px;
+  border: 0;
+  background: none;
+  color: #f3f7f6;
+  font-size: 16px;
+  outline: none;
+}
+.palette-field input::placeholder {
+  color: #8b9a9f;
+}
+/* The field cannot show its own ring (it fills the row), so the row does. */
+.palette-field:focus-within {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.palette ul {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.palette li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 5px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.palette li small {
+  flex: 0 0 56px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.palette li span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.palette li[aria-selected="true"] {
+  background: #a4ffd91c;
+  color: var(--accent);
+}
+.palette li.palette-empty {
+  color: var(--muted);
+  cursor: default;
+}
+@media (max-width: 760px) {
+  .palette-backdrop {
+    padding-top: 8vh;
+  }
+  .palette-field kbd {
+    display: none;
+  }
+}

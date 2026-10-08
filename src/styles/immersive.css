@@ -1,0 +1,87 @@
+/* Immersive view: the stage fills the viewport and everything else in the
+   page is taken out of the layout. Nothing is scroll-locked: with only a
+   fixed stage left, the document has nothing to scroll. */
+.app.immersive
+  > *:not(.workspace):not(.immersive-dock):not(.toast):not(.palette-backdrop) {
+  display: none;
+}
+.app.immersive .workspace > :not(.camera-stage) {
+  display: none;
+}
+.app.immersive .workspace {
+  display: block;
+}
+.app.immersive .camera-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+}
+/* Mode, effects and exit float under the source badge, in the corner, so
+   they stay clear of whoever is in the middle of the picture. */
+.immersive-dock {
+  position: fixed;
+  top: 48px;
+  left: 12px;
+  z-index: 31;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px;
+  border-radius: 6px;
+  background: #07101696;
+  backdrop-filter: blur(10px);
+}
+.immersive-dock select,
+.dock-button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: #f3f7f6;
+  font-size: 13px;
+}
+.immersive-dock select {
+  cursor: pointer;
+}
+.immersive-dock option {
+  color: #f3f7f6;
+  background: var(--surface);
+}
+.dock-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.immersive-dock select:hover,
+.dock-button:hover,
+.dock-button[aria-expanded="true"] {
+  background: #a4ffd925;
+  color: var(--accent);
+}
+.immersive-effects {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: max-content;
+  max-width: min(560px, calc(100vw - 24px));
+  max-height: 50vh;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #071016ee;
+  backdrop-filter: blur(12px);
+}
+/* The toast must stay readable above the fixed stage. */
+.app.immersive .toast {
+  z-index: 40;
+}
