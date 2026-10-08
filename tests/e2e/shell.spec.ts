@@ -14,28 +14,26 @@ const pressed = (page: Page, name: string) =>
     .getByRole("button", { name, exact: true });
 const tips = (page: Page) =>
   page.getByRole("group", { name: "Getting started tips" });
-/** Names of the stage's own controls and labels that the tips card overlaps. */
-const coveredByTips = (page: Page) =>
-  page.evaluate(() => {
-    const card = document.querySelector(".coach")!.getBoundingClientRect(),
-      covered: string[] = [];
-    for (const el of document.querySelectorAll<HTMLElement>(
-      ".camera-stage button, .camera-stage .hud-badge, .camera-stage .playback span",
-    )) {
-      if (el.closest(".coach")) continue;
-      const box = el.getBoundingClientRect();
-      if (
-        box.width &&
-        box.left < card.right &&
-        box.right > card.left &&
-        box.top < card.bottom &&
-        box.bottom > card.top
-      )
-        covered.push(el.getAttribute("aria-label") || el.innerText.trim());
-    }
-    return covered;
-  });
-
+const pill = (page: Page) =>
+  page.getByRole("button", { name: "Tips", exact: true });
+/** Whether the first element matching the selector shares any pixel with the
+ * stage. A missing or unrendered element is an error, not a pass. */
+const overlapsStage = (page: Page, selector: string) =>
+  page.evaluate((selector) => {
+    const el = document.querySelector(selector),
+      stage = document.querySelector(".camera-stage");
+    if (!el || !stage) throw new Error(`missing ${selector} or the stage`);
+    const a = el.getBoundingClientRect(),
+      b = stage.getBoundingClientRect();
+    if (!a.width || !a.height || !b.width || !b.height)
+      throw new Error(`${selector} or the stage is not rendered`);
+    return (
+      a.left < b.right &&
+      a.right > b.left &&
+      a.top < b.bottom &&
+      a.bottom > b.top
+    );
+  }, selector);
 test("shortcuts switch modes and drive the stage, but never while typing", async ({
   page,
   context,
@@ -147,60 +145,101 @@ test("shortcuts switch modes and drive the stage, but never while typing", async
   expect(errors).toEqual([]);
 });
 
-test("coach marks appear once, block nothing and are remembered", async ({
+test("tips open from a pill, cover none of the picture and are remembered", async ({
   page,
 }) => {
   await page.goto("./", { waitUntil: "domcontentloaded" });
   await ready(page);
   const card = tips(page);
-  await expect(card).toContainText("Tip 1 of 3");
-  // On the stage the card covers no control and no badge, at both desktop
-  // sizes the layout is designed for.
+  // A first visit: the card is closed and the pill asks to be noticed.
+  await expect(card).toHaveCount(0);
+  await expect(pill(page)).toHaveAttribute("data-fresh", "true");
+  await expect(pill(page)).toHaveAttribute("aria-expanded", "false");
+  // Neither the pill nor the open card shares a pixel with the stage, at the
+  // two desktop sizes the layout is designed for and on a phone.
   for (const size of [
-    { width: 1280, height: 720 },
     { width: 1536, height: 1024 },
+    { width: 1280, height: 720 },
+    { width: 390, height: 844 },
   ]) {
     await page.setViewportSize(size);
-    expect(await coveredByTips(page)).toEqual([]);
+    await expect(pill(page)).toBeVisible();
+    expect(await overlapsStage(page, ".tips-pill")).toBe(false);
+    await pill(page).click();
+    await expect(card).toContainText("Tip 1 of 3");
+    await expect(pill(page)).toHaveAttribute("aria-expanded", "true");
+    expect(await overlapsStage(page, ".coach")).toBe(false);
+    expect(await overlapsStage(page, ".tips-pill")).toBe(false);
+    const box = (await card.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(size.width);
+    // Still a first visit until the tips are finished or closed: the pill
+    // closes the card again here only to try the next size.
+    await page.evaluate(() => localStorage.removeItem("spectra.coach.v1"));
+    await pill(page).click();
+    await expect(card).toHaveCount(0);
   }
-  // Not modal: focus is left alone and the rest of the studio still works.
+  await page.setViewportSize({ width: 1536, height: 1024 });
+  await page.evaluate(() => localStorage.removeItem("spectra.coach.v1"));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await ready(page);
+  // Reachable by keyboard: the pill opens the card, and Tab walks on into it.
+  await pill(page).focus();
+  await page.keyboard.press("Enter");
+  await expect(card).toContainText("Tip 1 of 3");
+  // Not modal: focus is left on the pill and the rest of the studio works.
   expect(
     await page.evaluate(
       () => !document.activeElement?.closest(".coach") && !document.body.inert,
     ),
   ).toBe(true);
+  let inCard = false;
+  for (let presses = 0; presses < 4 && !inCard; presses++) {
+    await page.keyboard.press("Tab");
+    inCard = await page.evaluate(
+      () => !!document.activeElement?.closest(".coach"),
+    );
+  }
+  expect(inCard).toBe(true);
   // Hands has the fullest stage toolbar (it adds Clear).
   await page.getByRole("button", { name: "Hands", exact: true }).click();
   await ready(page);
   await expect(card).toContainText("Tip 1 of 3");
-  expect(await coveredByTips(page)).toEqual([]);
+  expect(await overlapsStage(page, ".coach")).toBe(false);
   await expect(page.getByRole("navigation", { name: "Vision mode" })).toHaveCSS(
     "outline-style",
     "solid",
   );
   await card.getByRole("button", { name: "Next tip" }).click();
   await expect(card).toContainText("Tip 2 of 3");
-  expect(await coveredByTips(page)).toEqual([]);
+  expect(await overlapsStage(page, ".coach")).toBe(false);
   await expect(page.getByRole("navigation", { name: "Vision mode" })).toHaveCSS(
     "outline-style",
     "none",
   );
   await card.getByRole("button", { name: "Next tip" }).click();
   await expect(card).toContainText("Tip 3 of 3");
-  expect(await coveredByTips(page)).toEqual([]);
+  expect(await overlapsStage(page, ".coach")).toBe(false);
   await card.getByRole("button", { name: "Got it" }).click();
   await expect(card).toHaveCount(0);
+  await expect(pill(page)).not.toHaveAttribute("data-fresh");
+  expect(
+    await page.evaluate(() => localStorage.getItem("spectra.coach.v1")),
+  ).toBe("done");
   await page.reload({ waitUntil: "domcontentloaded" });
   await ready(page);
+  // Remembered: closed, and the pill no longer asks for attention.
   await expect(tips(page)).toHaveCount(0);
+  await expect(pill(page)).not.toHaveAttribute("data-fresh");
   // The palette can bring them back on request.
   await page.getByRole("button", { name: "Open command palette" }).click();
   await page.keyboard.type("getting started");
   await page.keyboard.press("Enter");
   await expect(tips(page)).toContainText("Tip 1 of 3");
+  expect(await overlapsStage(page, ".coach")).toBe(false);
 });
 
-test("on a phone the tips sit under the stage and focus follows the page", async ({
+test("on a phone the tips sit above the stage and focus follows the page", async ({
   page,
 }) => {
   // 360 px is the narrowest common phone; the stage is 246 px tall there.
@@ -209,22 +248,26 @@ test("on a phone the tips sit under the stage and focus follows the page", async
   await ready(page);
   await page.getByRole("button", { name: "Hands", exact: true }).click();
   await ready(page);
+  expect(await overlapsStage(page, ".tips-pill")).toBe(false);
+  await pill(page).click();
   const card = tips(page);
   for (const tip of [1, 2, 3]) {
     await expect(card).toContainText(`Tip ${tip} of 3`);
-    expect(await coveredByTips(page)).toEqual([]);
+    expect(await overlapsStage(page, ".coach")).toBe(false);
     const stage = await page.locator(".camera-stage").boundingBox(),
       box = await card.boundingBox();
-    expect(box!.y).toBeGreaterThanOrEqual(stage!.y + stage!.height);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(stage!.y);
+    expect(box!.x).toBeGreaterThanOrEqual(0);
     expect(box!.x + box!.width).toBeLessThanOrEqual(360);
     if (tip < 3) await card.getByRole("button", { name: "Next tip" }).click();
   }
-  // Reading order top to bottom: stage, tips, effects tray, inspector,
-  // metrics. Keyboard focus must visit them in that same order.
+  // Reading order top to bottom: source actions, tips, stage, effects tray,
+  // inspector, metrics. Keyboard focus must visit them in that same order.
   const order = await page.evaluate(() => {
     const blocks = [
-      ".camera-stage",
+      ".actions",
       ".coach",
+      ".camera-stage",
       ".deck",
       ".inspector",
       ".metrics",
@@ -246,16 +289,17 @@ test("on a phone the tips sit under the stage and focus follows the page", async
     return { visited, tops };
   });
   expect(order.visited).toEqual([
-    ".camera-stage",
+    ".actions",
     ".coach",
+    ".camera-stage",
     ".deck",
     ".inspector",
     ".metrics",
   ]);
   expect([...order.tops].sort((a, b) => a - b)).toEqual(order.tops);
-  // And by the keyboard itself: Tab leaves the stage's last tool for the
-  // tips, and the tips for the effects tray.
-  await page.getByRole("button", { name: "Fullscreen" }).focus();
+  // And by the keyboard itself: Tab leaves the last source action for the
+  // tips, and the tips for the stage.
+  await page.getByLabel("Upload image or video").focus();
   await page.keyboard.press("Tab");
   expect(
     await page.evaluate(() => !!document.activeElement?.closest(".coach")),
@@ -263,7 +307,9 @@ test("on a phone the tips sit under the stage and focus follows the page", async
   await card.getByRole("button", { name: "Close tips" }).focus();
   await page.keyboard.press("Tab");
   expect(
-    await page.evaluate(() => !!document.activeElement?.closest(".deck")),
+    await page.evaluate(
+      () => !!document.activeElement?.closest(".camera-stage"),
+    ),
   ).toBe(true);
   await card.getByRole("button", { name: "Got it" }).click();
   await page.getByRole("button", { name: "Immersive" }).focus();
@@ -468,13 +514,16 @@ test("a denied camera gets its own error state with a way forward", async ({
   });
   await page.goto("./", { waitUntil: "domcontentloaded" });
   await ready(page);
+  await pill(page).click();
+  await expect(tips(page)).toBeVisible();
   await page.getByRole("button", { name: "Start camera" }).click();
   const alert = page.getByRole("alert");
   await expect(alert).toContainText("Camera access is blocked.");
   await expect(alert).toContainText("Camera permission was denied");
   await expect(alert).toContainText("set Camera to Allow");
-  // The first-run tips step aside for the error.
+  // The open tips step aside for the error; the pill stays, off the stage.
   await expect(tips(page)).toHaveCount(0);
+  expect(await overlapsStage(page, ".tips-pill")).toBe(false);
   await expect(
     alert.getByRole("button", { name: "Retry camera" }),
   ).toBeVisible();

@@ -152,23 +152,19 @@ export default function App() {
   // In one column the rail comes after the tray and the result card, so it is
   // also placed after them in the markup: focus then moves in reading order.
   const rail = <Inspector key="rail" />;
-  // The first-run tips sit on the stage where it is tall enough to hold them
-  // clear of its controls. In one column it is not (the card covered the
-  // toolbar at 360 px), so there the card goes under the stage instead, while
-  // the stage has nothing more urgent to say.
-  const tips = shell.coach !== null && !shell.immersive && (
+  // The tips card opens from the Tips pill, in the page flow above the
+  // workspace: it never sits on the stage or the rail. It steps aside while
+  // the stage is reporting an error, and comes back once that is resolved.
+  const tips = shell.coach !== null &&
+    !shell.immersive &&
+    !input.error &&
+    !vision.error && (
       <CoachMarks
-        key="tips"
         step={shell.coach}
         onStep={shell.setCoach}
         onDone={shell.endCoach}
       />
-    ),
-    stageClear =
-      !input.error &&
-      !vision.error &&
-      studio.status === "Ready" &&
-      !!input.source;
+    );
   return (
     <StudioContext.Provider value={studio}>
       <main
@@ -183,7 +179,13 @@ export default function App() {
           onUpload={controls.onUpload}
           pending={input.pending}
           onPalette={() => shell.setPalette(true)}
+          tips={{
+            open: shell.coach !== null,
+            fresh: shell.coachFresh,
+            onToggle: shell.toggleCoach,
+          }}
         />
+        {tips}
         <CameraPicker
           source={input.source}
           cameras={input.cameras}
@@ -205,10 +207,7 @@ export default function App() {
             notice={notice}
             actions={stageActions}
             onClip={(clip) => shell.setShare({ mode: modeId, ...clip })}
-          >
-            {!narrow && tips}
-          </CameraStage>
-          {narrow && stageClear && tips}
+          />
           {!narrow && rail}
           <StudioDeck
             key="deck"
