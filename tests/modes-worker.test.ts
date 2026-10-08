@@ -31,11 +31,24 @@ function startWorker(vision: Record<string, unknown>) {
       return kind === "2d" ? { drawImage() {} } : null;
     }
   }
-  new Function("self", "importScripts", "Vision", "OffscreenCanvas", source)(
+  // The worker downloads the model itself: hand it four bytes.
+  const fetched = async () => ({
+    ok: true,
+    arrayBuffer: async () => new ArrayBuffer(4),
+  });
+  new Function(
+    "self",
+    "importScripts",
+    "Vision",
+    "OffscreenCanvas",
+    "fetch",
+    source,
+  )(
     self,
     () => {},
     { FilesetResolver: { forVisionTasks: async () => ({}) }, ...vision },
     Canvas,
+    fetched,
   );
   const send = (data: unknown) => self.onmessage!({ data });
   return { posted, send };
@@ -74,8 +87,12 @@ async function run(kind: TaskKind, vision: Raw, options: Raw = {}) {
   return worker.posted;
 }
 const resultOf = (posted: Posted[]) => {
-  expect(posted.map((p) => p.message.type)).toEqual(["ready", "result"]);
-  return posted[1].message.result as TaskResult;
+  expect(posted.map((p) => p.message.type)).toEqual([
+    "downloaded",
+    "ready",
+    "result",
+  ]);
+  return posted[2].message.result as TaskResult;
 };
 const point = (x: number, y: number) => ({ x, y, z: 0, visibility: 0 });
 
@@ -112,7 +129,7 @@ describe("the worker's face kind", () => {
     expect(created[0]).toMatchObject({
       runningMode: "VIDEO",
       numFaces: 1,
-      baseOptions: { modelAssetPath: "/models/m.task", delegate: "CPU" },
+      baseOptions: { modelAssetBuffer: new Uint8Array(4), delegate: "CPU" },
     });
     expect(result.kind).toBe("face");
     expect(result.landmarks).toEqual([face]);
@@ -236,8 +253,8 @@ describe("the worker's segment kind", () => {
       ),
     });
     const extra = resultOf(posted).extra as SegmentExtra;
-    expect(posted[1].transfer).toEqual([extra.mask.buffer, extra.alpha.buffer]);
-    expect("transfer" in (posted[1].message.result as object)).toBe(false);
+    expect(posted[2].transfer).toEqual([extra.mask.buffer, extra.alpha.buffer]);
+    expect("transfer" in (posted[2].message.result as object)).toBe(false);
     // Other kinds transfer nothing.
     const face = await run("face", {
       FaceLandmarker: fakeTask({}, [], "detectForVideo"),
@@ -264,7 +281,7 @@ describe("the worker's segment kind", () => {
       generation: 1,
       confidence: 0.72,
     });
-    const result = worker.posted[1].message.result as TaskResult;
+    const result = worker.posted[2].message.result as TaskResult;
     expect(result.detections.map((d) => d.label)).toEqual(["clothes"]);
     expect((result.extra as SegmentExtra).classes).toHaveLength(3);
   });
@@ -272,7 +289,7 @@ describe("the worker's segment kind", () => {
     const posted = await run("segment", {
       ImageSegmenter: fakeTask({}, [], "segmentForVideo"),
     });
-    expect(posted[1].message.type).toBe("error");
-    expect(String(posted[1].message.error)).toContain("no masks");
+    expect(posted[2].message.type).toBe("error");
+    expect(String(posted[2].message.error)).toContain("no masks");
   });
 });

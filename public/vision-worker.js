@@ -1,7 +1,9 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved.
  * Original worker orchestration; MediaPipe runtime and models retain Apache-2.0 rights. */
 // One worker runs one vision task. Protocol (documented in docs/architecture.md):
-//   in  { type: "init", base, task: TaskSpec }                  out { type: "ready", delegate, files }
+//   in  { type: "init", base, task: TaskSpec }                  out { type: "downloaded" } when the model and
+//                                                                   wasm bytes are in, then
+//                                                               out { type: "ready", delegate, files }
 //   in  { type: "frame", bitmap, time, generation, confidence } out { type: "result", result: TaskResult }
 //   any failure                                                 out { type: "error", error }
 // A failed GPU start is not retried here: the page decides, and restarts this
@@ -54,6 +56,13 @@ function boundsOf(points) {
     w: Math.max(0, Math.min(1, x1) - x0),
     h: Math.max(0, Math.min(1, y1) - y0),
   };
+}
+
+// The whole file, or an error that names it.
+async function download(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
+  return new Uint8Array(await response.arrayBuffer());
 }
 
 // What was fetched from the site to get this worker ready: its own script,
@@ -320,9 +329,20 @@ self.onmessage = async ({ data }) => {
       const files = await Vision.FilesetResolver.forVisionTasks(
         `${data.base}runtime/wasm`,
       );
+      // The downloads happen here, not inside MediaPipe, so that the page
+      // can be told when the bytes are in: how long a GPU task may take to
+      // start is counted from then, not from a slow connection's first byte.
+      // The wasm is fetched only to have it in the browser's cache.
+      const [model] = await Promise.all([
+        download(`${data.base}models/${spec.model}`),
+        typeof files.wasmBinaryPath === "string"
+          ? download(files.wasmBinaryPath).then(() => null)
+          : null,
+      ]);
+      self.postMessage({ type: "downloaded" });
       task = await handler.create(files, {
         baseOptions: {
-          modelAssetPath: `${data.base}models/${spec.model}`,
+          modelAssetBuffer: model,
           delegate: spec.delegate,
         },
         runningMode: "VIDEO",

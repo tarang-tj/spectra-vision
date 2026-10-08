@@ -64,6 +64,10 @@ export function createTaskRunner(
     disposed = false,
     lastFrame = 0,
     started = 0,
+    // Whether the worker has reported that the model and wasm bytes arrived,
+    // and when. The GPU start is timed from that moment.
+    downloaded = false,
+    clock = 0,
     firstSent = 0,
     watchdog: ReturnType<typeof setTimeout> | undefined,
     note = "";
@@ -114,14 +118,22 @@ export function createTaskRunner(
   // loading or still owes its first result, never once it works or on CPU.
   const watch = () => {
     clearTimeout(watchdog);
-    if (disposed || active !== "GPU" || produced || (ready && !firstSent))
+    // Nothing is timed while the files download: a slow connection says
+    // nothing about the GPU (the mode's own load timeout still applies).
+    if (
+      disposed ||
+      active !== "GPU" ||
+      produced ||
+      (!ready && !downloaded) ||
+      (ready && !firstSent)
+    )
       return;
     const now = performance.now(),
       reason = gpuStartTimeout({
         active,
         ready,
         produced,
-        sinceStart: now - started,
+        sinceStart: now - clock,
         sinceFirstFrame: firstSent ? now - firstSent : null,
       });
     if (reason) fail(reason);
@@ -129,6 +141,7 @@ export function createTaskRunner(
   };
   const start = () => {
     started = performance.now();
+    downloaded = false;
     firstSent = 0;
     status = beginStatus(spec.kind, spec.model, requested, active, note);
     try {
@@ -143,7 +156,12 @@ export function createTaskRunner(
     worker.onmessage = (event: MessageEvent) => {
       if (disposed) return;
       const message = event.data;
-      if (message.type === "ready") {
+      if (message.type === "downloaded") {
+        // The download is not the GPU's doing: bound only what follows it.
+        downloaded = true;
+        clock = performance.now();
+        watch();
+      } else if (message.type === "ready") {
         ready = true;
         status.state = "ready";
         status.loadMs = performance.now() - started;

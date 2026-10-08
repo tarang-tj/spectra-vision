@@ -12,9 +12,9 @@ export function fallbackDelegate(
   return active === "GPU" && !produced ? "CPU" : null;
 }
 
-/** How long a GPU task may take to load before it is given up on. The load
- * includes the runtime and model download, so this is the bound a slow
- * connection has to beat too. */
+/** How long a GPU task may take to load before it is given up on, counted
+ * from the moment the worker reports that the model and wasm bytes are in
+ * (its "downloaded" message). A slow connection is not held against the GPU. */
 export const GPU_READY_LIMIT_MS = 8000;
 /** How long the first GPU frame may take (shader compilation happens here). */
 export const GPU_FIRST_RESULT_LIMIT_MS = 5000;

@@ -169,7 +169,8 @@ describe("task runner: bounded GPU start and the delegate switch", () => {
     const loads: { delegate: string; requested: string; note?: string }[] = [];
     const off = telemetry.on("model", (event) => loads.push(event));
     const { workers, events, runner } = harness(spec("GPU"));
-    // The worker never answers: no ready, no error.
+    // The files arrive, then the worker never answers: no ready, no error.
+    workers[0].reply({ type: "downloaded" });
     vi.advanceTimersByTime(GPU_READY_LIMIT_MS - 300);
     expect(workers).toHaveLength(1);
     expect(runner.delegate()).toBe("GPU");
@@ -197,6 +198,25 @@ describe("task runner: bounded GPU start and the delegate switch", () => {
     runner.dispose();
     expect(alive(workers)).toHaveLength(0);
     off();
+  });
+
+  it("does not count the download against the GPU start", () => {
+    const { workers, runner } = harness(spec("GPU"));
+    // A slow connection: the bytes take longer than the whole limit. Nothing
+    // is timed yet, so no timer runs either.
+    vi.advanceTimersByTime(GPU_READY_LIMIT_MS + 1000);
+    expect(workers).toHaveLength(1);
+    expect(runner.delegate()).toBe("GPU");
+    expect(vi.getTimerCount()).toBe(0);
+    // The bytes are in: the limit counts from here.
+    workers[0].reply({ type: "downloaded" });
+    vi.advanceTimersByTime(GPU_READY_LIMIT_MS - 500);
+    expect(workers).toHaveLength(1);
+    expect(runner.delegate()).toBe("GPU");
+    vi.advanceTimersByTime(1000);
+    expect(workers).toHaveLength(2);
+    expect(runner.delegate()).toBe("CPU");
+    runner.dispose();
   });
 
   it("falls back when GPU loads but its first frame never returns", () => {
