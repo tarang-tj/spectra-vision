@@ -1,23 +1,23 @@
 import type { Box, Detection, Point, Track } from "./types";
-export function iou(a: Box, b: Box) {
-  const overlap =
-    Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) *
-    Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
-  return overlap / Math.max(1e-9, a.w * a.h + b.w * b.h - overlap);
-}
+import { assign, centre, iou, pairGain } from "./tracker-cost";
+export { iou };
 
 /** How tracks are matched and kept. Times are in the clock of `update`. */
 export type TrackerOptions = {
-  /** Frames a new object must be seen in, one after the other, before it gets
-   * an id and is returned. 1 shows every detection at once. Hits need not
-   * follow each other, but a tentative object missed more than
-   * `tentativeMisses` times is forgotten, so a flicker never takes an id. */
+  /** Sightings a new object needs before it gets an id and is returned. 1
+   * shows every detection at once. The sightings need not follow each other:
+   * a tentative object is kept for `confirmWindowMs` after its last sighting,
+   * so an object found only on every 4th or 5th frame is still confirmed. */
   minHits: number;
   /** A confirmed track survives this many missed frames in a row. */
   maxMisses: number;
-  /** A tentative track survives this many misses before it is forgotten, so
-   * an object that is found on alternate frames is still confirmed. */
+  /** A tentative track also survives this many misses, whatever their timing. */
   tentativeMisses: number;
+  /** A tentative track is forgotten when not seen for this long (ms). */
+  confirmWindowMs: number;
+  /** A tentative track only takes a detection overlapping its box by more than
+   * this (IoU); with no velocity yet, a loose gate would chain flickers. */
+  tentativeIou: number;
   /** When results arrive further apart than this (ms), a new object is
    * confirmed at once: waiting a whole extra result costs more than a flicker. */
   slowGapMs: number;
@@ -29,20 +29,33 @@ export type TrackerOptions = {
    * than this (IoU), or when the centres are closer than `maxCentre`. */
   minIou: number;
   maxCentre: number;
-  /** Weight of the newest velocity sample in the running velocity (0..1). */
+  /** Weight of the newest velocity sample in the running velocity (0..1), for
+   * a result 1/15 s after the previous one. Low means a steady velocity that
+   * jittery boxes cannot swing. */
   velocityBlend: number;
   /** The box is moved along its velocity for at most this long (ms). */
   maxPredictMs: number;
 };
+/** Smoothing of the centre, same 1/15 s reference as `velocityBlend`. The
+ * prediction is built from this smoothed centre, so box jitter cannot decide
+ * which of two overlapping boxes belongs to which track. */
+const CENTRE_BLEND = 0.3;
+/** Results further apart than this let a track reach further: the centre gate
+ * grows with the time since the track was seen, up to REACH_MAX times. */
+const REACH_MS = 150;
+const REACH_MAX = 3;
+const REFERENCE_GAP_MS = 1000 / 15;
 export const DEFAULT_TRACKER: TrackerOptions = {
   minHits: 1,
   maxMisses: 10,
   tentativeMisses: 2,
+  confirmWindowMs: 1000,
+  tentativeIou: 0.5,
   slowGapMs: 400,
   maxAgeMs: 900,
   minIou: 0.15,
   maxCentre: 0.075,
-  velocityBlend: 0.5,
+  velocityBlend: 0.08,
   maxPredictMs: 400,
 };
 /** The settings the app is measured with: DEFAULT_TRACKER plus a two-frame
@@ -56,6 +69,8 @@ type Live = {
   id: number; // 0 until confirmed
   label: string;
   box: Box;
+  fx: number; // smoothed centre
+  fy: number;
   vx: number; // centre velocity, image fractions per ms
   vy: number;
   lastSeen: number;
@@ -63,58 +78,6 @@ type Live = {
   misses: number;
   trail: Point[];
 };
-const centre = (b: Box) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
-
-/** Assignment that maximizes the total of `gain` (rows = tracks, columns =
- * detections); a pair with gain 0 is treated as unassigned. Hungarian
- * algorithm on a square matrix padded with zeros. Returns column per row. */
-function assign(gain: number[][], rows: number, cols: number): number[] {
-  const n = Math.max(rows, cols),
-    cost = (i: number, j: number) => (i < rows && j < cols ? -gain[i][j] : 0),
-    u = new Array<number>(n + 1).fill(0),
-    v = new Array<number>(n + 1).fill(0),
-    p = new Array<number>(n + 1).fill(0),
-    way = new Array<number>(n + 1).fill(0);
-  for (let i = 1; i <= n; i++) {
-    p[0] = i;
-    let j0 = 0;
-    const minv = new Array<number>(n + 1).fill(Infinity),
-      used = new Array<boolean>(n + 1).fill(false);
-    do {
-      used[j0] = true;
-      const i0 = p[j0];
-      let delta = Infinity,
-        j1 = 0;
-      for (let j = 1; j <= n; j++) {
-        if (used[j]) continue;
-        const cur = cost(i0 - 1, j - 1) - u[i0] - v[j];
-        if (cur < minv[j]) {
-          minv[j] = cur;
-          way[j] = j0;
-        }
-        if (minv[j] < delta) {
-          delta = minv[j];
-          j1 = j;
-        }
-      }
-      for (let j = 0; j <= n; j++)
-        if (used[j]) {
-          u[p[j]] += delta;
-          v[j] -= delta;
-        } else minv[j] -= delta;
-      j0 = j1;
-    } while (p[j0] !== 0);
-    do {
-      const j1 = way[j0];
-      p[j0] = p[j1];
-      j0 = j1;
-    } while (j0);
-  }
-  const column = new Array<number>(rows).fill(-1);
-  for (let j = 1; j <= n; j++)
-    if (p[j] >= 1 && p[j] <= rows && j <= cols) column[p[j] - 1] = j - 1;
-  return column;
-}
 
 export class Tracker {
   private nextId = 1;
@@ -137,40 +100,33 @@ export class Tracker {
       gap = time - this.prevTime,
       slow = gap > o.slowGapMs,
       previous = this.tracks.filter(
-        (t) => t.lastSeen >= this.prevTime || time - t.lastSeen < limit,
+        (t) =>
+          t.lastSeen >= this.prevTime ||
+          (t.id
+            ? time - t.lastSeen < limit
+            : time - t.lastSeen < Math.max(limit, o.confirmWindowMs) ||
+              t.misses < o.tentativeMisses),
       );
     // Each track's box is moved along its own velocity to where it should be now.
     const predicted = previous.map((t) => {
       const dt = Math.min(Math.max(0, time - t.lastSeen), o.maxPredictMs);
       return {
         ...t.box,
-        x: t.box.x + t.vx * dt,
-        y: t.box.y + t.vy * dt,
+        x: t.fx + t.vx * dt - t.box.w / 2,
+        y: t.fy + t.vy * dt - t.box.h / 2,
       };
     });
     const gain = previous.map((t, ti) =>
-      detections.map((d) => {
-        if (d.label !== t.label) return 0;
-        // Allowed when either the predicted or the last seen box fits.
-        let allowed = false;
-        for (const box of [predicted[ti], t.box]) {
-          const c = centre(box),
-            e = centre(d.box);
-          if (
-            iou(d.box, box) > o.minIou ||
-            Math.hypot(e.x - c.x, e.y - c.y) < o.maxCentre
-          )
-            allowed = true;
-        }
-        if (!allowed) return 0;
-        const c = centre(predicted[ti]),
-          e = centre(d.box);
-        return (
-          1e-6 +
-          Math.max(0, iou(d.box, predicted[ti])) +
-          0.15 * Math.max(0, 1 - Math.hypot(e.x - c.x, e.y - c.y))
-        );
-      }),
+      detections.map((d) =>
+        pairGain(
+          { ...t, confirmed: t.id > 0 },
+          predicted[ti],
+          d,
+          o,
+          slow,
+          Math.min(REACH_MAX, Math.max(1, (time - t.lastSeen) / REACH_MS)),
+        ),
+      ),
     );
     const column = previous.length
         ? assign(gain, previous.length, detections.length)
@@ -191,8 +147,13 @@ export class Tracker {
       let track: Live;
       if (old) {
         const dt = time - old.lastSeen,
-          oc = centre(old.box),
-          b = old.hits > 1 ? o.velocityBlend : 1;
+          // Weight of this sample: velocityBlend for a result 1/15 s after the
+          // last, more for longer gaps, and a plain running mean while the
+          // track is young.
+          b = Math.max(
+            1 - Math.pow(1 - o.velocityBlend, dt / REFERENCE_GAP_MS),
+            1 / old.hits,
+          );
         track = {
           ...old,
           box: d.box,
@@ -202,14 +163,27 @@ export class Tracker {
           trail: [...old.trail, c].slice(-32),
         };
         if (dt > 0) {
-          track.vx = (1 - b) * old.vx + (b * (c.x - oc.x)) / dt;
-          track.vy = (1 - b) * old.vy + (b * (c.y - oc.y)) / dt;
+          // Alpha-beta filter on the centre: the prediction is built from the
+          // smoothed centre, so box jitter does not move it.
+          const pdt = Math.min(dt, o.maxPredictMs),
+            rx = c.x - (old.fx + old.vx * pdt),
+            ry = c.y - (old.fy + old.vy * pdt),
+            a =
+              old.hits > 1
+                ? 1 - Math.pow(1 - CENTRE_BLEND, dt / REFERENCE_GAP_MS)
+                : 1;
+          track.fx = old.fx + old.vx * pdt + a * rx;
+          track.fy = old.fy + old.vy * pdt + a * ry;
+          track.vx = old.vx + (b * rx) / dt;
+          track.vy = old.vy + (b * ry) / dt;
         }
       } else
         track = {
           id: 0,
           label: d.label,
           box: d.box,
+          fx: c.x,
+          fy: c.y,
           vx: 0,
           vy: 0,
           lastSeen: time,
@@ -229,11 +203,12 @@ export class Tracker {
         });
     });
     // Missed tracks are retained for association only, never rendered as fresh
-    // detections. A tentative one is kept through `tentativeMisses` misses.
+    // detections.
     for (const t of previous)
       if (
         !matched.has(t) &&
-        t.misses < (t.id ? o.maxMisses : o.tentativeMisses)
+        // A tentative track is pruned by age when the next result arrives.
+        (t.id ? t.misses < o.maxMisses : true)
       )
         live.push({ ...t, misses: t.misses + 1 });
     if (Number.isFinite(this.prevTime)) this.lastGap = Math.max(0, gap);
