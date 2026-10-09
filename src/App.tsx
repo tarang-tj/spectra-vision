@@ -20,6 +20,7 @@ import { useShortcuts } from "./shell/use-shortcuts";
 import { useSourceControls } from "./shell/use-source-controls";
 import { useToast } from "./shell/use-toast";
 import { downloadSession } from "./session-export";
+import { stageHooks } from "./stage/stage-hooks";
 import { StudioContext } from "./studio-context";
 import type { Studio } from "./studio-context";
 import { useSession } from "./vision/useSession";
@@ -99,6 +100,7 @@ export default function App() {
     rows,
     count,
     paused,
+    setPaused: controls.setPaused,
     status: input.pending ? "Opening source" : vision.status,
     setConfidence,
     toggleEffect,
@@ -109,6 +111,7 @@ export default function App() {
     panel: shell.panel,
     openPanel: shell.openPanel,
     immersive: shell.immersive,
+    stage: stageHooks,
   };
   // The immersive effects popover starts closed each time the view is entered.
   useEffect(() => {

@@ -1,4 +1,4 @@
-import type { Delegate, TaskKind } from "../vision/types";
+import type { Delegate, TaskKind, VisionResult } from "../vision/types";
 
 /** Measured events only: every number here comes from a model run or a clock. */
 export type TelemetryEvents = {
@@ -22,6 +22,9 @@ export type TelemetryEvents = {
      * wasm files and the model. */
     files?: string[];
   };
+  /** One per merged vision result, for any mode. Read it through
+   * `onVisionResult` (src/vision/result-feed.ts). */
+  result: { result: VisionResult; generation: number };
   /** One per drawn stage frame, fed by the render loop. */
   frame: { time: number; dt: number; drawMs: number };
 };

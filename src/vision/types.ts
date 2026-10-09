@@ -26,6 +26,10 @@ export type Delegate = "CPU" | "GPU";
 export type TaskSpec = {
   kind: TaskKind;
   model: string;
+  /** A slower, more accurate model for the same task, loaded instead of
+   * `model` while the Precision setting is "Precise". Listed in
+   * scripts/models.json like any other model. */
+  preciseModel?: string;
   options: Record<string, unknown>;
   delegate: Delegate;
 };
@@ -37,11 +41,22 @@ export type TaskResult = {
   time: number;
   latency: number;
   delegate: Delegate;
+  /** The model file this result came from (set by the task runner). */
+  model?: string;
   detections: Detection[];
   landmarks: Point[][];
   handedness: string[];
   /** Kind-specific payload (blendshapes, masks, gesture names) added by later kinds. */
   extra?: Record<string, unknown>;
+};
+/** `extra` of a "pose" or "hand" result: MediaPipe's world landmarks, one list
+ * per body or hand and indexed exactly like `landmarks`. Units are metres. The
+ * origin is the hip midpoint for a pose and the hand's geometric centre for a
+ * hand, so the points give sizes and angles, not a position in the room. `x`,
+ * `y` and `z` are real-world offsets (y down, as in the image); `visibility`
+ * is present on pose points. Always an array, empty when nothing was seen. */
+export type WorldExtra = {
+  world: Point[][];
 };
 /** `extra` of a "face" result. One entry per face, in the order of `landmarks`.
  * `blendshapes` maps every MediaPipe blendshape name to its score (0..1);

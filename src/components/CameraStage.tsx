@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import type { ReactNode, RefObject } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import type { PointerEvent, ReactNode, RefObject } from "react";
 import {
   Camera,
   Expand,
@@ -13,6 +13,7 @@ import {
   Square,
 } from "lucide-react";
 import type { ModeDef } from "../modes";
+import { stageHooks } from "../stage/stage-hooks";
 import { useStageLoop } from "../stage/use-stage-loop";
 import type { FrameData } from "../vision/frame";
 import { useClipRecorder } from "../shell/use-clip-recorder";
@@ -48,6 +49,12 @@ export default function CameraStage(props: {
     stage = useRef<HTMLDivElement>(null),
     latest = useRef(props);
   const [fullscreen, setFullscreen] = useState(false);
+  // True while a panel listens for pointer input: the canvas then keeps touch
+  // gestures to itself (see .camera-stage canvas[data-pointer] in stage.css).
+  const measuring = useSyncExternalStore(
+    stageHooks.subscribe,
+    stageHooks.hasPointerHandlers,
+  );
   const capture = useClipRecorder(
     canvas,
     `${mode.id}:${source?.generation ?? 0}`,
@@ -84,6 +91,25 @@ export default function CameraStage(props: {
       if (source) shot();
     },
   };
+  // Pointer input for panels (stage-hooks.ts). With no handler registered this
+  // does nothing, so the canvas behaves as it always did.
+  const pointer =
+    (type: "down" | "move" | "up", cancelled = false) =>
+    (e: PointerEvent<HTMLCanvasElement>) => {
+      if (!stageHooks.hasPointerHandlers()) return;
+      const box = e.currentTarget.getBoundingClientRect();
+      if (!box.width || !box.height) return;
+      const consumed = stageHooks.dispatch(
+        type,
+        (e.clientX - box.left) / box.width,
+        (e.clientY - box.top) / box.height,
+        { id: e.pointerId, type: e.pointerType, cancelled },
+      );
+      if (!consumed) return;
+      e.preventDefault();
+      // A drag that leaves the canvas keeps reporting until the finger lifts.
+      if (type === "down") e.currentTarget.setPointerCapture(e.pointerId);
+    };
   const expand = async () => {
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
@@ -109,7 +135,16 @@ export default function CameraStage(props: {
       className={`camera-stage ${fullscreen ? "is-fullscreen" : ""}`}
       ref={stage}
     >
-      <canvas ref={canvas} aria-label={`${mode.label} canvas`} role="img" />
+      <canvas
+        ref={canvas}
+        aria-label={`${mode.label} canvas`}
+        role="img"
+        data-pointer={measuring ? "on" : undefined}
+        onPointerDown={pointer("down")}
+        onPointerMove={pointer("move")}
+        onPointerUp={pointer("up")}
+        onPointerCancel={pointer("up", true)}
+      />
       <div className="stage-top">
         <span className="hud-badge">
           <i className={source?.kind === "camera" ? "live-dot" : ""} />

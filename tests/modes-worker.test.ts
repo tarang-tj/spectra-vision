@@ -8,6 +8,7 @@ import type {
   SegmentExtra,
   TaskKind,
   TaskResult,
+  WorldExtra,
 } from "../src/vision/types";
 
 // Runs the real worker script against stand-ins for the MediaPipe tasks, to
@@ -291,5 +292,55 @@ describe("the worker's segment kind", () => {
     });
     expect(posted[2].message.type).toBe("error");
     expect(String(posted[2].message.error)).toContain("no masks");
+  });
+});
+
+describe("the worker's pose and hand kinds: world landmarks", () => {
+  const landmark = (x: number) => point(x, 0.5),
+    world = (x: number) => ({ x, y: 0.1, z: -0.2, visibility: 0.9 });
+  it("passes a pose's world landmarks in extra.world, indexed like landmarks", async () => {
+    const posted = await run("pose", {
+      PoseLandmarker: fakeTask(
+        {
+          landmarks: [[landmark(0.1), landmark(0.2)]],
+          worldLandmarks: [[world(0.01), world(0.02)]],
+        },
+        [],
+        "detectForVideo",
+      ),
+    });
+    const result = resultOf(posted),
+      extra = result.extra as WorldExtra;
+    expect(result.landmarks[0]).toHaveLength(2);
+    expect(extra.world).toEqual([[world(0.01), world(0.02)]]);
+    expect(extra.world[0]).toHaveLength(result.landmarks[0].length);
+  });
+  it("does the same for hands, one list per hand", async () => {
+    const posted = await run("hand", {
+      HandLandmarker: fakeTask(
+        {
+          landmarks: [[landmark(0.1)], [landmark(0.8)]],
+          worldLandmarks: [[world(0.03)], [world(-0.03)]],
+          handedness: [[{ categoryName: "Left" }], [{ categoryName: "Right" }]],
+        },
+        [],
+        "detectForVideo",
+      ),
+    });
+    const result = resultOf(posted);
+    expect((result.extra as WorldExtra).world).toHaveLength(2);
+    expect(result.handedness).toEqual(["Left", "Right"]);
+  });
+  it("reports an empty list, not an invented one, when the model returns none", async () => {
+    const posted = await run("pose", {
+      PoseLandmarker: fakeTask({ landmarks: [] }, [], "detectForVideo"),
+    });
+    expect(resultOf(posted).extra).toEqual({ world: [] });
+  });
+  it("adds nothing to the other kinds", async () => {
+    const posted = await run("object", {
+      ObjectDetector: fakeTask({ detections: [] }, [], "detectForVideo"),
+    });
+    expect(resultOf(posted).extra).toBeUndefined();
   });
 });

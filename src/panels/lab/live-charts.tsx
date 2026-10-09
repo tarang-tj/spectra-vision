@@ -4,6 +4,7 @@ import { tasksOf } from "../../modes";
 import { DROP_FACTOR } from "../../telemetry/stats";
 import { taskStatus } from "../../telemetry/task-status";
 import { chooseDelegate, requestedDelegate } from "../../vision/delegate";
+import { modelOf } from "../../vision/settings";
 import type { Delegate, TaskSpec } from "../../vision/types";
 import { useStudio } from "../../studio-context";
 import { CHART, drawChart } from "./charts";
@@ -28,7 +29,7 @@ function Stat(props: { label: string; value: string; id: string }) {
 
 /** What one task is really running on, from the runner's own record. */
 function delegateLine(spec: TaskSpec) {
-  const status = taskStatus(spec.kind, spec.model);
+  const status = taskStatus(spec.kind, modelOf(spec));
   if (!status) return "Not started.";
   if (status.state === "failed") return `Failed: ${status.note}`;
   if (status.state === "loading")

@@ -2,8 +2,11 @@ import type { ModeDef } from "../modes";
 import { telemetry } from "../telemetry/bus";
 import { createFrame, updateFrame } from "../vision/frame";
 import type { Frame, FrameData } from "../vision/frame";
+import { smoothingOn } from "../vision/settings";
+import { ResultSmoother } from "../vision/smooth-result";
 import { EffectHost } from "./effect-host";
 import { GlLayer } from "./gl-layer";
+import { stageHooks } from "./stage-hooks";
 
 /** What the stage component hands the renderer each frame. */
 export type StageInputs = {
@@ -13,7 +16,8 @@ export type StageInputs = {
 };
 
 /** Draws one stage frame in a fixed order: source image, effects that sit under
- * the tracking, the mode's own drawing, 2d effects, then the GPU layer.
+ * the tracking, the mode's own drawing, 2d effects, the GPU layer, then the
+ * overlays panels registered (stage-hooks.ts).
  * It owns the only Frame, the effect instances and the GL layer. */
 export class StageRenderer {
   private layer = new GlLayer();
@@ -23,6 +27,8 @@ export class StageRenderer {
   private generation: number | undefined;
   private lastTime = 0;
   private modeFailed = false;
+  private smoother = new ResultSmoother();
+  private smoothing = false;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -70,11 +76,11 @@ export class StageRenderer {
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = "#10191c";
     ctx.fillRect(0, 0, width, height);
-    if (!source) return;
+    if (!source) return stageHooks.track(null, 0, 0);
     const e = source.element,
       sw = e instanceof HTMLVideoElement ? e.videoWidth : e.naturalWidth,
       sh = e instanceof HTMLVideoElement ? e.videoHeight : e.naturalHeight;
-    if (!sw || !sh) return;
+    if (!sw || !sh) return stageHooks.track(null, 0, 0);
     const dt = paused || !this.lastTime ? 0 : time - this.lastTime;
     this.lastTime = time;
     updateFrame(
@@ -90,6 +96,15 @@ export class StageRenderer {
       paused,
       !paused && !reducedMotion,
     );
+    stageHooks.track(frame, sw, sh);
+    // "Smooth landmarks" filters what is drawn. `data.result` stays raw, for
+    // the export, the result feed and the panels.
+    const smooth = smoothingOn();
+    if (smooth !== this.smoothing) {
+      this.smoothing = smooth;
+      this.smoother.reset();
+    }
+    if (smooth) frame.result = this.smoother.apply(data.result);
     const rect = frame.rect;
     ctx.save();
     if (frame.mirror) {
@@ -113,6 +128,7 @@ export class StageRenderer {
     this.effects.draw(frame, "2d");
     if (this.effects.draw(frame, "gl") && this.layer.canvas)
       ctx.drawImage(this.layer.canvas, 0, 0, width, height);
+    stageHooks.drawOverlays(ctx, frame);
     if (measure)
       telemetry.emit("frame", {
         time,

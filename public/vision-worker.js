@@ -36,6 +36,14 @@ const read = (output, bitmap, confidence) => ({
 });
 const detect = (task, bitmap, time) => task.detectForVideo(bitmap, time);
 
+// Pose and hand: the landmarks as above, plus MediaPipe's world landmarks
+// (metres, same indexing as `landmarks`) in `extra.world`. A result without
+// them gets an empty list; nothing is made up.
+const readWorld = (output, bitmap, confidence) => ({
+  ...read(output, bitmap, confidence),
+  extra: { world: output.worldLandmarks ?? [] },
+});
+
 // The image-normalized box around one set of landmarks, clamped to the image.
 function boundsOf(points) {
   let x0 = 1,
@@ -278,7 +286,7 @@ function handlerFor(kind) {
           minPoseDetectionConfidence: value,
           minPosePresenceConfidence: value,
         }),
-        read,
+        read: readWorld,
       };
     case "hand":
       return {
@@ -289,7 +297,7 @@ function handlerFor(kind) {
           minHandDetectionConfidence: value,
           minHandPresenceConfidence: value,
         }),
-        read,
+        read: readWorld,
       };
     case "face":
       return {

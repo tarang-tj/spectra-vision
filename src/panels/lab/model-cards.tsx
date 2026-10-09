@@ -2,6 +2,7 @@
 import { modes, tasksOf } from "../../modes";
 import type { ModeDef } from "../../modes";
 import { taskStatus } from "../../telemetry/task-status";
+import { modelOf } from "../../vision/settings";
 import { useStudio } from "../../studio-context";
 import { modelCard } from "./environment";
 import { figure } from "./live-charts";
@@ -11,7 +12,7 @@ import { figure } from "./live-charts";
 function slowest(mode: ModeDef, field: "loadMs" | "firstResultMs") {
   let worst = 0;
   for (const spec of tasksOf(mode)) {
-    const value = taskStatus(spec.kind, spec.model)?.[field];
+    const value = taskStatus(spec.kind, modelOf(spec))?.[field];
     if (typeof value !== "number") return null;
     worst = Math.max(worst, value);
   }
@@ -71,7 +72,9 @@ export function ModelCards() {
         <h3>Models in use</h3>
       </header>
       {tasksOf(mode).map((spec) => {
-        const card = modelCard(spec.model);
+        // The model in use now: the precise one while Precision asks for it.
+        const model = modelOf(spec),
+          card = modelCard(model);
         return (
           <dl
             className="lab-card"
@@ -79,7 +82,7 @@ export function ModelCards() {
             data-testid={`lab-model-${spec.kind}`}
           >
             <dt>Model</dt>
-            <dd>{spec.model}</dd>
+            <dd>{model}</dd>
             {card ? (
               <>
                 <dt>Size</dt>

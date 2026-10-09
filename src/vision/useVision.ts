@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { tasksOf } from "../modes";
+import { telemetry } from "../telemetry/bus";
 import type { ModeDef } from "../modes";
 import { mergeResults } from "./merge";
 import { createTaskRunner } from "./task-runner";
@@ -76,6 +77,13 @@ export function useVision(
             return;
           const merged = mergeResults(mode.id, kinds, latest, taskResult);
           latest = merged.tasks;
+          // The module-level result feed (result-feed.ts), built only while
+          // someone listens.
+          if (telemetry.listening("result"))
+            telemetry.emit("result", {
+              result: merged,
+              generation: merged.generation,
+            });
           setResult(merged);
         },
         onError: unavailable,

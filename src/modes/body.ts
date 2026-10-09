@@ -16,6 +16,7 @@ const body: ModeDef = {
   task: {
     kind: "pose",
     model: "pose_landmarker_lite.task",
+    preciseModel: "pose_landmarker_full.task",
     options: {
       numPoses: 1,
       minPoseDetectionConfidence: 0.45,

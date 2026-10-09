@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 import type { InspectorRow, ModeDef } from "./modes";
+import type { StageHooks } from "./stage/stage-hooks";
 import type { FrameData } from "./vision/frame";
 
 /** Everything a panel may read or change. Panels take no props; they call
@@ -14,6 +15,9 @@ export type Studio = {
   /** How many things the mode is following in this frame ("Tracked"). */
   count: number;
   paused: boolean;
+  /** Pause or resume the stage and detection. A panel that needs a still frame
+   * (the Ruler) calls it; resuming is the panel's job too. */
+  setPaused(value: boolean): void;
   /** "Ready", or what the stage is waiting for. */
   status: string;
   setConfidence(value: number): void;
@@ -28,6 +32,8 @@ export type Studio = {
   openPanel(id: string): void;
   /** True in the stage-only view, where the rail and the page chrome are hidden. */
   immersive: boolean;
+  /** Draw on the stage canvas and read pointer input there. See stage-hooks.ts. */
+  stage: StageHooks;
 };
 
 export const StudioContext = createContext<Studio | null>(null);

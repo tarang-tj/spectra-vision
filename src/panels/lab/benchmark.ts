@@ -10,6 +10,7 @@ import { telemetry } from "../../telemetry/bus";
 import { droppedFrames, rate, summarize } from "../../telemetry/stats";
 import { loadCount, taskStatus } from "../../telemetry/task-status";
 import { chooseDelegate, chosenDelegate } from "../../vision/delegate";
+import { modelOf } from "../../vision/settings";
 import type { Delegate, Source, TaskKind } from "../../vision/types";
 import { measured } from "./benchmark-report";
 import type { BenchRow, BenchTask } from "./benchmark-report";
@@ -167,14 +168,13 @@ async function runOne(
     for (let i = 0; i < specs.length; i++) {
       const spec = specs[i],
         s = summarize(latencies.get(spec.kind)!),
-        sha256 = await hashModel(spec.model),
+        model = modelOf(spec),
+        sha256 = await hashModel(model),
         task: BenchTask = {
           kind: spec.kind,
-          model: spec.model,
+          model,
           sha256,
-          sha256Matches: sha256
-            ? sha256 === modelCard(spec.model)?.sha256
-            : null,
+          sha256Matches: sha256 ? sha256 === modelCard(model)?.sha256 : null,
           delegateRequested: delegate,
           delegateActive: final[i]?.active ?? null,
           delegateNote: final[i]?.note ?? "",
