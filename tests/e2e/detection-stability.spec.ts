@@ -113,7 +113,7 @@ test("on the moving demo, with Smooth landmarks on, the figures are finite and m
     })
     .toBe(true);
   // A hand that moves has real spread, far above the still figure.
-  expect(await value(page, "stability-raw-hand")).toBeGreaterThan(1);
+  await expect.poll(() => value(page, "stability-raw-hand")).toBeGreaterThan(1);
   await expect
     .poll(async () => finite(await value(page, "stability-smooth-hand")))
     .toBe(true);

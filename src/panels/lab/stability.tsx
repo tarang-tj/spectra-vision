@@ -33,10 +33,7 @@ function Figure(props: {
   return (
     <div>
       <dt>{props.label}</dt>
-      <dd
-        data-testid={props.id}
-        data-value={Number.isFinite(props.exact) ? props.exact : undefined}
-      >
+      <dd data-testid={props.id} data-value={String(props.exact)}>
         {props.value}
       </dd>
     </div>
