@@ -95,6 +95,11 @@ const fusion: ModeDef = {
       model: "face_landmarker.task",
       options: {
         numFaces: 1,
+        // Presence reads head direction from the matrix and expression change
+        // from the blendshapes; without these two the face is drawn but
+        // nothing about it can be measured.
+        outputFaceBlendshapes: true,
+        outputFacialTransformationMatrixes: true,
         minFaceDetectionConfidence: 0.45,
         minFacePresenceConfidence: 0.45,
         minTrackingConfidence: 0.5,

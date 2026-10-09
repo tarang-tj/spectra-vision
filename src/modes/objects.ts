@@ -84,10 +84,10 @@ const objects: ModeDef = {
       frame.emit("after", "object", index);
       ctx.restore();
     });
-    // Say plainly that boxes are being hidden.
+    // Say plainly that boxes are being hidden. Under the source badge at the
+    // top left: the bottom corners hold the pause button and the stage tools.
     const note = filterSummary(filter);
-    if (note)
-      drawChip(ctx, frame, note, rect.x + 8, rect.y + rect.h - 40, "#ffd18d");
+    if (note) drawChip(ctx, frame, note, rect.x + 12, rect.y + 46, "#ffd18d");
   },
   inspector: (frame) =>
     frame.tracks
