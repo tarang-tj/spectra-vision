@@ -74,7 +74,7 @@ test("Precise in Objects loads EfficientDet-Lite2, finds real objects with it an
 async function twoPeople(page: Page) {
   const png = await page.evaluate(async () => {
     const img = new Image();
-    img.src = "/demo/studio.png";
+    img.src = new URL("demo/studio.png", document.baseURI).href;
     await img.decode();
     const c = document.createElement("canvas");
     c.width = 1520;

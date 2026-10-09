@@ -1,5 +1,5 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import { finerInfo } from "../../modes/lib/finer";
+import { finerInfo, finerOn, onFinerChange } from "../../modes/lib/finer";
 import { onVisionResult } from "../../vision/result-feed";
 import type { VisionResult } from "../../vision/types";
 
@@ -13,6 +13,8 @@ type Classifier = {
   state: "loading" | "ready" | "failed";
   note: string;
   floor: number;
+  /** The source the figures below were measured on. */
+  generation: number;
   /** In the latest result: boxes found, and boxes with a finer name. */
   boxes: number;
   named: number;
@@ -60,6 +62,7 @@ export function record(result: VisionResult, now = Date.now()) {
           state: info.state,
           note: info.note ?? "",
           floor: info.floor,
+          generation: result.generation,
           boxes: task.detections.length,
           named: task.detections.filter((d) => d.finer).length,
         }
@@ -89,5 +92,13 @@ export function onSeenChange(listener: () => void) {
   };
 }
 
+// Figures about the classifier describe the setting being on: turning it off
+// takes them away at once, not at the next result.
+onFinerChange(() => {
+  if (!finerOn() && classifier) {
+    classifier = null;
+    notify(Date.now(), true);
+  }
+});
 // Started when this module loads, so counting does not wait for the tab.
 onVisionResult((result) => record(result));

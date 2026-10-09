@@ -38,6 +38,7 @@ describe("the automatic delegate", () => {
     for (const renderer of [
       "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)",
       "llvmpipe (LLVM 15.0.7, 256 bits)",
+      "softpipe",
       "Microsoft Basic Render Driver",
       "",
     ]) {

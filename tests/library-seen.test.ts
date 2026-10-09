@@ -129,4 +129,13 @@ describe("class lists and finer names", () => {
     expect(finerFor(track, [det("chair")])).toBeNull();
     expect(finerText({ label: "armchair", score: 0.414 })).toBe("armchair 41%");
   });
+  it("never lends a neighbour's name to a box whose own crop had none", () => {
+    // Two chairs that overlap. A has a name; B's crop scored under the floor.
+    const a = det("chair", { label: "rocking chair", score: 0.41 }, box),
+      b = det("chair", undefined, { ...box, x: 0.13 });
+    expect(finerFor({ label: "chair", box: b.box }, [a, b])).toBeNull();
+    expect(finerFor({ label: "chair", box: a.box }, [a, b])?.label).toBe(
+      "rocking chair",
+    );
+  });
 });

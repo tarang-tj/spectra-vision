@@ -30,8 +30,14 @@ const objects: ModeDef = {
   // Tracked boxes with corner brackets and a label. A selected track dims the rest.
   drawBase(ctx, frame) {
     const { rect, mirror } = frame,
-      selected = frame.settings.selected,
       filter = getFilter(),
+      // A selected box whose class is hidden selects nothing, so the boxes
+      // that are shown are not all dimmed for a row nobody can see.
+      selected = frame.tracks.some(
+        (t) => t.id === frame.settings.selected && !shows(t.label, filter),
+      )
+        ? null
+        : frame.settings.selected,
       detections = frame.result?.detections ?? [];
     frame.tracks.forEach((t, index) => {
       // A class the filter hides is not drawn. `index` stays the track's own,

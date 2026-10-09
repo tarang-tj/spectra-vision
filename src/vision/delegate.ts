@@ -53,7 +53,7 @@ export function gpuStartTimeout(progress: StartProgress): string | null {
  * interrupted inside that call. So it is refused before it starts. */
 export function softwareRendererReason(name: string | null): string | null {
   if (name === null) return "this browser gave no WebGL2 context";
-  return /swiftshader|llvmpipe|software|basic render/i.test(name)
+  return /swiftshader|llvmpipe|softpipe|software|basic render/i.test(name)
     ? `this browser draws WebGL in software (${name})`
     : null;
 }

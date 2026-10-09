@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useState, useSyncExternalStore } from "react";
+import { finerOn, onFinerChange } from "../modes/lib/finer";
 import FinerSetting from "../modes/lib/finer-setting";
 import {
   filterSummary,
@@ -38,12 +39,23 @@ const CHOICES: { id: FilterMode; label: string }[] = [
 /** Every name the Objects models can give, how often each was seen this
  * session, and a filter for which classes Objects shows. */
 function Library() {
-  const { mode } = useStudio(),
+  const { mode, frame } = useStudio(),
+    source = frame.source,
     [query, setQuery] = useState("");
   useSyncExternalStore(onSeenChange, seenVersion);
   const filter = useSyncExternalStore(onFilterChange, getFilter),
     summary = filterSummary(filter),
-    classifier = classifierState(),
+    finerIsOn = useSyncExternalStore(onFinerChange, finerOn),
+    // The classifier's figures are shown only for the mode, the source and the
+    // setting they were measured under.
+    latest = classifierState(),
+    classifier =
+      finerIsOn &&
+      mode.id === "objects" &&
+      latest &&
+      latest.generation === source?.generation
+        ? latest
+        : null,
     detector = matching(DETECTOR_LABELS, query);
   return (
     <div className="library-panel">

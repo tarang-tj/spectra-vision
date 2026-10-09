@@ -79,6 +79,28 @@ test("Library counts what Objects saw, filters classes on the stage rows and res
   await tab(page, "Inspect").click();
   await expect(rows(page).filter({ hasText: "chair" })).toHaveCount(1);
 
+  // When the filter hides every box, Inspect says so and offers the reset,
+  // instead of claiming nothing was detected.
+  await tab(page, "Library").click();
+  await page.getByRole("button", { name: "Only these" }).click();
+  await page
+    .locator(".library-list li")
+    .filter({ hasText: /^toaster/ })
+    .getByRole("checkbox")
+    .check();
+  await tab(page, "Inspect").click();
+  await expect(rows(page)).toHaveCount(0);
+  await expect(page.getByTestId("inspect-filter")).toContainText(
+    "Filter on: showing only toaster",
+  );
+  await expect(
+    page.getByText("Every box found is hidden by the class filter."),
+  ).toBeVisible();
+  await expect(page.getByText("Nothing detected yet")).toHaveCount(0);
+  await page.getByRole("button", { name: "Reset filter" }).click();
+  await expect(page.getByTestId("inspect-filter")).toHaveCount(0);
+  await expect(rows(page).filter({ hasText: "chair" })).toHaveCount(1);
+
   // Only these: just the chosen class.
   await tab(page, "Library").click();
   await page.getByRole("button", { name: "Only these" }).click();

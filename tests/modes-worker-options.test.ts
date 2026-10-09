@@ -162,10 +162,14 @@ describe("finer names", () => {
   function setup(finer: unknown, scores: number[] = []) {
     const asked: Raw[] = [],
       clock = { now: 0 },
-      detections = [10, 40, 70].map((x) => ({
-        categories: [{ categoryName: "chair", score: 0.9 }],
-        boundingBox: box(x),
-      }));
+      // What the stand-ins do next: where the chairs are, whether the next
+      // crops throw, and which source this is.
+      state = { xs: [10, 40, 70], throwNext: 0, generation: 1 },
+      detectionsNow = () =>
+        state.xs.map((x) => ({
+          categories: [{ categoryName: "chair", score: 0.9 }],
+          boundingBox: box(x),
+        }));
     const w = startWorker(
       {
         ObjectDetector: {
@@ -173,14 +177,20 @@ describe("finer names", () => {
             asked.push({ created: o });
             return {
               setOptions: async () => {},
-              detectForVideo: () => ({ detections }),
+              detectForVideo: () => ({ detections: detectionsNow() }),
             };
           },
         },
         ImageClassifier: {
           createFromOptions: async () => ({
+            close: () => asked.push({ closed: true }),
             classify: (_i: unknown, o: Raw) => {
               asked.push({ crop: o.regionOfInterest });
+              clock.now += 10;
+              if (state.throwNext > 0) {
+                state.throwNext--;
+                throw new Error("bad crop");
+              }
               const score = scores.shift() ?? 0.8;
               return {
                 classifications: [
@@ -199,7 +209,7 @@ describe("finer names", () => {
         type: "frame",
         bitmap: bitmap(),
         time: t,
-        generation: 1,
+        generation: state.generation,
         confidence: 0.4,
       });
       return results(w.posted).at(-1)!;
@@ -208,6 +218,7 @@ describe("finer names", () => {
       w,
       asked,
       clock,
+      state,
       frame,
       init: () =>
         w.send({
@@ -292,8 +303,66 @@ describe("finer names", () => {
     await settle();
     expect((await frame(10)).detections.some((d) => d.finer)).toBe(true);
     await w.send({ type: "options", options: { finer: null } });
+    // The classifier is released, not just ignored.
+    expect(asked.filter((a) => a.closed)).toHaveLength(1);
     const off = await frame(2000);
     expect(off.detections.some((d) => d.finer)).toBe(false);
     expect(off.extra).toBeUndefined();
+  });
+
+  it("forgets names when the source changes, so none is lent to another picture", async () => {
+    const { asked, init, frame, state } = setup(FINER);
+    await init();
+    await settle();
+    await frame(0);
+    await frame(100);
+    const before = crops(asked).length;
+    state.generation = 2;
+    const next = await frame(200);
+    // The same boxes on a new source are classified again, not reused.
+    expect(crops(asked).length - before).toBe(2);
+    expect(next.detections.filter((d) => d.finer)).toHaveLength(2);
+  });
+  it("renews remembered names even while new boxes keep arriving", async () => {
+    const { asked, init, frame, state } = setup({ ...FINER, perPass: 3 }, []);
+    await init();
+    await settle();
+    state.xs = [10];
+    await frame(0);
+    // After a second the old answer is due, but three new boxes arrive.
+    state.xs = [10, 40, 70, 90];
+    const before = crops(asked).length;
+    await frame(1200);
+    const crop = crops(asked)
+      .slice(before)
+      .map((c) => c.crop.left);
+    expect(crop).toHaveLength(3);
+    expect(crop).toContain(0.1);
+  });
+  it("skips a crop that errors or has no area and keeps Finer names on", async () => {
+    const { init, frame, state } = setup(FINER);
+    await init();
+    await settle();
+    state.throwNext = 1;
+    state.xs = [10, 100];
+    const first = await frame(0);
+    // One crop threw, one box lies past the edge: neither names anything and
+    // the feature is still ready.
+    expect(first.detections.some((d) => d.finer)).toBe(false);
+    expect((first.extra as { finer: { state: string } }).finer.state).toBe(
+      "ready",
+    );
+    state.xs = [10, 40];
+    const later = await frame(1500);
+    expect(later.detections.filter((d) => d.finer).length).toBeGreaterThan(0);
+  });
+  it("reports latency that includes the classifier's time", async () => {
+    const { init, frame } = setup(FINER);
+    await init();
+    await settle();
+    const r = await frame(0),
+      info = (r.extra as { finer: { ms: number } }).finer;
+    expect(info.ms).toBe(20);
+    expect(r.latency).toBe(20);
   });
 });

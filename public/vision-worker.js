@@ -192,7 +192,7 @@ function softwareRenderer() {
       info = gl?.getExtension("WEBGL_debug_renderer_info"),
       name = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
     gl?.getExtension("WEBGL_lose_context")?.loseContext();
-    return /swiftshader|llvmpipe|software/i.test(name) ? name : "";
+    return /swiftshader|llvmpipe|softpipe|software/i.test(name) ? name : "";
   } catch {
     return "";
   }
@@ -337,23 +337,39 @@ function planFiner(memory, detections, now, cfg) {
     reuse.set(i, m);
     if (now - m.at >= cfg.everyMs) stale.push(i);
   });
-  // New objects first, then the answers that are oldest.
+  // New objects first, then the answers that are oldest. One slot of every
+  // pass goes to the oldest answer when there is one, so a busy scene that
+  // keeps producing new boxes cannot starve the renewal of remembered names.
   stale.sort((a, b) => reuse.get(a).at - reuse.get(b).at);
-  return { reuse, todo: [...fresh, ...stale].slice(0, cfg.perPass) };
+  const room = stale.length && cfg.perPass > 1 ? cfg.perPass - 1 : cfg.perPass;
+  return {
+    reuse,
+    todo: [...fresh.slice(0, room), ...stale].slice(0, cfg.perPass),
+  };
 }
 // An object nobody has classified yet is due at once.
 const NEVER = -1e15;
 let memory = [];
+// Release the classifier's graph and forget every name it gave.
+function closeFiner() {
+  try {
+    finer?.classifier?.close();
+  } catch {
+    /* A classifier that is already gone needs nothing more. */
+  }
+  finer = null;
+  memory = [];
+}
 async function setFiner(next, base) {
   if (!next) {
-    finer = null;
-    memory = [];
+    closeFiner();
     return;
   }
   if (finer && finer.cfg.model === next.model) {
     finer.cfg = next;
     return;
   }
+  closeFiner();
   finer = { cfg: next, state: "loading", note: "", classifier: null };
   const mine = finer;
   memory = [];
@@ -367,19 +383,25 @@ async function setFiner(next, base) {
     if (finer === mine) {
       mine.classifier = classifier;
       mine.state = "ready";
-    } else classifier.close?.();
+    } else classifier.close();
   } catch (error) {
     mine.state = "failed";
     mine.note = error instanceof Error ? error.message : String(error);
   }
 }
 // The crop is given to the classifier as a region of interest of the frame.
-const regionOf = (box) => ({
-  left: Math.max(0, box.x),
-  top: Math.max(0, box.y),
-  right: Math.min(1, box.x + box.w),
-  bottom: Math.min(1, box.y + box.h),
-});
+// A box that has no area once clamped to the image has no region: null.
+const regionOf = (box) => {
+  const region = {
+    left: Math.max(0, box.x),
+    top: Math.max(0, box.y),
+    right: Math.min(1, box.x + box.w),
+    bottom: Math.min(1, box.y + box.h),
+  };
+  return region.right - region.left > 1e-4 && region.bottom - region.top > 1e-4
+    ? region
+    : null;
+};
 function withFiner(fields, bitmap) {
   if (!finer) return fields;
   const cfg = finer.cfg,
@@ -396,22 +418,24 @@ function withFiner(fields, bitmap) {
     let entry = plan.reuse.get(i) ?? null,
       answer = entry ? entry.finer : null;
     if (plan.todo.includes(i)) {
-      try {
-        const top = finer.classifier.classify(bitmap, {
-          regionOfInterest: regionOf(d.box),
-        }).classifications[0]?.categories[0];
-        answer =
-          top && top.score >= cfg.floor
-            ? { label: top.categoryName, score: top.score }
-            : null;
-        entry = { at: now };
-        info.classified++;
-      } catch (error) {
-        finer.state = info.state = "failed";
-        finer.note = info.note =
-          error instanceof Error ? error.message : String(error);
-        return;
+      // A crop that cannot be classified (no area, or one error) is skipped:
+      // it has no name this pass and is tried again after `everyMs`. It never
+      // turns the feature off.
+      const region = regionOf(d.box);
+      answer = null;
+      if (region) {
+        try {
+          const top = finer.classifier.classify(bitmap, {
+            regionOfInterest: region,
+          }).classifications[0]?.categories[0];
+          if (top && top.score >= cfg.floor)
+            answer = { label: top.categoryName, score: top.score };
+          info.classified++;
+        } catch {
+          info.skipped = (info.skipped ?? 0) + 1;
+        }
       }
+      entry = { at: now };
     }
     next.push({
       box: d.box,
@@ -556,6 +580,8 @@ self.onmessage = async ({ data }) => {
       }
       // A new source must not inherit the preceding video's tracking crop.
       if (generation !== sourceGeneration) {
+        // Names belong to the picture they were computed on.
+        memory = [];
         await task.setOptions({ runningMode: "IMAGE" });
         await task.setOptions({ runningMode: "VIDEO" });
         sourceGeneration = generation;
@@ -579,7 +605,7 @@ self.onmessage = async ({ data }) => {
               delegate: spec.delegate,
               generation,
               time,
-              latency,
+              latency: latency + (fields.extra?.finer?.ms ?? 0),
               ...fields,
             },
           },

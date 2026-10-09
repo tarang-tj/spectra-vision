@@ -63,9 +63,10 @@ const overlap = (a: Box, b: Box) => {
 };
 
 /** The finer name of a tracked box: that of the detection with the same label
- * whose box overlaps it most (above 0.3 IoU) and that has one. A track's box
- * can be a little off the detection it came from, so it is matched, not
- * assumed. Null when there is none. */
+ * whose box overlaps it most (above 0.3 IoU). The best match is chosen first
+ * and its name read after, so a neighbour's name is never lent to a box whose
+ * own crop had none. A track's box can be a little off the detection it came
+ * from, so it is matched, not assumed. Null when there is none. */
 export function finerFor(
   track: { label: string; box: Box },
   detections: readonly Detection[],
@@ -73,7 +74,7 @@ export function finerFor(
   let best: Detection | null = null,
     bestIou = 0.3;
   for (const d of detections) {
-    if (!d.finer || d.label !== track.label) continue;
+    if (d.label !== track.label) continue;
     const value = overlap(track.box, d.box);
     if (value > bestIou) {
       best = d;
