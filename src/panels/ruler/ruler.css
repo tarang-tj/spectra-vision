@@ -1,0 +1,123 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+/* The Ruler panel: one column. Every control is at least 40 px tall and the
+   groups wrap, so nothing is clipped at 390 px wide. */
+.ruler-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.ruler-panel > h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ruler-beta {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.ruler-note,
+.ruler-basis,
+.ruler-warn {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.ruler-warn {
+  color: #ffd18d;
+  border-left: 2px solid #ffd18d;
+  padding-left: 8px;
+}
+.ruler-step {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.ruler-block {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.ruler-block h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.ruler-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ruler-panel .button {
+  min-height: 42px;
+  padding: 8px 14px;
+  font-size: 13px;
+  white-space: normal;
+  min-width: 0;
+}
+.ruler-panel .button[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ruler-custom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ruler-custom label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+  flex: 1 1 110px;
+  min-width: 0;
+}
+.ruler-custom input {
+  min-height: 42px;
+  width: 100%;
+}
+.ruler-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ruler-results li {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.ruler-value {
+  font-size: 18px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.ruler-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+.ruler-guidance {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
