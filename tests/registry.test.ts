@@ -91,7 +91,12 @@ describe("the shipped registries", () => {
     for (const m of modes)
       expect(effectsFor(m.id).some((e) => e.id === "constellation")).toBe(true);
   });
-  it("list Inspect as the first panel, then the Lab", () => {
-    expect(panels.map((p) => p.id)).toEqual(["inspect", "lab"]);
+  it("list Inspect as the first panel, then the Lab, then the measuring panels", () => {
+    expect(panels.map((p) => p.id)).toEqual([
+      "inspect",
+      "lab",
+      "presence",
+      "ruler",
+    ]);
   });
 });
