@@ -229,7 +229,7 @@ export class Tracker {
         });
     });
     // Missed tracks are retained for association only, never rendered as fresh
-    // detections. A tentative one is dropped at its first miss.
+    // detections. A tentative one is kept through `tentativeMisses` misses.
     for (const t of previous)
       if (
         !matched.has(t) &&

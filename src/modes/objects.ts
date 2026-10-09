@@ -37,8 +37,7 @@ const objects: ModeDef = {
         (t) => t.id === frame.settings.selected && !shows(t.label, filter),
       )
         ? null
-        : frame.settings.selected,
-      detections = frame.result?.detections ?? [];
+        : frame.settings.selected;
     frame.tracks.forEach((t, index) => {
       // A class the filter hides is not drawn. `index` stays the track's own,
       // which is what the effects look up.
@@ -72,7 +71,7 @@ const objects: ModeDef = {
         ctx.lineTo(x, y + c * sy);
       });
       ctx.stroke();
-      const finer = finerFor(t, detections),
+      const finer = finerFor(t),
         label = `${t.label}  ${(t.score * 100).toFixed(0)}% · ${finer ? `${finerText(finer)} · ` : ""}${String(t.id).padStart(2, "0")}`;
       ctx.font = "600 12px Inter Variable, sans-serif";
       const tw = ctx.measureText(label).width + 14,
@@ -94,7 +93,7 @@ const objects: ModeDef = {
     frame.tracks
       .filter((t) => shows(t.label))
       .map((t) => {
-        const finer = finerFor(t, frame.result?.detections ?? []);
+        const finer = finerFor(t);
         return {
           key: t.id,
           label: t.label,

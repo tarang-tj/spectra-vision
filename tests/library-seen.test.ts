@@ -15,6 +15,7 @@ import {
   CLASSIFIER_LABELS,
 } from "../src/panels/library/labels";
 import { finerFor, finerText } from "../src/modes/lib/finer";
+import { Tracker } from "../src/vision/tracker";
 import type { Detection, VisionResult } from "../src/vision/types";
 
 const box = { x: 0.1, y: 0.1, w: 0.2, h: 0.2 };
@@ -116,26 +117,22 @@ describe("class lists and finer names", () => {
     expect(DETECTOR_LABELS).toHaveLength(80);
     expect(CLASSIFIER_LABELS).toHaveLength(1000);
   });
-  it("finds a track's finer name by label and overlap, and never from another label", () => {
+  it("reads a track's own finer name and nothing else", () => {
     const named = det("chair", { label: "armchair", score: 0.6 });
-    const track = { label: "chair", box: { ...box, x: 0.11 } };
-    expect(finerFor(track, [named])?.label).toBe("armchair");
-    expect(finerFor({ label: "cup", box }, [named])).toBeNull();
-    expect(
-      finerFor({ label: "chair", box: { x: 0.7, y: 0.7, w: 0.1, h: 0.1 } }, [
-        named,
-      ]),
-    ).toBeNull();
-    expect(finerFor(track, [det("chair")])).toBeNull();
+    expect(finerFor(named)?.label).toBe("armchair");
+    expect(finerFor(det("chair"))).toBeNull();
     expect(finerText({ label: "armchair", score: 0.414 })).toBe("armchair 41%");
   });
-  it("never lends a neighbour's name to a box whose own crop had none", () => {
+  it("never lends a neighbour's name, through the real tracker", () => {
     // Two chairs that overlap. A has a name; B's crop scored under the floor.
     const a = det("chair", { label: "rocking chair", score: 0.41 }, box),
       b = det("chair", undefined, { ...box, x: 0.13 });
-    expect(finerFor({ label: "chair", box: b.box }, [a, b])).toBeNull();
-    expect(finerFor({ label: "chair", box: a.box }, [a, b])?.label).toBe(
-      "rocking chair",
-    );
+    const tracker = new Tracker();
+    tracker.update([a, b], 0);
+    const tracks = tracker.update([a, b], 66);
+    const names = tracks.map((t) => finerFor(t)?.label ?? null).sort();
+    expect(names).toEqual([null, "rocking chair"]);
+    const namedTrack = tracks.find((t) => finerFor(t));
+    expect(namedTrack?.box.x).toBeCloseTo(a.box.x, 6);
   });
 });

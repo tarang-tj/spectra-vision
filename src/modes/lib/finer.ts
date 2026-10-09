@@ -1,11 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { readFlag, writeFlag } from "../../shell/storage";
-import type {
-  Box,
-  Detection,
-  FinerExtra,
-  LiveOptions,
-} from "../../vision/types";
+import type { FinerExtra, LiveOptions } from "../../vision/types";
 
 // Finer names for Objects: an ImageNet classifier names the crop of each
 // detected object next to the detector's own label. Off by default, kept on
@@ -55,33 +50,16 @@ export const finerOption: LiveOptions = {
   subscribe: onFinerChange,
 };
 
-const overlap = (a: Box, b: Box) => {
-  const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x),
-    h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y),
-    inter = Math.max(0, w) * Math.max(0, h);
-  return inter / Math.max(1e-9, a.w * a.h + b.w * b.h - inter);
-};
-
-/** The finer name of a tracked box: that of the detection with the same label
- * whose box overlaps it most (above 0.3 IoU). The best match is chosen first
- * and its name read after, so a neighbour's name is never lent to a box whose
- * own crop had none. A track's box can be a little off the detection it came
- * from, so it is matched, not assumed. Null when there is none. */
-export function finerFor(
-  track: { label: string; box: Box },
-  detections: readonly Detection[],
-): { label: string; score: number } | null {
-  let best: Detection | null = null,
-    bestIou = 0.3;
-  for (const d of detections) {
-    if (d.label !== track.label) continue;
-    const value = overlap(track.box, d.box);
-    if (value > bestIou) {
-      best = d;
-      bestIou = value;
-    }
-  }
-  return best?.finer ?? null;
+/** The finer name of a tracked box: the one carried by the track itself. A
+ * track is built from its own detection (the tracker copies the detection's
+ * fields into it), so its name is read, never looked up again by overlap: a
+ * lookup could hand a box the name of a neighbour when the two overlap or when
+ * the tracks are one result behind the detections. Null when its own crop had
+ * no name above the floor. */
+export function finerFor(track: {
+  finer?: { label: string; score: number };
+}): { label: string; score: number } | null {
+  return track.finer ?? null;
 }
 
 /** The "chair 76% · rocking chair 41%" text shared by the stage label and the
