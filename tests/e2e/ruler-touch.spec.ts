@@ -111,8 +111,18 @@ test("placing, dragging and the loupe work with a finger", async ({ page }) => {
   expect(before).toBeGreaterThan(0);
 
   // Drag the end by a finger: the loupe shows during the drag and goes after.
+  // The baseline is the span's own line, so wait until it is on the canvas and
+  // two reads agree: the value reaches the panel a frame before the overlay.
+  let idle = 0;
+  await expect
+    .poll(async () => {
+      const now = await lit(page),
+        settled = now > 0 && now === idle;
+      idle = now;
+      return settled;
+    })
+    .toBe(true);
   const cdp = await page.context().newCDPSession(page),
-    idle = await lit(page),
     from = await screenOf(page, b),
     to = { x: from.x + 14, y: from.y - 12 };
   await touch(cdp, "touchStart", from);
