@@ -1,33 +1,43 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import { angleDifference } from "../../measure/angles";
 import { measured } from "../../measure/noise";
 import { describe } from "../../measure/series";
 import type { Baseline } from "./calibration";
 import { handRows } from "./hand-metrics";
-import { halfRange, notSeen, share, spread, weights } from "./row";
+import { headAngleBetween } from "./head-angle";
+import {
+  denominatorText,
+  halfRange,
+  notSeen,
+  seenChain,
+  share,
+  spread,
+} from "./row";
 import type { MetricRow } from "./row";
 import type { Recording, TaskName, Thresholds } from "./types";
 
 const NO_CAL = (what: string) =>
   `${what} was not seen during calibration, so there is no noise floor to state an error from.`;
 const finiteValues = (values: number[]) => values.filter(Number.isFinite);
+const RATE_NOTE =
+  " The noise floor was measured at the frame rate of the calibration; a different rate later changes it.";
 
 function head(rec: Recording, base: Baseline, th: Thresholds): MetricRow {
   const id = "head",
     label = "Head direction near baseline";
-  if (rec.face.length < 2)
+  if (!base.face && rec.seen.face >= 2)
+    return notSeen(id, label, NO_CAL("The face"));
+  const { samples, w, seenMs, coveredMs } = seenChain(rec.face);
+  if (samples.length < 2)
     return notSeen(id, label, "No face was seen while measuring.");
   if (!base.face) return notSeen(id, label, NO_CAL("The face"));
-  const w = weights(rec.face.map((f) => f.t)),
-    off = rec.face.map((f) =>
-      Math.hypot(
-        angleDifference(f.yaw, base.face!.yaw),
-        f.pitch - base.face!.pitch,
-      ),
+  const bf = base.face,
+    off = samples.map((f) =>
+      headAngleBetween(f.yaw, f.pitch, bf.yaw, bf.pitch),
     ),
-    at = (angle: number) => share(w, (i) => off[i] <= angle).percent,
-    noise = base.face.noiseAngle,
-    value = at(th.headAngle);
+    at = (angle: number) => share(w, (i) => off[i] <= angle),
+    noise = bf.noiseAngle,
+    nominal = at(th.headAngle),
+    value = nominal.percent;
   if (!Number.isFinite(value))
     return notSeen(
       id,
@@ -36,18 +46,21 @@ function head(rec: Recording, base: Baseline, th: Thresholds): MetricRow {
     );
   const [lo, hi] = spread(
     value,
-    at(Math.max(0, th.headAngle - noise)),
-    at(th.headAngle + noise),
+    at(Math.max(0, th.headAngle - noise)).percent,
+    at(th.headAngle + noise).percent,
   );
+  const denominator = { what: "a face was seen", seenMs, coveredMs };
   return {
     id,
     label,
     range: [lo, hi],
+    denominator,
     measured: measured(
       value,
-      halfRange(value, lo, hi),
+      // Never smaller than one result interval's share.
+      Math.max(halfRange(value, lo, hi), nominal.step),
       "%",
-      `Share of time the head direction (yaw and pitch from the face matrix) was within ${th.headAngle}° of the baseline held in calibration. Error: the share recomputed with the angle moved by the calibration noise, ±${noise.toFixed(1)}°. This is where the head points, not where the eyes look.`,
+      `Share of the time a face was seen (${denominatorText(denominator)}) in which the angle between the head direction and the baseline held in calibration was ${th.headAngle}° or less. Time the face was lost is not in the denominator. Error: the share recomputed with the angle moved by the calibration noise, ±${noise.toFixed(1)}°, and never under one result interval. This is where the head points, not where the eyes look.`,
     ),
   };
 }
@@ -55,7 +68,7 @@ function head(rec: Recording, base: Baseline, th: Thresholds): MetricRow {
 function sway(rec: Recording, base: Baseline): MetricRow {
   const id = "sway",
     label = "Sway";
-  const xs = rec.pose.map((p) => p.x);
+  const xs = rec.pose.flatMap((p) => (p.s ? [p.s.x] : []));
   if (xs.length < 2)
     return notSeen(id, label, "Both shoulders were not seen while measuring.");
   if (!base.pose) return notSeen(id, label, NO_CAL("The shoulders"));
@@ -67,7 +80,7 @@ function sway(rec: Recording, base: Baseline): MetricRow {
       sd,
       base.pose.swayNoise,
       "shoulder widths",
-      `Standard deviation of the shoulder midpoint's sideways position, in shoulder widths of the calibration frame. Error: the same spread measured while holding still in calibration. Leaning toward or away from the camera changes the apparent width.`,
+      `Standard deviation of the shoulder midpoint's sideways position over the time both shoulders were seen, in shoulder widths of the calibration frame. Error: the same spread measured while holding still in calibration. Leaning toward or away from the camera changes the apparent width.`,
     ),
   };
 }
@@ -75,7 +88,8 @@ function sway(rec: Recording, base: Baseline): MetricRow {
 function stillness(rec: Recording, base: Baseline, th: Thresholds): MetricRow {
   const id = "stillness",
     label = "Stillness";
-  const motion = rec.pose.map((p) => p.motion);
+  const { samples, w: w0, seenMs, coveredMs } = seenChain(rec.pose),
+    motion = samples.map((p) => p.motion);
   if (finiteValues(motion).length < 2)
     return notSeen(
       id,
@@ -85,11 +99,11 @@ function stillness(rec: Recording, base: Baseline, th: Thresholds): MetricRow {
   if (!base.pose || !Number.isFinite(base.pose.motionMean))
     return notSeen(id, label, NO_CAL("The body"));
   const { scale, motionMean, motionSd } = base.pose,
-    w = weights(rec.pose.map((p) => p.t)),
-    use = w.map((weight, i) => (Number.isFinite(motion[i]) ? weight : 0)),
+    use = w0.map((weight, i) => (Number.isFinite(motion[i]) ? weight : 0)),
     at = (floor: number) =>
-      share(use, (i) => motion[i] / scale <= th.stillMultiple * floor).percent,
-    value = at(motionMean);
+      share(use, (i) => motion[i] / scale <= th.stillMultiple * floor),
+    nominal = at(motionMean),
+    value = nominal.percent;
   if (!Number.isFinite(value))
     return notSeen(
       id,
@@ -98,18 +112,20 @@ function stillness(rec: Recording, base: Baseline, th: Thresholds): MetricRow {
     );
   const [lo, hi] = spread(
     value,
-    at(Math.max(0, motionMean - motionSd)),
-    at(motionMean + motionSd),
+    at(Math.max(0, motionMean - motionSd)).percent,
+    at(motionMean + motionSd).percent,
   );
+  const denominator = { what: "both shoulders were seen", seenMs, coveredMs };
   return {
     id,
     label,
     range: [lo, hi],
+    denominator,
     measured: measured(
       value,
-      halfRange(value, lo, hi),
+      Math.max(halfRange(value, lo, hi), nominal.step),
       "%",
-      `Share of time the mean speed of shoulders, elbows, wrists and hips stayed at or under ${th.stillMultiple} times the noise floor (the mean speed measured while holding still, ${motionMean.toFixed(3)} shoulder widths a second). Error: the share recomputed with the floor moved by one calibration standard deviation.`,
+      `Share of the time the body was seen (${denominatorText(denominator)}) in which the mean speed of shoulders, elbows, wrists and hips stayed at or under ${th.stillMultiple} times the noise floor (the mean speed measured while holding still, ${motionMean.toFixed(3)} shoulder widths a second). Time the body was lost is not in the denominator. Error: the share recomputed with the floor moved by one calibration standard deviation, and never under one result interval.${RATE_NOTE}`,
     ),
   };
 }
@@ -117,7 +133,7 @@ function stillness(rec: Recording, base: Baseline, th: Thresholds): MetricRow {
 function expression(rec: Recording, base: Baseline): MetricRow {
   const id = "expression",
     label = "Expression change";
-  const changes = finiteValues(rec.face.map((f) => f.change));
+  const changes = finiteValues(rec.face.map((f) => f.s?.change ?? NaN));
   if (changes.length < 2)
     return notSeen(id, label, "No face was seen while measuring.");
   if (!base.face || !Number.isFinite(base.face.changeNoise))
@@ -129,13 +145,13 @@ function expression(rec: Recording, base: Baseline): MetricRow {
       describe(changes).mean,
       base.face.changeNoise,
       "per s",
-      "Mean absolute change per second of the smile, brow raise and jaw open scores (each 0 to 1), averaged. It measures how much the face moves, not what it means. Error: the same signal while holding still in calibration.",
+      `Mean absolute change per second of the smile, brow raise and jaw open scores (each 0 to 1), averaged, over the time the face was seen. It measures how much the face moves, not what it means. Error: the same signal while holding still in calibration.${RATE_NOTE}`,
     ),
   };
 }
 
 function wristWorld(rec: Recording, base: Baseline): MetricRow | null {
-  const speeds = finiteValues(rec.pose.map((p) => p.worldSpeed));
+  const speeds = finiteValues(rec.pose.map((p) => p.s?.worldSpeed ?? NaN));
   if (!speeds.length) return null;
   const id = "wrist-world",
     label = "Wrist speed relative to hips";

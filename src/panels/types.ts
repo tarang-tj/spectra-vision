@@ -7,9 +7,6 @@ export type PanelDef = {
   /** Tab text. */
   label: string;
   order: number;
-  /** Optional short marker beside the tab text, for example "Beta". Shown to
-   * the eye only: the panel's own heading must say it too. */
-  tag?: string;
   /** Takes no props: read and change app state through useStudio(). */
   Component: ComponentType;
   /** Optional: hide the tab while it has nothing to show. */

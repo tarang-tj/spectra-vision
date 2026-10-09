@@ -110,7 +110,6 @@ const ruler: PanelDef = {
   id: "ruler",
   label: "Ruler",
   order: 40,
-  tag: "Beta",
   Component: Ruler,
 };
 export default ruler;

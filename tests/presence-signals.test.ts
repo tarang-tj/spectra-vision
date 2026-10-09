@@ -154,6 +154,15 @@ describe("signal extractor", () => {
     expect(after.pose!.motion).toBeNaN();
   });
 
+  it("does not count a task result again after a pause", () => {
+    const x = new SignalExtractor();
+    const a = task("pose", 0, [body(0.5)]);
+    expect(x.ingest(merged(0, { pose: a }), 1).pose).toBeTruthy();
+    x.reset();
+    // The first merged result after the pause still carries the old pose result.
+    expect(x.ingest(merged(9000, { pose: a }), 1).pose).toBeUndefined();
+  });
+
   it("uses world landmarks for wrist speed in metres when present, never needs them", () => {
     const x = new SignalExtractor();
     const world = (wx: number): Point[] =>

@@ -2,7 +2,9 @@
 // Plane geometry for the Ruler, in source pixels (never normalized units, so
 // the aspect ratio is right). Pure: no DOM, no clock, no randomness.
 
-export type Pt = { x: number; y: number };
+/** `s` is the tap uncertainty (one sd, source pixels) the point was placed
+ * with; it rides along so the error bar does not depend on later resizing. */
+export type Pt = { x: number; y: number; s?: number };
 /** Row-major 3x3 matrix. */
 export type Mat3 = readonly [
   number,
@@ -96,14 +98,23 @@ export function solveHomography(src: Pt[], dst: Pt[]): Mat3 | null {
       1,
     ],
     tdInv: Mat3 = [nd.s, 0, nd.cx, 0, nd.s, nd.cy, 0, 0, 1];
-  const out = mul(tdInv, mul(core, ts));
-  return out.every(Number.isFinite) ? out : null;
+  const out = mul(tdInv, mul(core, ts)),
+    // Scale so w is exactly 1 at the centroid of the reference. Points with
+    // w <= 0 then lie at or beyond the horizon of the plane.
+    wc =
+      out[6] * (src.reduce((t, q) => t + q.x, 0) / 4) +
+      out[7] * (src.reduce((t, q) => t + q.y, 0) / 4) +
+      out[8];
+  if (!Number.isFinite(wc) || Math.abs(wc) < 1e-12) return null;
+  const norm1 = out.map((v) => v / wc) as unknown as Mat3;
+  return norm1.every(Number.isFinite) ? norm1 : null;
 }
 
-/** Map a point through a homography; null at or beyond the horizon. */
+/** Map a point through a homography from `solveHomography` (w is 1 at the
+ * reference centroid); null at or beyond the horizon, where w is not positive. */
 export function applyHomography(h: Mat3, p: Pt): Pt | null {
   const w = h[6] * p.x + h[7] * p.y + h[8];
-  if (!Number.isFinite(w) || Math.abs(w) < 1e-12) return null;
+  if (!Number.isFinite(w) || w < 1e-6) return null;
   return {
     x: (h[0] * p.x + h[1] * p.y + h[2]) / w,
     y: (h[3] * p.x + h[4] * p.y + h[5]) / w,
@@ -204,12 +215,14 @@ export function solveSheet(
   long: number,
   short: number,
   swap: boolean,
+  /** Fixes which side is long (during a drag), overriding the guess. */
+  forceFirstIsLong?: boolean,
 ): Sheet | null {
   if (ordered.length !== 4 || degenerateReason(ordered)) return null;
   const first =
       (dist(ordered[0], ordered[1]) + dist(ordered[3], ordered[2])) / 2,
     second = (dist(ordered[1], ordered[2]) + dist(ordered[0], ordered[3])) / 2,
-    firstIsLong = first >= second !== swap,
+    firstIsLong = forceFirstIsLong ?? first >= second !== swap,
     w = firstIsLong ? long : short,
     d = firstIsLong ? short : long,
     plane = [

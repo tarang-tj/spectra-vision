@@ -4,8 +4,9 @@
 // panel that mounts again draws them again.
 import { useCallback, useEffect, useRef } from "react";
 import { useStudio } from "../../studio-context";
-import { drawRuler } from "./overlay";
+import { drawRuler, view } from "./overlay";
 import { endDrag, onRulerPointer, setFreeze } from "./pointer";
+import { clear } from "./store";
 
 export function useRulerStage() {
   const { stage, paused, setPaused } = useStudio(),
@@ -21,8 +22,16 @@ export function useRulerStage() {
   }, []);
   const resume = useCallback(() => {
     froze.current = false;
+    // A video moves on once resumed: its points would describe a gone frame.
+    if (view.video) clear();
     live.current.setPaused(false);
   }, []);
+
+  // Something else resumed the stage (a mode change, the stage's own button):
+  // the pause is no longer ours, so closing the panel must not touch it.
+  useEffect(() => {
+    if (!paused) froze.current = false;
+  }, [paused]);
 
   useEffect(() => {
     const offOverlay = stage.addOverlay(drawRuler),
@@ -36,6 +45,8 @@ export function useRulerStage() {
       // Leave the stage as found: resume only what this panel paused.
       if (froze.current && live.current.paused) live.current.setPaused(false);
       froze.current = false;
+      // The stage may run again while the panel is closed; video points go.
+      if (view.video) clear();
     };
   }, [stage, freeze]);
 

@@ -162,8 +162,9 @@ test("a session measures on the Fusion demo, keeps going on another tab and expo
       summary.metrics.map((m) => [m.id, m.value, m.error, m.unit]),
     ),
   );
-  // The demo is a real photograph of nobody in particular: the face, body and hand
-  // models all find a person in it, so these three must be measured.
+  // Measured on this machine: the demo input gives a body and a hand but no
+  // face (head direction and expression change read "not seen"), so only the
+  // body is required here. The maths of those two is covered by unit tests.
   expect(summary.metrics.find((m) => m.id === "seen-pose")!.seen).toBe(true);
   expect(errors).toEqual([]);
 });

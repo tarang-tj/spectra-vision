@@ -188,3 +188,39 @@ test("a live source is frozen by the ruler and resumed when the panel closes", a
     page.getByRole("button", { name: "Pause detection" }),
   ).toBeVisible();
 });
+
+test("on a camera source, points and results are dropped when the picture moves on", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  await open(page);
+  await page.getByRole("button", { name: "Start camera" }).click();
+  await expect(page.getByRole("button", { name: "Stop camera" })).toBeVisible();
+  await page.getByRole("button", { name: "Ruler", exact: true }).click();
+  await page.getByRole("button", { name: "Freeze frame" }).click();
+  await expect(page.getByTestId("ruler-step")).toContainText("Tap corner 1");
+
+  // Four corners and two ends, by fraction of the canvas box (the middle of
+  // the picture, clear of the letterbox bars).
+  const at = async (fx: number, fy: number) => {
+    const box = (await page.locator(".camera-stage canvas").boundingBox())!;
+    await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
+  };
+  for (const [fx, fy] of [
+    [0.4, 0.35],
+    [0.6, 0.35],
+    [0.6, 0.65],
+    [0.4, 0.65],
+    [0.45, 0.45],
+    [0.55, 0.55],
+  ])
+    await at(fx, fy);
+  await expect(page.getByTestId("ruler-result")).toHaveCount(1);
+
+  // Resuming drops them, so an old value cannot be shown on a new frame.
+  await page.getByRole("button", { name: "Resume live view" }).click();
+  await expect(page.getByTestId("ruler-result")).toHaveCount(0);
+  await page.getByRole("button", { name: "Freeze frame" }).click();
+  await expect(page.getByTestId("ruler-step")).toContainText("Tap corner 1");
+  await expect(page.getByTestId("ruler-result")).toHaveCount(0);
+});

@@ -4,6 +4,7 @@ import { onVisionResult } from "../../vision/result-feed";
 import type { VisionResult } from "../../vision/types";
 import { Calibrator } from "./calibration";
 import type { Baseline } from "./calibration";
+import { recordSignals } from "./recording";
 import { LiveSeries } from "./live-series";
 import { computeRows } from "./metrics";
 import type { MetricRow } from "./row";
@@ -15,7 +16,7 @@ import {
   THRESHOLD_LIMITS,
   emptyRecording,
 } from "./types";
-import type { FaceSample, Recording, Signals, Thresholds } from "./types";
+import type { FaceSample, Recording, Thresholds } from "./types";
 
 export type Phase = "idle" | "calibrating" | "measuring" | "done";
 export type EndReason = "user" | "source" | "mode" | "limit";
@@ -107,31 +108,6 @@ function finish(reason: EndReason) {
   notify();
 }
 
-function record(sig: Signals, step: number) {
-  rec.results++;
-  rec.coveredMs += step;
-  if (step > 0) rec.steps++;
-  if (sig.face !== undefined) {
-    rec.fresh.face++;
-    if (sig.face) {
-      rec.seen.face++;
-      rec.face.push(sig.face);
-    }
-  }
-  if (sig.pose !== undefined) {
-    rec.fresh.pose++;
-    if (sig.pose) {
-      rec.seen.pose++;
-      rec.pose.push(sig.pose);
-    }
-  }
-  if (sig.hand) {
-    rec.fresh.hand++;
-    rec.hand.push(sig.hand);
-    if (sig.hand.hands.length) rec.seen.hand++;
-  }
-}
-
 /** One merged result from the feed. Exported so unit tests can drive it. */
 export function ingest(result: VisionResult, gen: number) {
   if (!active()) return;
@@ -150,7 +126,8 @@ export function ingest(result: VisionResult, gen: number) {
   const step = lastTime !== null && !gap ? result.time - lastTime : 0;
   lastTime = result.time;
   const sig = extractor.ingest(result, aspect);
-  if (sig.face) latestFace = sig.face;
+  // A lost face clears the mark: nothing is drawn for a head that is not seen.
+  if (sig.face !== undefined) latestFace = sig.face;
   models = (["face", "pose", "hand"] as const).flatMap((task) => {
     const t = result.tasks[task];
     return t
@@ -170,7 +147,7 @@ export function ingest(result: VisionResult, gen: number) {
       lastNotify = lastRows = -Infinity;
     }
   } else {
-    record(sig, step);
+    recordSignals(rec, sig, step);
     live.push(sig, baseline!);
     if (
       rec.face.length >= MAX_SAMPLES ||

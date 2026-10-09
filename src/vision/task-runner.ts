@@ -104,6 +104,20 @@ export function createTaskRunner(
     busy = false;
     ready = false;
     const retry = fallbackDelegate(active, produced);
+    if (!retry && model !== spec.model && !produced) {
+      // The precise model never produced a frame (offline on first use, a
+      // failed download): run the standard one and say so, so a saved
+      // Precise choice cannot leave the mode broken on every visit.
+      console.warn(
+        `[spectra vision] ${spec.kind}: ${model} failed (${message}); using ${spec.model}.`,
+      );
+      stop();
+      model = spec.model;
+      note = `The precise model did not load (${message}). Running the standard model.`;
+      events.onRestart?.();
+      start();
+      return;
+    }
     if (!retry) {
       status.state = "failed";
       status.note = message;

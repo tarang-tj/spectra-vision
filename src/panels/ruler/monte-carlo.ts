@@ -66,10 +66,11 @@ export function distanceSpread(
 ): Spread | null {
   const n = Math.max(MIN_SAMPLES, Math.floor(samples)),
     normal = gaussian(seededRandom(seed)),
-    jitter = (p: Pt): Pt => ({
-      x: p.x + sigmaPx * normal(),
-      y: p.y + sigmaPx * normal(),
-    });
+    // Each point carries the tap uncertainty it was placed with.
+    jitter = (p: Pt): Pt => {
+      const sd = p.s ?? sigmaPx;
+      return { x: p.x + sd * normal(), y: p.y + sd * normal() };
+    };
   let sum = 0,
     sumSq = 0,
     used = 0;
@@ -89,8 +90,14 @@ export function distanceSpread(
 
 export type Span = { mm: number; errorMm: number; measured: Measured };
 
-/** One measurement: mean ± 2 standard deviations, in `unit`. Null when the
- * span cannot be computed (a point on the horizon) or the bar is unusable. */
+const key = (p: Pt) => `${p.x},${p.y},${p.s ?? ""}`;
+const cache = new Map<string, { mm: number; errorMm: number } | null>();
+
+/** One measurement in `unit`: the direct plane distance between the two taps,
+ * with 2 standard deviations of the perturbed samples as its bar. (The mean of
+ * the samples is biased upward, so it is not the value.) Null when a point is
+ * at or beyond the horizon, or the bar is unusable. Results are memoized per
+ * measurement, so dragging one point does not rerun the others. */
 export function measureSpan(
   sheet: Sheet,
   a: Pt,
@@ -100,15 +107,33 @@ export function measureSpan(
   seed = DEFAULT_SEED,
   samples = DEFAULT_SAMPLES,
 ): Span | null {
-  const s = distanceSpread(sheet, a, b, sigmaPx, seed, samples);
-  if (!s) return null;
-  const errorMm = 2 * s.sd;
+  const k = [
+    ...sheet.ordered.map(key),
+    sheet.plane[1].x,
+    sheet.plane[2].y,
+    key(a),
+    key(b),
+    sigmaPx,
+    seed,
+    samples,
+  ].join("|");
+  let hit = cache.get(k);
+  if (hit === undefined) {
+    const mm = planeDistance(sheet.h, a, b),
+      s =
+        mm === null
+          ? null
+          : distanceSpread(sheet, a, b, sigmaPx, seed, samples);
+    hit = mm !== null && s ? { mm, errorMm: 2 * s.sd } : null;
+    if (cache.size > 500) cache.clear();
+    cache.set(k, hit);
+  }
+  if (!hit) return null;
   return {
-    mm: s.mean,
-    errorMm,
+    ...hit,
     measured: measured(
-      fromMm(s.mean, unit),
-      fromMm(errorMm, unit),
+      fromMm(hit.mm, unit),
+      fromMm(hit.errorMm, unit),
       unit,
       BASIS,
     ),

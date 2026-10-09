@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { formatMeasured } from "../../measure/format";
+import { denominatorText } from "./row";
 import type { MetricRow } from "./row";
 
 /** Every metric as value ± error, or "not seen" with the reason. The basis of
@@ -27,6 +28,10 @@ export default function ResultsTable(props: { rows: MetricRow[] }) {
             </th>
             <td className={row.measured ? "value" : "value not-seen"}>
               {row.measured ? formatMeasured(row.measured) : "not seen"}
+              {row.measured && row.denominator && (
+                <small>{denominatorText(row.denominator)}</small>
+              )}
+              {row.measured && row.detail && <small>{row.detail}</small>}
               {row.measured && row.range && (
                 <small>
                   recomputed range {row.range[0].toFixed(1)} to{" "}

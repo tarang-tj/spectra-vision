@@ -77,13 +77,17 @@ export type Signals = {
   pose?: PoseSample | null;
   hand?: HandSample;
 };
+/** One new result of a task: `s` is null when the task ran and saw nothing. */
+export type Stamped<T> = { t: number; s: T | null };
 export type TaskName = "face" | "pose" | "hand";
 export const TASKS: TaskName[] = ["face", "pose", "hand"];
 
 /** Everything recorded while measuring. */
 export type Recording = {
-  face: FaceSample[];
-  pose: PoseSample[];
+  /** Every new face and pose result, including those that saw nothing: an
+   * unseen result breaks the time chain, so lost time is never credited. */
+  face: Stamped<FaceSample>[];
+  pose: Stamped<PoseSample>[];
   hand: HandSample[];
   /** New results per task, and how many of them saw the person. */
   fresh: Record<TaskName, number>;

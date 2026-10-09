@@ -33,7 +33,7 @@ export class SignalExtractor {
   private prevHand: { t: number; centres: Map<string, Pt> } | null = null;
 
   reset() {
-    this.lastTask = {};
+    // lastTask is kept: a task result seen before a pause is not new after it.
     this.prevFace = this.prevPose = this.prevHand = null;
   }
 

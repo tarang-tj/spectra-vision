@@ -5,7 +5,7 @@
 import type { Frame } from "../../vision/frame";
 import { derive } from "./derive";
 import { orderCorners, type Pt } from "./homography";
-import { bindSource, getState } from "./store";
+import { bindSource, clear, getState } from "./store";
 
 const REF = "#ffd18d";
 const LINE = "#a4ffd9";
@@ -16,6 +16,8 @@ const FONT = "600 12px system-ui, sans-serif";
 export const view = {
   /** The shown source is a still picture, or the stage is paused. */
   still: true,
+  /** The source is a video or camera (its points cannot outlive a freeze). */
+  video: false,
   /** The point being placed or dragged, in source pixels and canvas pixels. */
   loupe: null as { at: Pt; canvas: { x: number; y: number } } | null,
 };
@@ -117,7 +119,14 @@ export function drawRuler(ctx: CanvasRenderingContext2D, frame: Frame) {
   bindSource(frame.source.generation, w, h, frame.rect.w / w);
   view.still = frame.paused || el instanceof HTMLImageElement;
   // Points belong to a frozen picture; on a moving one they would mislead.
-  if (!view.still) return;
+  view.video = el instanceof HTMLVideoElement;
+  if (!view.still) {
+    // Points belong to one frozen frame. Once a video moves on they describe
+    // a picture that is gone, so they and their results are dropped.
+    if (view.video && (getState().corners.length || getState().measures.length))
+      clear();
+    return;
+  }
   const s = getState(),
     d = derive(s),
     at = (p: Pt) => frame.project({ x: p.x / w, y: p.y / h });

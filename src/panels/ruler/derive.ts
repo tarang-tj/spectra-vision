@@ -23,6 +23,8 @@ export type Derived = {
   /** Why the reference cannot be used yet, or null. */
   problem: string | null;
   sheet: Sheet | null;
+  /** Tap indices of the corners in `sheet.ordered` order. */
+  order: number[];
   rows: Row[];
   /** Warnings about the reference itself. */
   referenceWarnings: string[];
@@ -38,13 +40,39 @@ export function referenceOf(s: RulerState): Reference | null {
   return customReference(Number(s.customA), Number(s.customB));
 }
 
+/** While a handle is dragged, the long side is held to the edge it had at the
+ * start (as tap indices), so the guess cannot flip mid-drag. */
+function lockedFirstIsLong(
+  lock: readonly [number, number] | null,
+  order: number[],
+): boolean | undefined {
+  if (!lock) return undefined;
+  const i = order.indexOf(lock[0]),
+    j = order.indexOf(lock[1]);
+  if (i < 0 || j < 0) return undefined;
+  const lo = Math.min(i, j),
+    hi = Math.max(i, j);
+  if (hi - lo === 1 || (lo === 0 && hi === 3))
+    return lo === 0 && hi === 1 ? true : lo === 2 && hi === 3 ? true : false;
+  return undefined;
+}
+
+/** The long edge of the current sheet as tap indices, to lock during a drag. */
+export function longEdge(d: Derived): [number, number] | null {
+  if (!d.sheet || d.order.length !== 4) return null;
+  return d.sheet.firstIsLong
+    ? [d.order[0], d.order[1]]
+    : [d.order[1], d.order[2]];
+}
+
 let memo: { state: RulerState; value: Derived } | null = null;
 
 export function derive(s: RulerState): Derived {
   if (memo && memo.state === s) return memo.value;
   const reference = referenceOf(s);
   let problem: string | null = null,
-    sheet: Sheet | null = null;
+    sheet: Sheet | null = null,
+    order: number[] = [];
   const referenceWarnings: string[] = [];
   if (!reference) problem = "Enter both sides of the custom reference in mm.";
   else if (s.corners.length === 4) {
@@ -52,7 +80,14 @@ export function derive(s: RulerState): Derived {
       bad = degenerateReason(ordered);
     if (bad) problem = `The four corners cannot be used: ${bad}.`;
     else {
-      sheet = solveSheet(ordered, reference.long, reference.short, s.swap);
+      order = ordered.map((p) => s.corners.indexOf(p));
+      sheet = solveSheet(
+        ordered,
+        reference.long,
+        reference.short,
+        s.swap,
+        lockedFirstIsLong(s.lock, order),
+      );
       if (!sheet) problem = "The four corners do not define a flat surface.";
     }
     if (s.source && !bad) {
@@ -63,6 +98,7 @@ export function derive(s: RulerState): Derived {
         );
     }
   }
+  // Only for points placed before their own uncertainty was stored.
   const sigma = TAP_SIGMA_SCREEN_PX / (s.scale > 0 ? s.scale : 1),
     rows: Row[] = [];
   s.measures.forEach((m, index) => {
@@ -73,6 +109,10 @@ export function derive(s: RulerState): Derived {
       warnings.push(
         "This span is more than 10 times the reference's long side. Small errors in the reference grow with distance, so trust it less than the bar suggests.",
       );
+    if (!span)
+      warnings.push(
+        "Not measured: a point is at or beyond the horizon of the surface, or the reference is too small for a span this far away. Tap points on the reference's surface, or use a bigger reference.",
+      );
     rows.push({
       index,
       span,
@@ -80,7 +120,7 @@ export function derive(s: RulerState): Derived {
       warnings,
     });
   });
-  const value = { reference, problem, sheet, rows, referenceWarnings };
+  const value = { reference, problem, sheet, order, rows, referenceWarnings };
   memo = { state: s, value };
   return value;
 }

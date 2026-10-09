@@ -1,6 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect, beforeEach } from "vitest";
-import { derive } from "../src/panels/ruler/derive";
+import { derive, longEdge } from "../src/panels/ruler/derive";
 import {
   bindSource,
   clear,
@@ -9,6 +9,7 @@ import {
   move,
   place,
   resetRuler,
+  setLock,
   undo,
 } from "../src/panels/ruler/store";
 
@@ -68,6 +69,30 @@ describe("ruler store", () => {
     bindSource(2, 1000, 800, 1.2);
     expect(getState().corners).toHaveLength(0);
   });
+  it("keeps the error bar of placed points when the display scale changes", () => {
+    corners.forEach((c) => place(c, 2));
+    place({ x: 100, y: 600 }, 2);
+    place({ x: 900, y: 600 }, 2);
+    const before = derive(getState()).rows[0].span!.errorMm;
+    bindSource(1, 1000, 800, 3);
+    expect(derive(getState()).rows[0].span!.errorMm).toBe(before);
+  });
+  it("holds the long side fixed while a handle is dragged", () => {
+    // A nearly square-looking reference: dragging one corner flips the guess.
+    [
+      { x: 100, y: 100 },
+      { x: 400, y: 100 },
+      { x: 400, y: 380 },
+      { x: 100, y: 380 },
+    ].forEach((c) => place(c));
+    const free = () => derive(getState()).sheet!.plane[1].x;
+    const start = free();
+    setLock(longEdge(derive(getState())));
+    move({ kind: "corner", i: 2 }, { x: 400, y: 440 });
+    expect(free()).toBe(start);
+    setLock(null);
+    expect(free()).not.toBe(start);
+  });
   it("warns about a small reference and a far span, and not otherwise", () => {
     corners.forEach((c) => place(c));
     place({ x: 100, y: 600 });
@@ -82,9 +107,9 @@ describe("ruler store", () => {
     bindSource(3, 1000, 800, 1);
     [
       { x: 100, y: 100 },
-      { x: 130, y: 100 },
-      { x: 130, y: 123 },
-      { x: 100, y: 123 },
+      { x: 160, y: 100 },
+      { x: 160, y: 146.36 },
+      { x: 100, y: 146.36 },
     ].forEach((c) => place(c));
     place({ x: 100, y: 700 });
     place({ x: 900, y: 700 });

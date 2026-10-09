@@ -3,7 +3,7 @@ import { measured } from "../../measure/noise";
 import type { Baseline } from "./calibration";
 import { countStarts } from "./hand-events";
 import type { SpeedSample } from "./hand-events";
-import { halfRange, notSeen, share, spread, weights } from "./row";
+import { halfRange, notSeen, share, spread, sum, weights } from "./row";
 import type { MetricRow } from "./row";
 import type { Recording, Thresholds } from "./types";
 
@@ -34,14 +34,20 @@ export function handRows(
         name,
         "Hands were seen too briefly to cover any time.",
       );
+    const seenMs = w.reduce((acc, weight, i) => acc + (own[i] ? weight : 0), 0);
     return {
       id,
       label: name,
+      denominator: {
+        what: `a hand labelled ${label} was seen`,
+        seenMs,
+        coveredMs: sum(w),
+      },
       measured: measured(
         percent,
         step,
         "%",
-        `Share of time the hand model found a hand it labelled ${label} (the model's own label). Error: one result interval. Misses by the model are not included.`,
+        `Share of the time the hand model ran (${(sum(w) / 1000).toFixed(1)} s) in which it found a hand it labelled ${label} (the model's own label). Error: one result interval. Misses by the model are not included.`,
       ),
     };
   });
@@ -76,12 +82,14 @@ export function handRows(
         lists.set(h.label, list);
       }
     const minutes = rec.coveredMs / 60000,
-      perMinute = (speed: number) => {
+      count = (speed: number) => {
         let n = 0;
         for (const list of lists.values())
           n += countStarts(list, speed, th.handStill);
-        return n / minutes;
+        return n;
       },
+      perMinute = (speed: number) => count(speed) / minutes,
+      starts = count(th.handSpeed),
       value = perMinute(th.handSpeed),
       lo = perMinute(th.handSpeed + noise),
       hi = perMinute(Math.max(0, th.handSpeed - noise));
@@ -90,11 +98,13 @@ export function handRows(
       id,
       label,
       range,
+      detail: `${starts} ${starts === 1 ? "start" : "starts"} in ${(rec.coveredMs / 1000).toFixed(1)} s`,
       measured: measured(
         value,
-        halfRange(value, range[0], range[1]),
+        // One start more or less is the resolution of a count.
+        Math.max(halfRange(value, range[0], range[1]), 1 / minutes),
         "per min",
-        `Times a hand sped up to ${th.handSpeed} shoulder widths a second or more after at least ${th.handStill} ms under it, per minute covered. Hand speed is the palm centre's. Error: the count recomputed with the speed threshold moved by the calibration noise, ±${noise.toFixed(2)} shoulder widths a second (a count can rise or fall as the threshold moves).`,
+        `Times a hand sped up to ${th.handSpeed} shoulder widths a second or more after at least ${th.handStill} ms under it, per minute covered. Hand speed is the palm centre's. Error: the count recomputed with the speed threshold moved by the calibration noise, ±${noise.toFixed(2)} shoulder widths a second (a count can rise or fall as the threshold moves), and never under one start in the time covered. The noise floor was measured at the frame rate of the calibration; a different rate later changes it.`,
       ),
     };
   }

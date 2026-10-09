@@ -25,12 +25,14 @@ function statusLine(state: ReturnType<typeof read>, paused: boolean): string {
       ? "Stage paused. Measuring waits, and paused time is left out."
       : "Measuring. Stop when you are done.";
   if (state.phase === "done")
-    return state.endReason === "source" || state.endReason === "mode"
-      ? "Stopped because the source or mode changed. This is what was measured until then."
-      : "Stopped. Nothing is saved unless you export it.";
+    return state.endReason === "limit"
+      ? "Stopped by itself: a session ends after 40,000 results of one model (about 45 minutes). This is what was measured until then."
+      : state.endReason === "source" || state.endReason === "mode"
+        ? "Stopped because the source or mode changed. This is what was measured until then."
+        : "Stopped. Nothing is saved unless you export it.";
   return state.endReason
     ? "Calibration was cancelled. Nothing was measured."
-    : "Start, then hold still and look at the camera for a few seconds. Nothing is uploaded or saved unless you export it.";
+    : "Start, then hold still and look at the camera for a few seconds. A session ends by itself after about 45 minutes. Nothing is uploaded or saved unless you export it.";
 }
 
 /** Measures how a person presents on camera in Fusion mode. A measuring
@@ -172,7 +174,6 @@ const presence: PanelDef = {
   id: "presence",
   label: "Presence",
   order: 50,
-  tag: "Beta",
   Component: Presence,
 };
 export default presence;

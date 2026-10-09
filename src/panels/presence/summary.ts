@@ -5,6 +5,7 @@
 import { formatMeasured } from "../../measure/format";
 import type { BenchReport } from "../lab/benchmark-report";
 import type { Baseline } from "./calibration";
+import { denominatorText } from "./row";
 import type { MetricRow } from "./row";
 import type { EndReason, ModelUse } from "./presence-store";
 import type { Thresholds } from "./types";
@@ -37,6 +38,11 @@ export type PresenceSummary = {
     range: [number, number] | null;
     basis: string | null;
     reason: string | null;
+    /** Shares: seconds the thing was seen and seconds the task ran; the share is of the first. */
+    seenSeconds: number | null;
+    coveredSeconds: number | null;
+    /** Raw count and time beside a rate, for example "1 start in 3.0 s". */
+    detail: string | null;
   }[];
 };
 
@@ -84,6 +90,11 @@ export function buildSummary(input: Input): PresenceSummary {
       range: row.range ? [row.range[0], row.range[1]] : null,
       basis: row.measured?.basis ?? null,
       reason: row.reason ?? null,
+      seenSeconds: row.denominator ? num(row.denominator.seenMs / 1000) : null,
+      coveredSeconds: row.denominator
+        ? num(row.denominator.coveredMs / 1000)
+        : null,
+      detail: row.detail ?? null,
     })),
   };
 }
@@ -121,7 +132,7 @@ export function toMarkdown(
     ];
   for (const row of rows)
     lines.push(
-      `| ${row.label} | ${row.measured ? `${formatMeasured(row.measured)}${row.range ? ` (recomputed range ${row.range[0].toFixed(1)} to ${row.range[1].toFixed(1)})` : ""}` : `not seen (${cell(row.reason ?? "")})`} | ${row.measured ? cell(row.measured.basis) : ""} |`,
+      `| ${row.label} | ${row.measured ? `${formatMeasured(row.measured)}${row.denominator ? ` ${denominatorText(row.denominator)}` : ""}${row.detail ? ` (${row.detail})` : ""}${row.range ? ` (recomputed range ${row.range[0].toFixed(1)} to ${row.range[1].toFixed(1)})` : ""}` : `not seen (${cell(row.reason ?? "")})`} | ${row.measured ? cell(row.measured.basis) : ""} |`,
     );
   lines.push("", protocol.notes, "");
   return lines.join("\n");

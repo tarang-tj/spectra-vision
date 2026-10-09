@@ -184,6 +184,26 @@ describe("presence store", () => {
     presenceStore.setThresholds({ headAngle: 15 });
   });
 
+  it("stops drawing the head mark once the face is lost", () => {
+    presenceStore.start(1);
+    run(0, 6000);
+    expect(presenceStore.overlay()!.face).not.toBeNull();
+    const lost = result(6100);
+    delete lost.tasks.face;
+    feed({
+      ...lost,
+      tasks: {
+        ...lost.tasks,
+        face: {
+          ...lost.tasks.pose!,
+          kind: "face",
+          extra: { blendshapes: [], matrices: [] },
+        },
+      },
+    });
+    expect(presenceStore.overlay()!.face).toBeNull();
+  });
+
   it("exports JSON with the stated shape and no judging words", () => {
     presenceStore.start(1);
     run(0, 6000);

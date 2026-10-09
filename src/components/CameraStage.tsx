@@ -108,7 +108,14 @@ export default function CameraStage(props: {
       if (!consumed) return;
       e.preventDefault();
       // A drag that leaves the canvas keeps reporting until the finger lifts.
-      if (type === "down") e.currentTarget.setPointerCapture(e.pointerId);
+      // Capture can throw for a pointer that has already gone; the drag then
+      // simply ends at the canvas edge.
+      if (type === "down")
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          /* pointer no longer active */
+        }
     };
   const expand = async () => {
     try {

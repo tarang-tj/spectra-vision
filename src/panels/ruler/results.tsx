@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useStudio } from "../../studio-context";
 import { resultsText, type Derived } from "./derive";
-import { BASIS } from "./monte-carlo";
+import { BASIS, DEFAULT_SAMPLES, TAP_SIGMA_SCREEN_PX } from "./monte-carlo";
 import type { RulerState } from "./store";
 
 /** Value ± error for each measurement, what the error covers, and a copy
@@ -40,8 +40,9 @@ export default function Results({ s, d }: { s: RulerState; d: Derived }) {
         ))}
       </ol>
       <p className="ruler-basis">
-        Each bar is 2 standard deviations over 400 simulated tap errors of 1.5
-        screen pixels.
+        Each value is the distance between your taps. Its bar is 2 standard
+        deviations over {DEFAULT_SAMPLES} simulated tap errors of{" "}
+        {TAP_SIGMA_SCREEN_PX} screen pixels.
       </p>
       <p className="ruler-basis" data-testid="ruler-basis">
         {BASIS}

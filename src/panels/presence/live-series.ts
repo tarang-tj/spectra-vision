@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import { angleDifference } from "../../measure/angles";
 import { Series } from "../../measure/series";
 import type { Baseline } from "./calibration";
+import { headAngleBetween } from "./head-angle";
 import type { Signals } from "./types";
 
 export type ChartId = "head" | "hands" | "sway" | "still" | "expression";
@@ -29,10 +29,7 @@ export class LiveSeries {
     if (face && base.face)
       this.series.head.push(
         face.t,
-        Math.hypot(
-          angleDifference(face.yaw, base.face.yaw),
-          face.pitch - base.face.pitch,
-        ),
+        headAngleBetween(face.yaw, face.pitch, base.face.yaw, base.face.pitch),
       );
     if (face) this.series.expression.push(face.t, face.change);
     if (pose && base.pose) {

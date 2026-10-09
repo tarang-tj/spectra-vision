@@ -24,6 +24,8 @@ export type RulerState = {
   source: { w: number; h: number } | null;
   /** Canvas CSS pixels per source pixel, as last drawn. */
   scale: number;
+  /** While a handle is dragged: the long edge (tap indices) to hold fixed. */
+  lock: [number, number] | null;
 };
 
 const UNIT_KEY = "spectra.ruler.unit.v1";
@@ -48,6 +50,7 @@ const initial = (): RulerState => ({
   generation: null,
   source: null,
   scale: 1,
+  lock: null,
 });
 
 let state = initial();
@@ -105,20 +108,25 @@ export function bindSource(
   }
 }
 
-const clamp = (p: Pt): Pt => {
-  const s = state.source;
-  return s
-    ? {
-        x: Math.min(s.w, Math.max(0, p.x)),
-        y: Math.min(s.h, Math.max(0, p.y)),
-      }
-    : p;
+/** Keep the point on the picture and stamp it with the tap uncertainty (one
+ * sd in source pixels) it was placed with, so a later resize cannot change
+ * the error bar of a point that has not moved. */
+const clamp = (p: Pt, sigma?: number): Pt => {
+  const s = state.source,
+    at = s
+      ? {
+          x: Math.min(s.w, Math.max(0, p.x)),
+          y: Math.min(s.h, Math.max(0, p.y)),
+        }
+      : { x: p.x, y: p.y };
+  const sd = sigma ?? p.s;
+  return sd === undefined ? at : { ...at, s: sd };
 };
 
 /** Add the next point: a reference corner until there are four, then the
  * start or end of a measurement. Returns the handle so a drag can continue. */
-export function place(p: Pt): Handle {
-  const at = clamp(p);
+export function place(p: Pt, sigma?: number): Handle {
+  const at = clamp(p, sigma);
   if (state.corners.length < 4) {
     set({ corners: [...state.corners, at] });
     return { kind: "corner", i: state.corners.length - 1 };
@@ -134,8 +142,8 @@ export function place(p: Pt): Handle {
   return { kind: "end", m: state.measures.length - 1, end: "a" };
 }
 
-export function move(handle: Handle, p: Pt) {
-  const at = clamp(p);
+export function move(handle: Handle, p: Pt, sigma?: number) {
+  const at = clamp(p, sigma);
   if (handle.kind === "corner") {
     if (!state.corners[handle.i]) return;
     const corners = state.corners.slice();
@@ -186,4 +194,6 @@ export function undo() {
   }
 }
 
-export const clear = () => set({ corners: [], measures: [], swap: false });
+export const clear = () =>
+  set({ corners: [], measures: [], swap: false, lock: null });
+export const setLock = (lock: [number, number] | null) => set({ lock });

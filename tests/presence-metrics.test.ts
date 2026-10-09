@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Calibrator } from "../src/panels/presence/calibration";
+import { recordSignals } from "../src/panels/presence/recording";
 import { countStarts } from "../src/panels/presence/hand-events";
 import { computeRows } from "../src/panels/presence/metrics";
 import {
@@ -44,26 +45,8 @@ function session(cal: Signals[], measure: Signals[]) {
   cal.forEach((s) => c.add(s));
   const base = c.finish(5000),
     rec: Recording = emptyRecording();
-  for (const s of measure) {
-    rec.results++;
-    if (s.face !== undefined) {
-      rec.fresh.face++;
-      if (s.face) (rec.seen.face++, rec.face.push(s.face));
-    }
-    if (s.pose !== undefined) {
-      rec.fresh.pose++;
-      if (s.pose) (rec.seen.pose++, rec.pose.push(s.pose));
-    }
-    if (s.hand) {
-      rec.fresh.hand++;
-      rec.hand.push(s.hand);
-      if (s.hand.hands.length) rec.seen.hand++;
-    }
-    if (rec.results > 1) {
-      rec.coveredMs += DT;
-      rec.steps++;
-    }
-  }
+  // The store's own recording path, one result every DT after the first.
+  measure.forEach((s, i) => recordSignals(rec, s, i ? DT : 0));
   return { base, rec };
 }
 const series = (n: number, make: (i: number, t: number) => Partial<Signals>) =>
@@ -147,7 +130,7 @@ describe("head toward camera", () => {
     expect(head.range![0]).toBeCloseTo(0, 6);
     expect(head.measured!.error).toBeCloseTo(100, 6);
   });
-  it("does not count time across a gap", () => {
+  it("does not count time across a stage stop", () => {
     const meas = [
       { t: 0, face: face(0, 0) },
       { t: DT, face: face(DT, 0) },
@@ -159,6 +142,71 @@ describe("head toward camera", () => {
     expect(
       row(computeRows(rec, base, DEFAULT_THRESHOLDS), "head").measured!.value,
     ).toBeCloseTo(50, 6);
+  });
+  it("states its denominator when the face is lost for half the session", () => {
+    // 30 s facing the camera, then 30 s in which the face model sees nothing.
+    const meas = series(600, (i) => ({
+      face: i < 300 ? face(i * DT, 0) : null,
+    }));
+    const { base, rec } = session(cal, meas);
+    const head = row(computeRows(rec, base, DEFAULT_THRESHOLDS), "head");
+    expect(head.measured!.value).toBeCloseTo(100, 6);
+    expect(head.denominator!.seenMs).toBeCloseTo(29_900, 6);
+    expect(head.denominator!.coveredMs).toBeCloseTo(59_900, 6);
+    expect(head.measured!.basis).toMatch(/29\.9 s of 59\.9 s a face was seen/);
+    expect(head.measured!.error).toBeGreaterThan(0);
+    // The seen share is a separate row and says the face was seen half the time.
+    expect(
+      row(computeRows(rec, base, DEFAULT_THRESHOLDS), "seen-face").measured!
+        .value,
+    ).toBeCloseTo(50, 6);
+  });
+  it("does not credit the time of a loss to the direction it ends in", () => {
+    const meas: Signals[] = [
+      { t: 0, face: face(0, 0) },
+      { t: 100, face: face(100, 0) },
+      ...Array.from({ length: 10 }, (_, i) => ({
+        t: 200 + i * 100,
+        face: null,
+      })),
+      { t: 1200, face: face(1200, 40) },
+      { t: 1300, face: face(1300, 40) },
+    ];
+    const { base, rec } = session(cal, meas);
+    // 100 ms inside, 100 ms outside; the 1.1 s of loss is credited to neither.
+    expect(
+      row(computeRows(rec, base, DEFAULT_THRESHOLDS), "head").measured!.value,
+    ).toBeCloseTo(50, 6);
+  });
+  it("uses the true angle between directions, not the hypotenuse of yaw and pitch", () => {
+    const exact = series(30, () => ({ face: face(0, 0, 0) }));
+    const meas = series(50, (i) => ({ face: face(i * DT, 40, 40) }));
+    const { base, rec } = session(exact, meas);
+    // yaw 40 and pitch 40 are 54.07 degrees apart (the hypotenuse would say 56.6).
+    const at = (headAngle: number) =>
+      row(computeRows(rec, base, { ...DEFAULT_THRESHOLDS, headAngle }), "head")
+        .measured!.value;
+    expect(at(55)).toBeCloseTo(100, 6);
+    expect(at(54)).toBeCloseTo(0, 6);
+  });
+});
+
+describe("stillness when the body is lost", () => {
+  it("is a share of the time the body was seen, with both times stated", () => {
+    const calm = (i: number) =>
+      pose(i * DT, 0.5 + (i % 2 ? 0.001 : -0.001), 0.02);
+    const cal = series(30, (i) => ({ pose: calm(i) }));
+    // 30 s still, then the person walks out of frame for 30 s.
+    const meas = series(600, (i) => ({ pose: i < 300 ? calm(i) : null }));
+    const { base, rec } = session(cal, meas);
+    const still = row(computeRows(rec, base, DEFAULT_THRESHOLDS), "stillness");
+    expect(still.measured!.value).toBeCloseTo(100, 6);
+    expect(still.denominator!.seenMs).toBeLessThan(30_000);
+    expect(still.denominator!.coveredMs).toBeGreaterThan(59_000);
+    expect(still.measured!.basis).toMatch(
+      /Time the body was lost is not in the denominator/,
+    );
+    expect(still.measured!.error).toBeGreaterThan(0);
   });
 });
 
@@ -222,6 +270,24 @@ describe("hand movement starts", () => {
       row(computeRows(rec, base, DEFAULT_THRESHOLDS), "hand-view-left")
         .measured!.value,
     ).toBeCloseTo(100, 6);
+  });
+});
+
+describe("counts never read as exact", () => {
+  it("floors the error at one start and shows the raw count and time", () => {
+    const cal = series(30, (i) => ({
+      pose: pose(i * DT),
+      hand: hand(i * DT, i ? (i % 2 ? 0.01 : 0.03) * W : NaN),
+    }));
+    // One clear start in 3 s: still, then a fast burst.
+    const meas = series(30, (i) => ({
+      pose: pose(i * DT),
+      hand: hand(i * DT, i === 0 ? NaN : i < 15 ? 0.02 * W : 3 * W),
+    }));
+    const { base, rec } = session(cal, meas);
+    const moves = row(computeRows(rec, base, DEFAULT_THRESHOLDS), "hand-moves");
+    expect(moves.detail).toBe("1 start in 2.9 s");
+    expect(moves.measured!.error).toBeGreaterThanOrEqual(60 / 2.9 - 1e-9);
   });
 });
 
