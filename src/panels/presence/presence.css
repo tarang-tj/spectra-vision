@@ -1,0 +1,76 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+/* Presence panel: reuses the lab's blocks, notes and table. */
+.presence-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.presence-beta {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ae94fa;
+  border: 1px solid #ae94fa;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.presence-status {
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.presence-panel .button {
+  min-height: 42px;
+  width: 100%;
+}
+.presence-limits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+.presence-limits label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.presence-limits input {
+  min-height: 40px;
+  padding: 0 8px;
+  font-size: 14px;
+  color: inherit;
+  background: #090e11;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.presence-table td,
+.presence-table th {
+  text-align: left;
+}
+.presence-table td.value {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.presence-table details summary {
+  cursor: pointer;
+  min-height: 28px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.presence-table details p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.presence-table .not-seen {
+  color: var(--muted);
+}
+@media (max-width: 760px) {
+  .presence-panel {
+    grid-column: 1/3;
+  }
+}

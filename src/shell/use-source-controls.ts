@@ -67,6 +67,7 @@ export function useSourceControls(notice: (text: string) => void) {
     input,
     modeId,
     paused,
+    setPaused,
     mirror,
     motionDemo,
     togglePaused: () => setPaused((p) => !p),

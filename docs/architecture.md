@@ -167,6 +167,7 @@ type TaskKind = "object" | "pose" | "hand" | "face" | "segment" | "gesture";
 type TaskSpec = {
   kind: TaskKind;
   model: string;
+  preciseModel?: string; // loaded instead of `model` while Precision is "Precise"
   options: Record<string, unknown>;
   delegate: "CPU" | "GPU";
 };
@@ -176,6 +177,7 @@ type TaskResult = {
   time: number;
   latency: number;
   delegate: "CPU" | "GPU"; // the delegate that actually ran
+  model?: string; // the model file that ran (set by the task runner)
   detections: Detection[];
   landmarks: Point[][];
   handedness: string[];
@@ -317,6 +319,7 @@ type Studio = {
   rows: InspectorRow[];
   count: number; // the mode's Tracked figure for this frame
   paused: boolean;
+  setPaused(value: boolean): void; // pause or resume the stage and detection
   status: string; // "Ready", or what the stage is waiting for
   setConfidence(value: number): void;
   toggleEffect(id: string): void;
@@ -327,10 +330,11 @@ type Studio = {
   panel: string | null; // id of the panel on show, null for the first
   openPanel(id: string): void;
   immersive: boolean; // stage-only view
+  stage: StageHooks; // draw on the stage, read pointer input: see "Measurement layer"
 };
 ```
 
-Two panels ship: Inspect (`src/panels/inspect.tsx`), which is the v1 rail content, and Lab (`src/panels/lab.tsx` with its parts in `src/panels/lab/`). With one visible panel there is no tab bar. With more, `src/components/Inspector.tsx` shows a tab bar (`.panel-tabs`) and the chosen panel. Beside the stage the rail takes the stage's height and the panel scrolls inside it.
+Two panels ship (more are being added on the measurement layer below): Inspect (`src/panels/inspect.tsx`), which is the v1 rail content, and Lab (`src/panels/lab.tsx` with its parts in `src/panels/lab/`). With one visible panel there is no tab bar. With more, `src/components/Inspector.tsx` shows a tab bar (`.panel-tabs`) and the chosen panel. Beside the stage the rail takes the stage's height and the panel scrolls inside it.
 
 The Lab subscribes to the telemetry bus only while it is open, keeps fixed-size rings of samples (`lab-store.ts`), computes percentiles with `src/telemetry/stats.ts`, and runs the benchmark protocol in `benchmark.ts` (20 s measured after a 2 s warm-up per mode and delegate, exported as JSON or Markdown by `benchmark-report.ts`). It owns no timer while merely open: it is driven by the stage's `frame` events.
 
@@ -359,6 +363,104 @@ const about: PanelDef = {
 export default about;
 ```
 
+## Measurement layer
+
+Everything a panel needs to measure something real, added without changing default behaviour (pixels, session export and the Lite/CPU defaults are as before). A measuring panel is an ordinary panel (it has a tab, a component, and `visible()`), built from the pieces below.
+
+### Pure helpers: `src/measure/`
+
+No DOM, no clock, unit-tested (`tests/measure-*.test.ts`). They report "no data" as `NaN` or `null`, never as zero.
+
+```ts
+// one-euro.ts  time-aware One Euro filter; ONE_EURO_DEFAULTS is tuned for 0..1 image coordinates
+new OneEuroFilter(options?).filter(value, timeMs): number; .reset()
+new LandmarkSmoother(options?).smooth(points: Point[], timeMs): Point[]            // new points; input untouched
+new LandmarkSetSmoother(options?).smooth(lists: Point[][], timeMs, keys?: string[]) // keys: handedness; a changed key restarts that list
+// series.ts    fixed-capacity ring (reuses SampleWindow and percentile from telemetry/stats.ts)
+describe(values): { count, mean, sd, min, max }                                     // sample sd (n - 1), skips non-finite
+new Series(capacity).push(timeMs, value): boolean; .stats(spanMs?, now?); .percentile(q, spanMs?, now?); .samples(spanMs?, now?); .clear()
+// noise.ts
+type Measured = { value: number; error: number; unit: string; basis: string }       // basis says what the error covers
+noiseFloor(stillValues): { count, sd, peakToPeak }                                  // from an interval held still
+measured(value, error, unit, basis): Measured; isMeasured(m): boolean; combineErrors(...errors): number
+// format.ts
+formatMeasured(m): string                                                           // "12.3 ± 0.4 cm"; "not measured" without a usable error
+roundError(error): { error, decimals }                                              // one significant figure
+// angles.ts   degrees
+jointAngle2D(a, b, c, aspect = 1), jointAngle3D(a, b, c), angleDifference(a, b)    // (-180, 180]
+headPose(matrix): { yaw, pitch, roll } | null; headMatrix(yaw, pitch, roll): number[] // column-major 4x4; headMatrix is the inverse, for tests
+```
+
+Rules for a measured number: it is a `Measured`, it carries an error that something produced (a noise floor from a still interval, a Monte Carlo spread), and its `basis` states what that error covers and what it leaves out. Show it with `formatMeasured`. A metric whose inputs were not seen is shown as "not seen".
+
+### Result feed: every merged result, whichever panel is open
+
+```ts
+import { onVisionResult } from "../vision/result-feed";
+const off = onVisionResult((result: VisionResult, generation: number) => {});
+```
+
+A panel is unmounted while another tab is on show, so reading `useStudio().frame` misses frames. `onVisionResult` is a module-level subscription on the telemetry bus (event `result`): subscribe from a module-level store and measuring continues in the background. The result is the raw model output, the same object the stage and the session export receive; never mutate it. Nothing arrives while the stage is paused or the tab is hidden. `result.generation` changes with the source and the mode changes `result.mode`: reset a session when either changes.
+
+### Stage hooks: `useStudio().stage`, `setPaused`
+
+`src/stage/stage-hooks.ts`. One module-level instance whose identity never changes.
+
+```ts
+type StageHooks = {
+  addOverlay(
+    draw: (ctx: CanvasRenderingContext2D, frame: Frame) => void,
+  ): () => void;
+  onPointer(handler: (e: StagePointerEvent) => boolean | void): () => void;
+};
+type StagePointerEvent = {
+  type: "down" | "move" | "up"; // "up" with cancelled: true for a cancelled gesture
+  point: Point; // image-normalized 0..1, mirror and letterbox aware (inverse of frame.project)
+  inside: boolean; // over the image, not the letterbox bars
+  source: { width: number; height: number }; // source size in pixels: point.x * source.width is a pixel
+  canvas: { x: number; y: number }; // canvas CSS pixels, for hit radii and a loupe
+  scale: number; // canvas CSS pixels per source pixel
+  pointerId: number;
+  pointerType: string;
+  cancelled: boolean;
+};
+```
+
+- **Overlay.** Drawn last, after the mode, the effects and the GL layer, on the one stage canvas in CSS pixels, so Record and Screenshot capture it. It is also drawn while paused (the stage keeps redrawing the held frame). Context state is saved and restored around it. An overlay that throws is logged once and skipped. Remove it in the effect cleanup.
+- **Pointer.** Events from the stage canvas; the newest handler sees an event first and returns `true` to consume it (later handlers do not see it, the browser default is prevented, and on a consumed `down` the canvas captures the pointer so a drag continues outside it). While any handler is registered the canvas sets `touch-action: none` and a crosshair cursor (`canvas[data-pointer="on"]`). With none registered the canvas behaves as before. To drag a handle, remember the pointer id on `down` and return `true` for its `move` and `up`.
+- **Pause.** `setPaused(true)` stops detection and holds the last frame (a video source pauses too); an uploaded photo is already still. Whoever pauses resumes.
+- `unproject(point, rect, mirror)` in `src/vision/geometry.ts` is the pure inverse of `project`.
+
+### World landmarks
+
+The `pose` and `hand` tasks put MediaPipe's `worldLandmarks` in `extra.world` (type `WorldExtra`, `src/vision/types.ts`): `Point[][]`, one list per body or hand, indexed exactly like `landmarks`, in metres, `[]` when nothing was seen. The origin is the hip midpoint (pose) or the hand's centre (hand), so they give sizes, speeds and angles but not position in the room. MediaPipe tasks-vision 1.1.0 returns them for both kinds (checked in a real browser, `tests/e2e/measure.spec.ts`). Never depend on them: a panel must still work from image landmarks.
+
+### Smooth landmarks (setting, off by default)
+
+`src/vision/settings.ts` (`useSmoothing()`, `smoothingOn()`), switch in the Inspect panel. The stage runs pose, hand and face landmarks through `ResultSmoother` (`smooth-result.ts`, One Euro) **for drawing only**: `frame.result` seen by modes and effects is smoothed, while `useStudio().frame`, the result feed, the session export and `extra.world` always hold the raw values. A measuring panel must measure the raw values or filter on its own terms. Remembered in `localStorage` (`spectra.smooth.v1`).
+
+### Precision (setting, Fast by default)
+
+A `TaskSpec` may declare `preciseModel`. With Precision on "Precise" (`usePrecision()`, `getPrecision()`, `modelOf(spec)`), the task runner loads it instead of `model` and restarts on a fresh worker when the setting changes; the delegate rules are unchanged. Body and Fusion declare `pose_landmarker_full.task` (9,398,198 bytes, Apache-2.0, in `scripts/models.json` with its SHA-256). `TaskResult.model` and the Lab (model cards, load times, benchmark) report the file actually in use. Models are still fetched on demand only, and the service worker caches the full model on its first real use with the other `models/` files (no list to edit). Remembered in `localStorage` (`spectra.precision.v1`). Defaults stay Lite on CPU because CI has no GPU.
+
+### A measuring panel in ten lines (sketch: `store` is the panel's own module)
+
+```tsx
+function Sway() {
+  const { stage } = useStudio(); // a panel never owns the stage
+  const m = useSyncExternalStore(store.subscribe, store.sway); // a Measured, or undefined: "not seen"
+  useEffect(() => {
+    const offDraw = stage.addOverlay((ctx, f) => store.mark(ctx, f)); // captured by Screenshot
+    const offTap = stage.onPointer(
+      (e) => e.type === "down" && e.inside && store.tap(e.point, e.source),
+    );
+    const offFeed = onVisionResult((r) => store.add(r)); // module-level store: keeps measuring off-tab
+    return () => (offDraw(), offTap(), offFeed());
+  }, [stage]);
+  return <p>{m ? formatMeasured(m) : "not seen"}</p>; // value ± error unit; show m.basis beside it
+}
+```
+
 ## Telemetry bus
 
 `src/telemetry/bus.ts`. A typed emitter with no UI. Events carry measured values only.
@@ -367,6 +469,7 @@ export default about;
 telemetry.on("inference", (e) => {}); // { kind, latency, time, delegate }  one per task result
 telemetry.on("model", (e) => {}); // { kind, requested, delegate, loadMs, note?, files? } one per model load
 telemetry.on("frame", (e) => {}); // { time, dt, drawMs }  one per drawn stage frame
+telemetry.on("result", (e) => {}); // { result, generation }  one per merged vision result; use onVisionResult
 ```
 
 `model.note` says why the delegate in use is not the one requested. `model.files` lists what the worker fetched to load. `src/telemetry/task-status.ts` keeps one small record per model so that a load that happened while the Lab was closed is still on record.
@@ -422,11 +525,12 @@ src/effects/                types.ts, index.ts, trails.ts, constellation.ts, pla
 src/panels/                 types.ts, index.ts, inspect.tsx, lab.tsx, lab/
 src/studio-context.ts       Studio type and useStudio()
 src/session-export.ts       the JSON download
-src/stage/                  renderer.ts, effect-host.ts, gl-layer.ts, use-stage-loop.ts
+src/stage/                  renderer.ts, effect-host.ts, gl-layer.ts, use-stage-loop.ts, stage-hooks.ts
 src/gl/                     WebGL2 kit for effects
 src/vision/                 types.ts, frame.ts, draw.ts, geometry.ts, tracker.ts, merge.ts,
                             delegate.ts, webgl-probe.ts, task-runner.ts, useVision.ts, useSource.ts,
-                            useSession.ts
+                            useSession.ts, settings.ts, smooth-result.ts, result-feed.ts
+src/measure/                one-euro.ts, series.ts, noise.ts, format.ts, angles.ts (pure)
 src/telemetry/              bus.ts, stats.ts, task-status.ts
 src/shell/                  shortcuts, palette, layout, recorder, service worker registration
 src/components/             Header, ModeSwitch, CameraStage, StageMessage, CameraPicker, Inspector,
@@ -435,5 +539,6 @@ src/components/             Header, ModeSwitch, CameraStage, StageMessage, Camer
 src/styles/                 index.css, base.css, shell.css, stage.css, inspector.css, panel-tabs.css,
                             deck.css, palette.css, coach.css, share.css, immersive.css
 tests/                      unit: tracker, registry (with fixtures), vision, telemetry, modes, effects, lab,
-                            shell; e2e: studio, modes, effects, lab, shell, mode-switch, no-webgl
+                            shell, measure-*, stage-hooks, vision-smoothing, vision-settings;
+                            e2e: studio, modes, effects, lab, shell, mode-switch, no-webgl, measure
 ```

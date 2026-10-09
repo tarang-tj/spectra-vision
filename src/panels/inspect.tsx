@@ -1,4 +1,5 @@
 import { ChevronRight, Lightbulb } from "lucide-react";
+import MeasureSettings from "../components/MeasureSettings";
 import { useStudio } from "../studio-context";
 import { COLORS } from "../vision/types";
 import type { PanelDef } from "./types";
@@ -117,6 +118,7 @@ function Inspect() {
             {studio.motionDemo ? "Use still demo" : "Try motion demo"}
           </button>
         )}
+        <MeasureSettings mode={mode} />
       </div>
       <p className="mode-tip">
         <Lightbulb size={22} />

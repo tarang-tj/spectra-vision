@@ -7,6 +7,7 @@ import {
   onDelegateChoice,
   requestedDelegate,
 } from "./delegate";
+import { modelOf, onPrecisionChange } from "./settings";
 import type { Delegate, TaskResult, TaskSpec } from "./types";
 
 // Inference is capped near 15 fps per task, as in v1.
@@ -27,6 +28,8 @@ export type TaskRunner = {
   readonly spec: TaskSpec;
   /** The delegate in use right now (differs from the requested one after a fallback). */
   delegate(): Delegate;
+  /** The model file in use (the precise one while Precision asks for it). */
+  model(): string;
   ready(): boolean;
   /** True when the worker can take a frame at this animation time. */
   wants(time: number): boolean;
@@ -58,6 +61,9 @@ export function createTaskRunner(
   let worker: WorkerLike | null = null,
     requested: Delegate = spec.delegate,
     active: Delegate = requested,
+    // The file this worker loads: the task's model, or its precise one while
+    // the Precision setting asks for it.
+    model = modelOf(spec),
     ready = false,
     busy = false,
     produced = false,
@@ -80,7 +86,7 @@ export function createTaskRunner(
     note = refused ? `GPU was requested but ${refused}. Running on CPU.` : "";
   };
   choose();
-  let status = beginStatus(spec.kind, spec.model, requested, active, note);
+  let status = beginStatus(spec.kind, model, requested, active, note);
 
   const stop = () => {
     clearTimeout(watchdog);
@@ -98,6 +104,20 @@ export function createTaskRunner(
     busy = false;
     ready = false;
     const retry = fallbackDelegate(active, produced);
+    if (!retry && model !== spec.model && !produced) {
+      // The precise model never produced a frame (offline on first use, a
+      // failed download): run the standard one and say so, so a saved
+      // Precise choice cannot leave the mode broken on every visit.
+      console.warn(
+        `[spectra vision] ${spec.kind}: ${model} failed (${message}); using ${spec.model}.`,
+      );
+      stop();
+      model = spec.model;
+      note = `The precise model did not load (${message}). Running the standard model.`;
+      events.onRestart?.();
+      start();
+      return;
+    }
     if (!retry) {
       status.state = "failed";
       status.note = message;
@@ -143,7 +163,7 @@ export function createTaskRunner(
     started = performance.now();
     downloaded = false;
     firstSent = 0;
-    status = beginStatus(spec.kind, spec.model, requested, active, note);
+    status = beginStatus(spec.kind, model, requested, active, note);
     try {
       worker = spawn(`${base}vision-worker.js`);
     } catch {
@@ -182,6 +202,7 @@ export function createTaskRunner(
         // The runner, not the worker, is the authority on what it is running.
         result.kind = spec.kind;
         result.delegate = active;
+        result.model = model;
         telemetry.emit("inference", {
           kind: result.kind,
           latency: result.latency,
@@ -198,7 +219,7 @@ export function createTaskRunner(
     worker.postMessage({
       type: "init",
       base,
-      task: { ...spec, delegate: active },
+      task: { ...spec, model, delegate: active },
     });
     watch();
   };
@@ -214,9 +235,21 @@ export function createTaskRunner(
     start();
   });
 
+  // The Precision setting: load the other model for this task, if it has one.
+  const unwatchPrecision = onPrecisionChange(() => {
+    const next = modelOf(spec);
+    if (disposed || next === model) return;
+    stop();
+    model = next;
+    ready = busy = produced = false;
+    events.onRestart?.();
+    start();
+  });
+
   return {
     spec,
     delegate: () => active,
+    model: () => model,
     ready: () => ready,
     wants: (time) => ready && !busy && time - lastFrame >= MIN_FRAME_GAP,
     claim(time) {
@@ -246,6 +279,7 @@ export function createTaskRunner(
       disposed = true;
       ready = false;
       unwatch();
+      unwatchPrecision();
       stop();
     },
   };

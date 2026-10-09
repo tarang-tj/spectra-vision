@@ -2,6 +2,13 @@
 // Pure helpers that turn the face model's raw output into the few numbers the
 // inspector shows. No DOM and no canvas here, so they are unit-tested.
 
+// The head-pose maths lives in the measurement core (src/measure/angles.ts);
+// the face mode keeps importing it from here.
+import { headPose } from "../../measure/angles";
+import type { HeadPose } from "../../measure/angles";
+export { headPose };
+export type { HeadPose };
+
 export type Meter = {
   id: string;
   label: string;
@@ -68,31 +75,6 @@ export function meterText(value: number): string {
   const clamped = Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0)),
     filled = Math.round(clamped * CELLS);
   return `${"▰".repeat(filled)}${"▱".repeat(CELLS - filled)} ${Math.round(clamped * 100)}%`;
-}
-
-export type HeadPose = { yaw: number; pitch: number; roll: number };
-const degrees = (radians: number) => (radians * 180) / Math.PI;
-
-/** Head rotation in degrees from the 4x4 facial transformation matrix
- * (column-major, x right, y up, z toward the camera). Yaw is positive when the
- * face turns toward the right of the image, pitch when it tilts up, roll when
- * it leans counter-clockwise as seen in the image. Null for a malformed matrix. */
-export function headPose(
-  matrix: readonly number[] | undefined,
-): HeadPose | null {
-  if (!matrix || matrix.length < 16) return null;
-  // The upper-left 3x3 may carry a uniform scale: divide it out.
-  const scale = Math.hypot(matrix[0], matrix[1], matrix[2]);
-  if (!Number.isFinite(scale) || scale < 1e-6) return null;
-  // Where the face's forward (z) axis points, and how its x axis is rolled.
-  const fx = matrix[8] / scale,
-    fy = matrix[9] / scale,
-    fz = matrix[10] / scale;
-  return {
-    yaw: degrees(Math.atan2(fx, fz)),
-    pitch: degrees(Math.asin(Math.min(1, Math.max(-1, fy)))),
-    roll: degrees(Math.atan2(matrix[1], matrix[5])),
-  };
 }
 
 const signed = (value: number) => `${Math.round(value) || 0}°`;

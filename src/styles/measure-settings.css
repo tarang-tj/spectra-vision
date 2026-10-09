@@ -1,0 +1,24 @@
+.measure-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+.measure-settings [role="group"] {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.measure-settings .button {
+  min-height: 42px;
+  font-size: 12px;
+}
+.measure-settings .button[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.measure-settings p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}

@@ -13,6 +13,12 @@
   width: 100%;
   height: 100%;
 }
+/* A panel is listening for taps and drags (stage-hooks.ts): the canvas keeps
+   touch gestures to itself instead of scrolling the page. */
+.camera-stage canvas[data-pointer="on"] {
+  touch-action: none;
+  cursor: crosshair;
+}
 .stage-top {
   position: absolute;
   top: 12px;

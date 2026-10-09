@@ -24,6 +24,17 @@ export function project(
     y: rect.y + p.y * rect.h,
   };
 }
+/** The inverse of `project`: a canvas pixel back to an image-normalized point,
+ * given the same letterboxed `rect` and mirror flag. The result is outside
+ * 0..1 when the pixel is in the letterbox bars. `rect` must have a size. */
+export function unproject(
+  p: { x: number; y: number },
+  rect: ReturnType<typeof fit>,
+  mirror = false,
+): Point {
+  const x = (p.x - rect.x) / rect.w;
+  return { x: mirror ? 1 - x : x, y: (p.y - rect.y) / rect.h };
+}
 export function pinchRatio(points: Point[], aspect = 1) {
   if (points.length !== 21) return Infinity;
   const distance = (a: Point, b: Point) =>

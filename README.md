@@ -57,6 +57,32 @@ Effects are optional layers over a mode's own drawing. The tray lists only the e
 
 The eight WebGL2 effects share one WebGL2 context, composite onto the stage canvas (so Record and Screenshot capture them), and hold still while paused or when reduced motion is requested. In a browser without WebGL2 their switches are disabled and the tray says why; the modes and the two canvas effects keep working. On a software renderer they run, slowly.
 
+### Ruler (beta)
+
+The **Ruler** tab measures real distances on one flat surface, in any mode, with no depth sensor.
+
+1. Lay a reference of known size flat on the surface: a US Letter or A4 sheet, a bank card, or a custom size. A sheet of paper is better than a card for anything room sized.
+2. Freeze the frame, or upload a photo, and tap the reference's four corners. Drag a handle to refine it; a loupe magnifies the spot under the pointer.
+3. Tap two points on the same surface to measure between them.
+
+Each result is shown as a value plus or minus an error. The value is the distance between your taps. The error is two standard deviations of 400 repeats of the calculation with every tapped point moved by a small random amount (a standard deviation of 1.5 screen pixels), and it covers tap placement only. It does not cover lens distortion, points that are off the surface, or a bent or misprinted reference. The error grows as you measure further from the reference, and the panel warns when a span is more than 10 times the reference's long side. A tap beyond the surface's horizon reads "not measured". On a camera or video the points belong to the frozen frame and are cleared when the picture runs again. Ruler has been checked against synthetic images with known answers, not yet against a tape measure.
+
+### Presence (beta)
+
+The **Presence** tab measures how a person presents on camera, from the Fusion mode's body, hand and face results. Press **Start**, hold still and look at the camera for 5 seconds while it records your baseline and each signal's noise, then speak. It reports:
+
+- the share of time the head points within 15 degrees of the baseline direction (head direction, not eye contact);
+- hand movement starts per minute, and how long each hand was in view;
+- sway, as the spread of the shoulder midpoint in shoulder widths;
+- stillness, as the share of time body motion stays near the noise floor;
+- expression change per second across smile, brow raise and jaw open (change, not emotion).
+
+Every figure carries the noise measured during calibration, and the thresholds are shown and adjustable. Head direction and stillness are shares of the time the face or body was actually seen, and each row states that time next to the session's length, so time spent turned away or out of frame is visible instead of dropped. Hand starts show the raw count beside the rate. A signal the models never saw says "not seen". A session ends by itself at 40,000 samples, which is roughly 45 minutes. Presence gives no score, grade or advice. Nothing is saved unless you export the summary as JSON or Markdown. It has been checked on synthetic motion and on the demo input, which shows no face, so the head and expression figures have not yet been checked on a real person.
+
+### Detection settings
+
+The Inspect tab has two detection settings, both at their old behaviour by default. **Smooth landmarks** steadies drawn body, hand and face points with a One Euro filter; exported sessions always keep the raw values. **Precise** loads the larger BlazePose Full model (9.4 MB, Apache-2.0) for Body and Fusion in place of the Lite one; it is slower without a GPU.
+
 ### Lab
 
 The **Lab** tab in the right rail measures the app on your device. Nothing it shows is sent anywhere.
@@ -157,7 +183,7 @@ React and TypeScript manage controls and source ownership. Modes, effects and in
 
 | Path                                                                   | Responsibility                                                                    |
 | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `src/modes/`, `src/effects/`, `src/panels/`                            | The seven modes, ten effects and the Inspect and Lab panels, one file each        |
+| `src/modes/`, `src/effects/`, `src/panels/`                            | The seven modes, ten effects and the Inspect, Lab, Ruler and Presence panels      |
 | `src/vision/useSource.ts`                                              | Permission, file decoding, camera ownership, cancellation and cleanup             |
 | `src/vision/useVision.ts`, `task-runner.ts`, `public/vision-worker.js` | Model lifecycle, bounded frame transfer, delegate fallback, stale-result guards   |
 | `src/vision/useSession.ts`, `tracker.ts`                               | Object association, measured frame rate and the frames kept for export            |
