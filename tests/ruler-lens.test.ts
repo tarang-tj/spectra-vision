@@ -51,32 +51,34 @@ describe("radial lens fit", () => {
     "recovers a known coefficient %s from bent straight lines",
     (k) => {
       const edges = bent(k),
-        fit = fitRadial(edges, W, H)!;
+        fit = fitRadial(edges, W, H, 0.1)!;
       expect(Math.abs(fit.k - k)).toBeLessThan(1e-3);
+      expect(fit.reason).toBeNull();
       expect(fit.improved).toBe(true);
       expect(fit.before).toBeGreaterThan(1);
       expect(fit.after).toBeLessThan(0.01);
       expect(fit.after).toBeLessThan(fit.before * 0.1);
     },
   );
-  it("needs two edges of three points each", () => {
+  it("needs two edges of four points each", () => {
     expect(fitRadial([bent(0.1)[0]], W, H)).toBeNull();
-    expect(
-      fitRadial(
+    const short = fitRadial(
+      [
         [
-          [
-            { x: 1, y: 1 },
-            { x: 2, y: 2 },
-          ],
-          bent(0.1)[0],
+          { x: 1, y: 1 },
+          { x: 2, y: 2 },
+          { x: 3, y: 3 },
         ],
-        W,
-        H,
-      ),
-    ).toBeNull();
+        bent(0.1)[0],
+      ],
+      W,
+      H,
+    )!;
+    expect(short.improved).toBe(false);
+    expect(short.reason).toMatch(/at least 4 points/);
   });
   it("does not call straight edges an improvement", () => {
-    const fit = fitRadial(bent(0), W, H)!;
+    const fit = fitRadial(bent(0), W, H, 0.1)!;
     expect(fit.before).toBeLessThan(1e-4);
     expect(fit.improved).toBe(false);
   });
@@ -84,7 +86,7 @@ describe("radial lens fit", () => {
     // Zig-zag edges: no single radial term straightens them.
     const zig = (y: number): Pt[] =>
       [0, 1, 2, 3, 4].map((i) => ({ x: 100 + i * 250, y: y + (i % 2) * 60 }));
-    const fit = fitRadial([zig(200), zig(600)], W, H)!;
+    const fit = fitRadial([zig(200), zig(600)], W, H, 0.1)!;
     expect(fit.after).toBeLessThanOrEqual(fit.before + 1e-9);
     expect(fit.improved).toBe(false);
   });

@@ -6,6 +6,7 @@ import type { Derived } from "./derive";
 import { LEGEND, type Prim } from "./plan-layout";
 import type { PlanScene } from "./plan-scene";
 import type { RulerState } from "./state";
+import { droppedNote } from "./monte-carlo";
 import { toPlane } from "./shapes";
 import type { Fit } from "./topdown";
 import { areaFromMm2, areaUnit, fromMm } from "./units";
@@ -89,7 +90,7 @@ const verts = (pts: { x: number; y: number }[]) =>
   pts.map((p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join("; ");
 
 export const CSV_HEADER =
-  "shape,measure,value,error,unit,vertices_plane_mm,basis";
+  "shape,measure,value,error_2sd,unit,vertices_plane_mm,basis,note";
 
 /** One row per measurement: value, its error (2 sd), the unit, and the
  * vertices in plane millimetres. */
@@ -103,6 +104,7 @@ export function planCsv(s: RulerState, d: Derived): string {
       error: number,
       unit: string,
       pts: { x: number; y: number }[],
+      note = "",
     ) =>
       rows.push([
         shape,
@@ -112,7 +114,11 @@ export function planCsv(s: RulerState, d: Derived): string {
         unit,
         verts(pts),
         d.basis,
-      ]);
+        note,
+      ]),
+    // A shape that could not be measured still gets a row, with no value.
+    blank = (shape: string, measure: string, unit: string, why: string) =>
+      rows.push([shape, measure, "", "", unit, "", d.basis, why]);
   if (d.sheet) {
     d.rows.forEach((r) => {
       const m = s.measures[r.index],
@@ -125,11 +131,28 @@ export function planCsv(s: RulerState, d: Derived): string {
           fromMm(r.span.errorMm, u),
           u,
           pts,
+          r.span.kept < 1 ? droppedNote(r.span.kept) : "",
+        );
+      else if (m?.b)
+        blank(
+          `span ${r.index + 1}`,
+          "length",
+          u,
+          r.warnings[0] ?? "not measured",
         );
     });
     d.shapes.forEach((r) => {
       const res = r.result;
-      if (!res) return;
+      if (!res) {
+        blank(
+          r.label,
+          r.kind === "area" ? "area" : "length",
+          r.kind === "area" ? areaUnit(u) : u,
+          r.warnings[0] ?? "not measured",
+        );
+        return;
+      }
+      const note = res.kept < 1 ? droppedNote(res.kept) : "";
       res.legs.forEach((l, i) =>
         add(
           r.label,
@@ -138,6 +161,7 @@ export function planCsv(s: RulerState, d: Derived): string {
           fromMm(l.error, u),
           u,
           [res.plane[i], res.plane[(i + 1) % res.plane.length]],
+          note,
         ),
       );
       add(
@@ -147,7 +171,15 @@ export function planCsv(s: RulerState, d: Derived): string {
         fromMm(res.length.error, u),
         u,
         res.plane,
+        note,
       );
+      if (res.selfIntersecting)
+        blank(
+          r.label,
+          "area",
+          areaUnit(u),
+          "The outline crosses itself, so it has no single area.",
+        );
       if (res.area)
         add(
           r.label,
@@ -156,6 +188,7 @@ export function planCsv(s: RulerState, d: Derived): string {
           areaFromMm2(res.area.error, u),
           areaUnit(u),
           res.plane,
+          note,
         );
     });
   }

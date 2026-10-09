@@ -11,6 +11,7 @@ import {
   fitBox,
   invert3,
   renderTopDown,
+  SMEAR_LIMIT,
   type Raster,
 } from "../src/panels/ruler/topdown";
 
@@ -66,7 +67,7 @@ const sheet = solveSheet(
 )!;
 
 describe("top-down view", () => {
-  const fit = fitBox({ x0: 0, y0: 0, x1: 800, y1: 500 }, 400, 300),
+  const fit = fitBox({ x0: 0, y0: 0, x1: 800, y1: 500 }, 200, 150),
     out = renderTopDown(photo(), 1, sheet.h, null, fit)!;
   it("fits the plane box into the output size", () => {
     expect(fit.width).toBeLessThanOrEqual(400);
@@ -119,7 +120,7 @@ describe("top-down view", () => {
   });
   it("blanks ground the photo cannot resolve instead of smearing it", () => {
     // Zoomed far out, near the horizon one photo pixel covers many output pixels.
-    const zoom = fitBox({ x0: 0, y0: 0, x1: 400, y1: 300 }, 400, 300),
+    const zoom = fitBox({ x0: 0, y0: 0, x1: 400, y1: 300 }, 100, 75),
       near = renderTopDown(photo(), 1, sheet.h, null, zoom)!;
     let count = 0;
     for (let i = 3; i < near.data.length; i += 4) if (near.data[i]) count++;
@@ -132,6 +133,79 @@ describe("top-down view", () => {
       if (zoomed.data[i]) tightCount++;
     expect(count).toBeGreaterThan(0);
     expect(tightCount).toBe(0);
+  });
+  it("blanks by the worst direction and the real copy scale, checked by finite differences", () => {
+    // A view that reaches toward the horizon, sampled from a half-size copy.
+    const corners = [
+        [10, 10],
+        [790, 10],
+        [790, 590],
+        [10, 590],
+      ].map(([x, y]) => applyHomography(sheet.h, { x, y })!),
+      view = fitBox(
+        {
+          x0: Math.min(...corners.map((c) => c.x)),
+          y0: Math.min(...corners.map((c) => c.y)),
+          x1: Math.max(...corners.map((c) => c.x)),
+          y1: Math.max(...corners.map((c) => c.y)),
+        },
+        400,
+        300,
+      ),
+      half: Raster = (() => {
+        const big = photo(),
+          w = big.w / 2,
+          h = big.h / 2,
+          data = new Uint8ClampedArray(w * h * 4);
+        for (let y = 0; y < h; y++)
+          for (let x = 0; x < w; x++)
+            for (let c = 0; c < 4; c++)
+              data[(y * w + x) * 4 + c] =
+                big.data[(y * 2 * big.w + x * 2) * 4 + c];
+        return { data, w, h };
+      })(),
+      r = renderTopDown(half, 0.5, sheet.h, null, view)!,
+      hinv = invert3(sheet.h)!,
+      toMm = (x: number, y: number) =>
+        applyHomography(sheet.h, { x, y }) ?? { x: NaN, y: NaN },
+      limit = SMEAR_LIMIT / view.ppm;
+    let drawn = 0,
+      blankedButFine = 0,
+      smearedBlank = 0,
+      drawnButSmeared = 0;
+    for (let v = 0; v < r.h; v += 2)
+      for (let u = 0; u < r.w; u += 2) {
+        const X = view.box.x0 + (u + 0.5) / view.ppm,
+          Y = view.box.y0 + (v + 0.5) / view.ppm,
+          w = hinv[6] * X + hinv[7] * Y + hinv[8];
+        if (!(w > 1e-9)) continue;
+        const px = {
+            x: (hinv[0] * X + hinv[1] * Y + hinv[2]) / w,
+            y: (hinv[3] * X + hinv[4] * Y + hinv[5]) / w,
+          },
+          here = toMm(px.x, px.y),
+          // One copy pixel is two photo pixels: step along each axis.
+          dx = toMm(px.x + 2, px.y),
+          dy = toMm(px.x, px.y + 2),
+          step = Math.max(
+            Math.hypot(dx.x - here.x, dx.y - here.y),
+            Math.hypot(dy.x - here.x, dy.y - here.y),
+          ),
+          alpha = r.data[(v * r.w + u) * 4 + 3];
+        if (px.x < 0 || px.y < 0 || px.x > SIZE.w - 4 || px.y > SIZE.h - 4)
+          continue;
+        if (!Number.isFinite(step)) continue;
+        if (alpha) drawn++;
+        // Worst axis step is a lower bound on the worst direction, so a pixel
+        // clearly over the limit on an axis must be blank.
+        if (alpha && step > limit * 1.15) drawnButSmeared++;
+        if (!alpha && step < limit * 0.5) blankedButFine++;
+        if (!alpha && step > limit * 1.15) smearedBlank++;
+      }
+    expect(drawn).toBeGreaterThan(100);
+    expect(drawnButSmeared).toBe(0);
+    expect(smearedBlank).toBeGreaterThan(20); // the limit really bites here
+    expect(blankedButFine).toBe(0);
   });
   it("inverts a matrix", () => {
     const m = invert3(MAP)!;

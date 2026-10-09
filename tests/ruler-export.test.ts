@@ -144,4 +144,33 @@ describe("plan export for a known scene", () => {
     expect(niceLength(1234, "mm").text).toMatch(/^(1|2|5)0* mm$/);
     expect(niceLength(1900, "m").mm).toBe(2000);
   });
+  it("names the error column and gives an unmeasured shape a row with a reason", () => {
+    const real = derive(getState()),
+      d = {
+        ...real,
+        rows: [],
+        shapes: [
+          {
+            shape: 0,
+            kind: "area" as const,
+            label: "Area 9",
+            result: null,
+            legTexts: [],
+            lengthText: "not measured",
+            areaText: null,
+            areaAltText: null,
+            warnings: ["Not measured: a point is beyond the horizon."],
+          },
+        ],
+      },
+      csv = planCsv(getState(), d).trim().split("\n");
+    expect(csv[0]).toBe(
+      "shape,measure,value,error_2sd,unit,vertices_plane_mm,basis,note",
+    );
+    const cols = csv[1].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+    expect(cols[0]).toBe("Area 9");
+    expect(cols[2]).toBe(""); // no value
+    expect(cols[3]).toBe("");
+    expect(cols[7]).toMatch(/Not measured/);
+  });
 });

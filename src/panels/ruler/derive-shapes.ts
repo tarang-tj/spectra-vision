@@ -4,6 +4,7 @@ import { formatMeasured } from "../../measure/format";
 import { measured } from "../../measure/noise";
 import type { Sheet } from "./homography";
 import type { Lens } from "./lens";
+import { droppedNote } from "./monte-carlo";
 import { measureShape, type Quantity, type ShapeResult } from "./shapes";
 import type { Shape } from "./state";
 import { areaFromMm2, areaUnit, bigAreaUnit, fromMm, type Unit } from "./units";
@@ -63,6 +64,7 @@ export function shapeRows(
         "Not measured: a point is at or beyond the horizon of the surface, or the reference is too small for a shape this far away. Tap points on the reference's surface, or use a bigger reference.",
       );
     else {
+      if (result.kept < 1) warnings.push(droppedNote(result.kept));
       if (result.selfIntersecting)
         warnings.push(
           "This outline crosses itself, so it has no single area. Drag a corner until the sides no longer cross. The perimeter is still given.",

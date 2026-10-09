@@ -42,8 +42,18 @@ export default function PlanPanel({
       drawn.current = null;
       return;
     }
-    const sheet = d.sheet,
-      id = requestAnimationFrame(() => {
+    const sheet = d.sheet;
+    let id = 0,
+      waited = 0;
+    // The picture's copy is retaken by the stage after the panel reopens, a
+    // frame or two later; wait for it (up to about half a second) rather than
+    // drawing the lines on a blank floor.
+    const attempt = () => {
+      if (!view.snap && waited++ < 30) {
+        id = requestAnimationFrame(attempt);
+        return;
+      }
+      {
         const fit = fitBox(scene.bounds),
           floor = drawn.current?.floor ?? document.createElement("canvas");
         floor.width = el.width = fit.width;
@@ -65,7 +75,9 @@ export default function PlanPanel({
         const prims = layoutScene(scene, fit);
         drawPrims(ctx, prims);
         drawn.current = { scene, fit, prims, floor };
-      });
+      }
+    };
+    id = requestAnimationFrame(attempt);
     return () => cancelAnimationFrame(id);
   }, [scene, d.sheet, d.lens]);
 

@@ -72,7 +72,7 @@ export function makeJitter(
   };
 }
 
-export type Spread = { mean: number; sd: number; used: number };
+export type Spread = { mean: number; sd: number; used: number; kept: number };
 
 /** Distances in mm over `samples` perturbed trials. Trials whose corners tip
  * into a degenerate shape are dropped; null when fewer than 80% survive. */
@@ -104,13 +104,26 @@ export function distanceSpread(
   if (used < 0.8 * n) return null;
   const mean = sum / used,
     variance = Math.max(0, (sumSq - used * mean * mean) / (used - 1));
-  return { mean, sd: Math.sqrt(variance), used };
+  return { mean, sd: Math.sqrt(variance), used, kept: used / n };
 }
 
-export type Span = { mm: number; errorMm: number; measured: Measured };
+export type Span = {
+  mm: number;
+  errorMm: number;
+  measured: Measured;
+  /** Share of simulated taps that could be used (1 means none dropped). */
+  kept: number;
+};
+
+/** The sentence shown when some simulated taps had to be dropped. */
+export const droppedNote = (kept: number): string =>
+  `Only ${Math.floor(kept * 100)}% of the simulated taps could be used; the rest put a point at or beyond the horizon or gave no flat surface. The bar is a lower bound here, so do not read this value as precise.`;
 
 const key = (p: Pt) => `${p.x},${p.y},${p.s ?? ""}`;
-const cache = new Map<string, { mm: number; errorMm: number } | null>();
+const cache = new Map<
+  string,
+  { mm: number; errorMm: number; kept: number } | null
+>();
 
 /** One measurement in `unit`: the direct plane distance between the two taps,
  * with 2 standard deviations of the perturbed samples as its bar. (The mean of
@@ -145,7 +158,7 @@ export function measureSpan(
         mm === null
           ? null
           : distanceSpread(sheet, a, b, sigmaPx, seed, samples, lens);
-    hit = mm !== null && s ? { mm, errorMm: 2 * s.sd } : null;
+    hit = mm !== null && s ? { mm, errorMm: 2 * s.sd, kept: s.kept } : null;
     if (cache.size > 500) cache.clear();
     cache.set(k, hit);
   }

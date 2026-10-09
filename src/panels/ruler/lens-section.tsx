@@ -13,9 +13,8 @@ export default function LensSection({ s, d }: { s: RulerState; d: Derived }) {
     edges = s.shapes.filter((x) => x.kind === "edge" && x.done).length;
   let verdict: string;
   if (!fit)
-    verdict = `Tap along ${Math.max(0, 2 - edges)} more straight edge${edges >= 1 ? "" : "s"} to fit a correction.`;
-  else if (!fit.improved)
-    verdict = `Not used: the best fit leaves the edges ${px(fit.after)} from straight, against ${px(fit.before)} without it, which is not a clear improvement.`;
+    verdict = `Tap along ${Math.max(0, 2 - edges)} more straight edge${edges >= 1 ? "" : "s"} to fit a correction. Each edge needs at least 4 points.`;
+  else if (!fit.improved) verdict = `Not applied. ${fit.reason ?? ""}`;
   else if (s.lensOn)
     verdict = `Applied to every point. Edges are ${px(fit.before)} from straight in the photo and ${px(fit.after)} after correction.`;
   else
@@ -25,7 +24,7 @@ export default function LensSection({ s, d }: { s: RulerState; d: Derived }) {
       <h3>Lens correction (optional)</h3>
       <p className="ruler-note">
         A wide phone lens bends straight lines near the edges of the picture.
-        Tap three or more points along each of two or more edges you know are
+        Tap four or more points along each of two or more edges you know are
         straight, such as a door frame or a wall line, and SPECTRA fits one
         correction and shows how much straighter it makes them.
       </p>

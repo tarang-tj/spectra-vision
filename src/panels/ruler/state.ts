@@ -16,7 +16,7 @@ export type Shape = { kind: ShapeKind; pts: Pt[]; done: boolean };
 export const MIN_POINTS: Record<ShapeKind, number> = {
   path: 3,
   area: 3,
-  edge: 3,
+  edge: 4,
 };
 export type Handle =
   | { kind: "corner"; i: number }

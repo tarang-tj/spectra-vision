@@ -31,6 +31,8 @@ export type ShapeResult = {
   /** Outlines only; null when the outline crosses itself. */
   area: Quantity | null;
   selfIntersecting: boolean;
+  /** Share of simulated taps that could be used (1 means none dropped). */
+  kept: number;
 };
 
 const cross = (o: Pt, a: Pt, b: Pt) =>
@@ -178,5 +180,6 @@ function compute(
       ? { value: polygonArea(plane), error: 2 * sd(sums[nLegs + 1]) }
       : null,
     selfIntersecting: crossing,
+    kept: used / n,
   };
 }

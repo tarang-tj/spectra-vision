@@ -13,10 +13,6 @@ export type Lens = { k: number; cx: number; cy: number; norm: number };
 /** The coefficient is searched in this range. A fit that lands on the edge of
  * it is not a lens effect and is not used. */
 export const K_LIMIT = 0.6;
-/** A fit is kept only if it cuts the straightness error to this fraction. */
-export const KEEP_BELOW = 0.9;
-/** Edges already straighter than this (source pixels) have nothing to fix. */
-export const MIN_BEFORE_PX = 0.1;
 
 export const lensFor = (k: number, w: number, h: number): Lens => ({
   k,
@@ -90,33 +86,46 @@ export type LensFit = {
   /** Straightness error with no correction and with `k`, source pixels. */
   before: number;
   after: number;
-  /** True when the fit cuts the error enough to be worth applying. */
+  /** True when the fit passed every test below and may be applied. */
   improved: boolean;
+  /** Plain words for why a fit was not accepted, or null when it was. */
+  reason: string | null;
   edges: number;
   points: number;
 };
 
-/** Fit k. Null until there are two edges of three or more points each. */
-export function fitRadial(edges: Pt[][], w: number, h: number): LensFit | null {
-  const good = edges.filter((e) => e.length >= 3);
-  if (good.length < 2 || !(w > 0) || !(h > 0)) return null;
-  const f = (k: number) => straightness(good, k, w, h),
+/** Fewest points on an edge that may be used. */
+export const MIN_EDGE_POINTS = 4;
+/** Fewest residual degrees of freedom (points minus 2 per edge) in total. */
+export const MIN_DOF = 4;
+/** The edges must be this many times straighter-looking than tap noise. */
+export const NOISE_MARGIN = 2;
+/** The fit must cut the error to at most this fraction of what it was. */
+export const KEEP_BELOW_STRICT = 0.5;
+/** The radial map r(1 + k r^2) stops being one-to-one inside the picture at
+ * k = -1/3 (r is 1 at a corner), so the search stops short of it. */
+export const K_MIN = -0.3;
+export const K_MAX = K_LIMIT;
+
+/** The k in [K_MIN, K_MAX] that makes `edges` straightest (grid, then golden
+ * section). Pure search; no acceptance test. */
+function bestK(edges: Pt[][], w: number, h: number): number {
+  const f = (k: number) => straightness(edges, k, w, h),
     steps = 120,
-    step = (2 * K_LIMIT) / steps;
+    step = (K_MAX - K_MIN) / steps;
   let best = 0,
     bestF = Infinity;
   for (let i = 0; i <= steps; i++) {
-    const k = -K_LIMIT + i * step,
+    const k = K_MIN + i * step,
       v = f(k);
     if (v < bestF) {
       bestF = v;
       best = k;
     }
   }
-  // Golden-section refinement inside the best grid cell.
   const g = (Math.sqrt(5) - 1) / 2;
-  let lo = Math.max(-K_LIMIT, best - step),
-    hi = Math.min(K_LIMIT, best + step),
+  let lo = Math.max(K_MIN, best - step),
+    hi = Math.min(K_MAX, best + step),
     x1 = hi - g * (hi - lo),
     x2 = lo + g * (hi - lo),
     f1 = f(x1),
@@ -136,18 +145,75 @@ export function fitRadial(edges: Pt[][], w: number, h: number): LensFit | null {
       f2 = f(x2);
     }
   }
-  const k = (lo + hi) / 2,
-    before = f(0),
-    after = f(k),
-    atBound = Math.abs(k) > K_LIMIT - 2 * step;
-  return {
-    k,
-    before,
-    after,
-    improved: !atBound && before > MIN_BEFORE_PX && after < before * KEEP_BELOW,
-    edges: good.length,
-    points: good.reduce((s, e) => s + e.length, 0),
-  };
+  return (lo + hi) / 2;
+}
+
+/** Fit k, then decide whether it is more than a fit to tap noise. `sigma` is
+ * the tap uncertainty (one sd, source pixels). A fit is accepted only if:
+ * every edge has 4+ points and the edges leave 4+ degrees of freedom; the
+ * edges are more than 2 sigma from straight to begin with; k is inside the
+ * range where the map does not fold; the fit cuts the error to half or less;
+ * and, for each edge in turn, the k fitted from the OTHER edges also makes
+ * that held-out edge straighter. Null until there are two edges. */
+export function fitRadial(
+  edges: Pt[][],
+  w: number,
+  h: number,
+  sigma = 1.5,
+): LensFit | null {
+  if (edges.length < 2 || !(w > 0) || !(h > 0)) return null;
+  const used = edges.filter((e) => e.length >= MIN_EDGE_POINTS),
+    points = edges.reduce((t, e) => t + e.length, 0),
+    base = { edges: edges.length, points },
+    none = (reason: string): LensFit => ({
+      k: 0,
+      before: 0,
+      after: 0,
+      improved: false,
+      reason,
+      ...base,
+    });
+  if (used.length < 2)
+    return none(
+      `Each edge needs at least ${MIN_EDGE_POINTS} points and at least 2 edges are needed.`,
+    );
+  const dof = used.reduce((t, e) => t + e.length - 2, 0);
+  if (dof < MIN_DOF)
+    return none("Too few points to tell a lens from tap noise. Add points.");
+  const k = bestK(used, w, h),
+    before = straightness(used, 0, w, h),
+    after = straightness(used, k, w, h),
+    out = (reason: string | null): LensFit => ({
+      k,
+      before,
+      after,
+      improved: reason === null,
+      reason,
+      ...base,
+    });
+  if (before <= NOISE_MARGIN * sigma)
+    return out(
+      `The edges are only ${before.toFixed(1)} px from straight, within the tap noise (${(NOISE_MARGIN * sigma).toFixed(1)} px). There is no lens bend to correct.`,
+    );
+  if (k <= K_MIN + 0.01 || k >= K_MAX - 0.01)
+    return out(
+      "The best fit is at the edge of the allowed range, so it is not a lens effect.",
+    );
+  if (!(after <= before * KEEP_BELOW_STRICT))
+    return out(
+      `The fit leaves the edges ${after.toFixed(1)} px from straight against ${before.toFixed(1)} px, not a clear enough improvement.`,
+    );
+  for (let i = 0; i < used.length; i++) {
+    const rest = used.filter((_, j) => j !== i),
+      kRest =
+        rest.reduce((t, e) => t + e.length - 2, 0) >= 2 ? bestK(rest, w, h) : 0,
+      held = [used[i]];
+    if (!(straightness(held, kRest, w, h) < straightness(held, 0, w, h)))
+      return out(
+        "The fit from the other edges does not straighten one held-out edge, so the edges disagree about the lens.",
+      );
+  }
+  return out(null);
 }
 
 /** The tapped (distorted) position that `applyLens` would move to `q`.

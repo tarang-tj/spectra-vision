@@ -108,6 +108,9 @@ describe("measureShape under a known projective map", () => {
     ).toBeLessThan(1e-6);
     expect(r.legs).toHaveLength(4);
     expect(r.selfIntersecting).toBe(false);
+    // Share of simulated taps kept: reported so a dropped share can be shown.
+    expect(r.kept).toBeGreaterThan(0.8);
+    expect(r.kept).toBeLessThanOrEqual(1);
     expect(r.area!.error).toBeGreaterThan(0);
   });
   it("gives each leg of an open path and their sum", () => {

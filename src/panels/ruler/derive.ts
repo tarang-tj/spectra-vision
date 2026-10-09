@@ -6,12 +6,14 @@ import { applyLens, fitRadial, lensFor, type Lens, type LensFit } from "./lens";
 import {
   degenerateReason,
   orderCorners,
+  type Pt,
   quadArea,
   solveSheet,
   type Sheet,
 } from "./homography";
 import {
   basisFor,
+  droppedNote,
   measureSpan,
   TAP_SIGMA_SCREEN_PX,
   type Span,
@@ -80,6 +82,15 @@ export function longEdge(d: Derived): [number, number] | null {
     : [d.order[1], d.order[2]];
 }
 
+/** Mean tap uncertainty (source px) of the tapped edge points. */
+function edgeSigma(s: RulerState, edges: Pt[][]): number {
+  const fallback = TAP_SIGMA_SCREEN_PX / (s.scale > 0 ? s.scale : 1),
+    all = edges.flat();
+  return all.length
+    ? all.reduce((t, p) => t + (p.s ?? fallback), 0) / all.length
+    : fallback;
+}
+
 let memo: { state: RulerState; value: Derived } | null = null;
 
 export function derive(s: RulerState): Derived {
@@ -92,7 +103,9 @@ export function derive(s: RulerState): Derived {
     edges = s.shapes
       .filter((x) => x.kind === "edge" && x.done)
       .map((x) => x.pts),
-    lensFit = s.source ? fitRadial(edges, s.source.w, s.source.h) : null,
+    lensFit = s.source
+      ? fitRadial(edges, s.source.w, s.source.h, edgeSigma(s, edges))
+      : null,
     lens =
       s.lensOn && lensFit?.improved && s.source
         ? lensFor(lensFit.k, s.source.w, s.source.h)
@@ -145,6 +158,7 @@ export function derive(s: RulerState): Derived {
       warnings.push(
         "This span is more than 10 times the reference's long side. Small errors in the reference grow with distance, so trust it less than the bar suggests.",
       );
+    if (span && span.kept < 1) warnings.push(droppedNote(span.kept));
     if (!span)
       warnings.push(
         "Not measured: a point is at or beyond the horizon of the surface, or the reference is too small for a span this far away. Tap points on the reference's surface, or use a bigger reference.",

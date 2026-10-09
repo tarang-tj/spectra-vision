@@ -71,6 +71,24 @@ export function invert3(m: Mat3): Mat3 | null {
   ] as const;
 }
 
+/** Largest singular value of the Jacobian of `h` at a picture point whose
+ * plane position is (X, Y) and whose homogeneous scale is `wh`: plane mm per
+ * picture pixel in the worst direction. */
+export function worstStretch(
+  h: Mat3,
+  X: number,
+  Y: number,
+  wh: number,
+): number {
+  const a = (h[0] - X * h[6]) / wh,
+    b = (h[1] - X * h[7]) / wh,
+    c = (h[3] - Y * h[6]) / wh,
+    d = (h[4] - Y * h[7]) / wh,
+    s = a * a + b * b + c * c + d * d,
+    det = a * d - b * c;
+  return Math.sqrt((s + Math.sqrt(Math.max(0, s * s - 4 * det * det))) / 2);
+}
+
 /** Draw the surface seen from above. `h` maps picture pixels (after lens
  * correction) to plane mm; `src` is the frozen picture, `srcScale` its size
  * relative to the real picture; `at` converts real-picture pixels to it. */
@@ -88,7 +106,6 @@ export function renderTopDown(
     // inv * (X, Y, 1) has w = 1 / w_h, and w_h is positive in front of the
     // camera (solveHomography fixes it to 1 at the reference), so a plane
     // position with w <= 0 here is at or beyond the horizon.
-    detH = det3(h),
     mmPerOut = 1 / ppm;
   for (let v = 0; v < height; v++) {
     const Y = box.y0 + (v + 0.5) / ppm;
@@ -100,10 +117,11 @@ export function renderTopDown(
           x: (inv[0] * X + inv[1] * Y + inv[2]) / w,
           y: (inv[3] * X + inv[4] * Y + inv[5]) / w,
         },
-        // The Jacobian of the map is det(h) / w_h^3, so one photo pixel covers
-        // this many mm of plane here.
-        mmPerPhotoPx = Math.sqrt(Math.abs(detH * w * w * w));
-      if (!(mmPerPhotoPx <= SMEAR_LIMIT * mmPerOut)) continue; // too far to resolve
+        // Local Jacobian of the picture-to-plane map: one pixel of the copy
+        // covers at most this many mm of plane, in its worst direction (along
+        // depth near the horizon, far more than across).
+        mmPerCopyPx = worstStretch(h, X, Y, 1 / w) / srcScale;
+      if (!(mmPerCopyPx <= SMEAR_LIMIT * mmPerOut)) continue; // too far to resolve
       const p: Pt = invertLens(lens, q),
         sx = Math.floor(p.x * srcScale),
         sy = Math.floor(p.y * srcScale);

@@ -31,6 +31,9 @@ function Ruler() {
       hasSource &&
       (paused || frame.source?.element instanceof HTMLImageElement),
     { freeze, resume } = useRulerStage(still),
+    // Values belong to the picture they were measured on: not to a frame of
+    // another photo that has not been drawn over yet.
+    show = still && s.generation === frame.source?.generation,
     pending = s.measures.some((m) => m.b === null),
     open = openShape(s);
 
@@ -120,8 +123,8 @@ function Ruler() {
         </div>
       </section>
       <ShapeTools s={s} />
-      <Results s={s} d={d} show={still} />
-      <PlanPanel s={s} d={d} show={still} />
+      <Results s={s} d={d} show={show} />
+      <PlanPanel s={s} d={d} show={show} />
       <LensSection s={s} d={d} />
       <ul className="ruler-guidance">
         <li>
