@@ -10,11 +10,6 @@ import { getState, hit, move, place, setLock, type Handle } from "./store";
 
 type Drag = { id: number; handle: Handle };
 let drag: Drag | null = null;
-/** Set by the panel: pauses the stage on a live source. */
-let freeze: (() => void) | null = null;
-export const setFreeze = (fn: (() => void) | null) => {
-  freeze = fn;
-};
 export const endDrag = () => {
   drag = null;
   view.loupe = null;
@@ -33,11 +28,9 @@ export function onRulerPointer(e: StagePointerEvent): boolean {
     // finger's point is not replaced and its release still ends the drag.
     if (drag && drag.id !== e.pointerId) return true;
     if (!e.inside) return false;
-    if (!view.still) {
-      // A moving picture cannot be measured. The first tap freezes it.
-      freeze?.();
-      return true;
-    }
+    // A moving picture cannot be measured; the panel stops listening for
+    // taps then, and this guards the frame between the two.
+    if (!view.still) return false;
     const radius =
       (e.pointerType === "mouse" ? HIT_MOUSE : HIT_TOUCH) / e.scale;
     drag = { id: e.pointerId, handle: hit(at, radius) ?? place(at, sigma) };

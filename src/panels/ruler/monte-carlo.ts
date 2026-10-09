@@ -5,6 +5,7 @@
 // random numbers are seeded, so the same taps always give the same bar.
 import { measured, type Measured } from "../../measure/noise";
 import { fromMm, type Unit } from "./units";
+import { applyLens, type Lens } from "./lens";
 import {
   planeDistance,
   solveHomography,
@@ -15,6 +16,12 @@ import {
 /** What the bar covers, word for word. It is shown beside every result. */
 export const BASIS =
   "Tap placement only. Not included: lens distortion, points off the surface, a bent or misprinted reference.";
+
+/** The same, when a one-parameter lens correction was applied to every point. */
+export const BASIS_LENS =
+  "Tap placement only, after a one-parameter lens correction applied to every point. Not included: remaining lens distortion, points off the surface, a bent or misprinted reference.";
+export const basisFor = (lens: Lens | null): string =>
+  lens ? BASIS_LENS : BASIS;
 
 export const MIN_SAMPLES = 300;
 export const DEFAULT_SAMPLES = 400;
@@ -52,6 +59,19 @@ export function gaussian(random: () => number): () => number {
   };
 }
 
+/** A tap perturbation: Gaussian noise of the point's own stored uncertainty
+ * (or `sigmaPx`), then the lens correction, as the real measurement does. */
+export function makeJitter(
+  normal: () => number,
+  sigmaPx: number,
+  lens: Lens | null,
+): (p: Pt) => Pt {
+  return (p) => {
+    const sd = p.s ?? sigmaPx;
+    return applyLens(lens, { x: p.x + sd * normal(), y: p.y + sd * normal() });
+  };
+}
+
 export type Spread = { mean: number; sd: number; used: number };
 
 /** Distances in mm over `samples` perturbed trials. Trials whose corners tip
@@ -63,19 +83,18 @@ export function distanceSpread(
   sigmaPx: number,
   seed = DEFAULT_SEED,
   samples = DEFAULT_SAMPLES,
+  lens: Lens | null = null,
 ): Spread | null {
   const n = Math.max(MIN_SAMPLES, Math.floor(samples)),
     normal = gaussian(seededRandom(seed)),
     // Each point carries the tap uncertainty it was placed with.
-    jitter = (p: Pt): Pt => {
-      const sd = p.s ?? sigmaPx;
-      return { x: p.x + sd * normal(), y: p.y + sd * normal() };
-    };
+    jitter = makeJitter(normal, sigmaPx, lens),
+    base = sheet.raw ?? sheet.ordered;
   let sum = 0,
     sumSq = 0,
     used = 0;
   for (let i = 0; i < n; i++) {
-    const h = solveHomography(sheet.ordered.map(jitter), sheet.plane),
+    const h = solveHomography(base.map(jitter), sheet.plane),
       d = h ? planeDistance(h, jitter(a), jitter(b)) : null;
     if (d === null || !Number.isFinite(d)) continue;
     used++;
@@ -106,9 +125,11 @@ export function measureSpan(
   unit: Unit,
   seed = DEFAULT_SEED,
   samples = DEFAULT_SAMPLES,
+  lens: Lens | null = null,
 ): Span | null {
   const k = [
-    ...sheet.ordered.map(key),
+    ...(sheet.raw ?? sheet.ordered).map(key),
+    lens ? `${lens.k}|${lens.cx}|${lens.cy}` : "",
     sheet.plane[1].x,
     sheet.plane[2].y,
     key(a),
@@ -119,11 +140,11 @@ export function measureSpan(
   ].join("|");
   let hit = cache.get(k);
   if (hit === undefined) {
-    const mm = planeDistance(sheet.h, a, b),
+    const mm = planeDistance(sheet.h, applyLens(lens, a), applyLens(lens, b)),
       s =
         mm === null
           ? null
-          : distanceSpread(sheet, a, b, sigmaPx, seed, samples);
+          : distanceSpread(sheet, a, b, sigmaPx, seed, samples, lens);
     hit = mm !== null && s ? { mm, errorMm: 2 * s.sd } : null;
     if (cache.size > 500) cache.clear();
     cache.set(k, hit);
@@ -135,7 +156,7 @@ export function measureSpan(
       fromMm(hit.mm, unit),
       fromMm(hit.errorMm, unit),
       unit,
-      BASIS,
+      basisFor(lens),
     ),
   };
 }

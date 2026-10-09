@@ -4,11 +4,14 @@
 // panel that mounts again draws them again.
 import { useCallback, useEffect, useRef } from "react";
 import { useStudio } from "../../studio-context";
-import { drawRuler, view } from "./overlay";
-import { endDrag, onRulerPointer, setFreeze } from "./pointer";
+import { drawRuler, dropSnapshot, view } from "./overlay";
+import { endDrag, onRulerPointer } from "./pointer";
 import { clear } from "./store";
 
-export function useRulerStage() {
+/** `still` is true when the picture is a photo or the stage is paused. Taps
+ * are only listened for then: while the picture moves the canvas must let a
+ * finger scroll the page, and the Freeze button (not a tap) freezes it. */
+export function useRulerStage(still: boolean) {
   const { stage, paused, setPaused } = useStudio(),
     live = useRef({ paused, setPaused }),
     // True only when this panel is what paused the stage.
@@ -34,21 +37,26 @@ export function useRulerStage() {
   }, [paused]);
 
   useEffect(() => {
-    const offOverlay = stage.addOverlay(drawRuler),
-      offPointer = stage.onPointer(onRulerPointer);
-    setFreeze(freeze);
+    if (!still) return;
+    const off = stage.onPointer(onRulerPointer);
+    return () => {
+      off();
+      endDrag();
+    };
+  }, [stage, still]);
+
+  useEffect(() => {
+    const offOverlay = stage.addOverlay(drawRuler);
     return () => {
       offOverlay();
-      offPointer();
-      setFreeze(null);
-      endDrag();
       // Leave the stage as found: resume only what this panel paused.
       if (froze.current && live.current.paused) live.current.setPaused(false);
       froze.current = false;
       // The stage may run again while the panel is closed; video points go.
       if (view.video) clear();
+      dropSnapshot();
     };
-  }, [stage, freeze]);
+  }, [stage]);
 
   return { freeze, resume };
 }

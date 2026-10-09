@@ -1,118 +1,24 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-// The Ruler's own state, kept at module level so it survives the panel being
-// unmounted while another tab is open. Points are in source pixels. The state
-// object is replaced, never mutated, so useSyncExternalStore can compare it.
-import { useSyncExternalStore } from "react";
+// Editing the Ruler's points: placing, dragging, finding, undoing. The state
+// itself lives in state.ts and is re-exported here.
 import type { Pt } from "./homography";
-import { isUnit, type Unit } from "./units";
+import {
+  getState,
+  MIN_POINTS,
+  set,
+  type Handle,
+  type Shape,
+  type ShapeKind,
+  type Tool,
+} from "./state";
 
-export type Measure = { a: Pt; b: Pt | null };
-export type Handle =
-  | { kind: "corner"; i: number }
-  | { kind: "end"; m: number; end: "a" | "b" };
-export type RulerState = {
-  refId: string;
-  customA: string;
-  customB: string;
-  /** Reference corners in tap order (at most four). */
-  corners: Pt[];
-  swap: boolean;
-  measures: Measure[];
-  unit: Unit;
-  /** The source these points belong to, and its size in pixels. */
-  generation: number | null;
-  source: { w: number; h: number } | null;
-  /** Canvas CSS pixels per source pixel, as last drawn. */
-  scale: number;
-  /** While a handle is dragged: the long edge (tap indices) to hold fixed. */
-  lock: [number, number] | null;
-};
-
-const UNIT_KEY = "spectra.ruler.unit.v1";
-function savedUnit(): Unit {
-  try {
-    const v = localStorage.getItem(UNIT_KEY);
-    if (isUnit(v)) return v;
-  } catch {
-    /* Storage blocked: the default unit is fine. */
-  }
-  return "cm";
-}
-
-const initial = (): RulerState => ({
-  refId: "letter",
-  customA: "",
-  customB: "",
-  corners: [],
-  swap: false,
-  measures: [],
-  unit: savedUnit(),
-  generation: null,
-  source: null,
-  scale: 1,
-  lock: null,
-});
-
-let state = initial();
-const listeners = new Set<() => void>();
-const set = (patch: Partial<RulerState>) => {
-  state = { ...state, ...patch };
-  listeners.forEach((l) => l());
-};
-
-export const getState = () => state;
-export const subscribe = (l: () => void) => {
-  listeners.add(l);
-  return () => void listeners.delete(l);
-};
-export const useRuler = () => useSyncExternalStore(subscribe, getState);
-/** Back to a clean slate (tests). */
-export const resetRuler = () => set({ ...initial(), unit: state.unit });
-
-export const setRef = (refId: string) => set({ refId, swap: false });
-export const setCustom = (customA: string, customB: string) =>
-  set({ customA, customB });
-export const setUnit = (unit: Unit) => {
-  try {
-    localStorage.setItem(UNIT_KEY, unit);
-  } catch {
-    /* Remembering the unit is a courtesy; carry on without it. */
-  }
-  set({ unit });
-};
-export const toggleSwap = () => set({ swap: !state.swap });
-
-/** Called with each frame the overlay draws. Points belong to one source: a
- * new source (another photo, a camera restart) clears them, because they
- * would sit on the wrong picture. */
-export function bindSource(
-  generation: number,
-  w: number,
-  h: number,
-  scale: number,
-) {
-  if (state.generation !== generation) {
-    set({
-      generation,
-      source: { w, h },
-      scale,
-      corners: [],
-      measures: [],
-      swap: false,
-    });
-  } else if (
-    Math.abs(scale - state.scale) / state.scale > 0.005 ||
-    !state.source
-  ) {
-    set({ source: { w, h }, scale });
-  }
-}
+export * from "./state";
 
 /** Keep the point on the picture and stamp it with the tap uncertainty (one
  * sd in source pixels) it was placed with, so a later resize cannot change
  * the error bar of a point that has not moved. */
 const clamp = (p: Pt, sigma?: number): Pt => {
-  const s = state.source,
+  const s = getState().source,
     at = s
       ? {
           x: Math.min(s.w, Math.max(0, p.x)),
@@ -123,14 +29,35 @@ const clamp = (p: Pt, sigma?: number): Pt => {
   return sd === undefined ? at : { ...at, s: sd };
 };
 
-/** Add the next point: a reference corner until there are four, then the
- * start or end of a measurement. Returns the handle so a drag can continue. */
+const isShapeTool = (t: Tool): t is ShapeKind => t !== "span";
+
+/** Add a vertex to the open shape of this kind, or start one. */
+function addVertex(kind: ShapeKind, at: Pt): Handle {
+  const { shapes } = getState(),
+    last = shapes[shapes.length - 1];
+  if (last && last.kind === kind && !last.done) {
+    const next = shapes.slice();
+    next[next.length - 1] = { ...last, pts: [...last.pts, at] };
+    set({ shapes: next });
+    return { kind: "vertex", s: next.length - 1, i: last.pts.length };
+  }
+  set({ shapes: [...shapes, { kind, pts: [at], done: false }] });
+  return { kind: "vertex", s: shapes.length, i: 0 };
+}
+
+/** Add the next point. Edge taps (lens correction) go anywhere. Otherwise the
+ * first four taps are the reference corners, then the chosen tool places a
+ * span end or a path or outline vertex. Returns the handle so a drag can
+ * continue. */
 export function place(p: Pt, sigma?: number): Handle {
-  const at = clamp(p, sigma);
+  const at = clamp(p, sigma),
+    state = getState();
+  if (state.tool === "edge") return addVertex("edge", at);
   if (state.corners.length < 4) {
     set({ corners: [...state.corners, at] });
-    return { kind: "corner", i: state.corners.length - 1 };
+    return { kind: "corner", i: state.corners.length };
   }
+  if (isShapeTool(state.tool)) return addVertex(state.tool, at);
   const last = state.measures[state.measures.length - 1];
   if (last && last.b === null) {
     const measures = state.measures.slice();
@@ -139,16 +66,27 @@ export function place(p: Pt, sigma?: number): Handle {
     return { kind: "end", m: measures.length - 1, end: "b" };
   }
   set({ measures: [...state.measures, { a: at, b: null }] });
-  return { kind: "end", m: state.measures.length - 1, end: "a" };
+  return { kind: "end", m: state.measures.length, end: "a" };
 }
 
 export function move(handle: Handle, p: Pt, sigma?: number) {
-  const at = clamp(p, sigma);
+  const at = clamp(p, sigma),
+    state = getState();
   if (handle.kind === "corner") {
     if (!state.corners[handle.i]) return;
     const corners = state.corners.slice();
     corners[handle.i] = at;
     set({ corners });
+    return;
+  }
+  if (handle.kind === "vertex") {
+    const shape = state.shapes[handle.s];
+    if (!shape || !shape.pts[handle.i]) return;
+    const shapes = state.shapes.slice(),
+      pts = shape.pts.slice();
+    pts[handle.i] = at;
+    shapes[handle.s] = { ...shape, pts };
+    set({ shapes });
     return;
   }
   const m = state.measures[handle.m];
@@ -161,6 +99,7 @@ export function move(handle: Handle, p: Pt, sigma?: number) {
 /** Distance in canvas CSS pixels is the caller's business; this finds the
  * nearest handle within `radiusSrc` source pixels. */
 export function hit(p: Pt, radiusSrc: number): Handle | null {
+  const state = getState();
   let best: Handle | null = null,
     bestD = radiusSrc;
   const test = (q: Pt | null, h: Handle) => {
@@ -176,11 +115,30 @@ export function hit(p: Pt, radiusSrc: number): Handle | null {
     test(m.a, { kind: "end", m: i, end: "a" });
     test(m.b, { kind: "end", m: i, end: "b" });
   });
+  state.shapes.forEach((sh, s) =>
+    sh.pts.forEach((q, i) => test(q, { kind: "vertex", s, i })),
+  );
   return best;
 }
 
-/** Remove the most recently placed point. */
+/** Remove the most recently placed point of the chosen tool; an outline that
+ * was closed is reopened. With nothing left of that tool, a span end, then a
+ * reference corner (only while nothing else was measured). */
 export function undo() {
+  const state = getState();
+  if (isShapeTool(state.tool)) {
+    const at = state.shapes.map((s) => s.kind).lastIndexOf(state.tool);
+    if (at >= 0) {
+      const sh = state.shapes[at],
+        pts = sh.pts.slice(0, -1),
+        shapes = state.shapes.slice();
+      if (pts.length) shapes[at] = { ...sh, pts, done: false };
+      else shapes.splice(at, 1);
+      set({ shapes });
+      return;
+    }
+    if (state.tool === "edge") return;
+  }
   const last = state.measures[state.measures.length - 1];
   if (last) {
     set({
@@ -189,11 +147,38 @@ export function undo() {
           ? state.measures.slice(0, -1)
           : [...state.measures.slice(0, -1), { a: last.a, b: null }],
     });
-  } else if (state.corners.length) {
+  } else if (
+    state.corners.length &&
+    !state.shapes.some((s) => s.kind !== "edge")
+  ) {
     set({ corners: state.corners.slice(0, -1) });
   }
 }
 
 export const clear = () =>
-  set({ corners: [], measures: [], swap: false, lock: null });
-export const setLock = (lock: [number, number] | null) => set({ lock });
+  set({ corners: [], measures: [], shapes: [], swap: false, lock: null });
+
+/** Drop a half-built shape too short to keep; close one long enough. */
+const settle = (shapes: Shape[]): Shape[] =>
+  shapes
+    .map((s) =>
+      !s.done && s.pts.length >= MIN_POINTS[s.kind] ? { ...s, done: true } : s,
+    )
+    .filter((s) => s.done);
+
+/** Choose what taps add. A shape being built is finished if it has enough
+ * points and dropped if it does not, so none is left dangling. */
+export function setTool(tool: Tool) {
+  const state = getState();
+  set({ tool, shapes: settle(state.shapes) });
+}
+
+/** Close the outline or end the path being built, if it has enough points. */
+export function finishShape() {
+  const state = getState(),
+    last = state.shapes[state.shapes.length - 1];
+  if (!last || last.done || last.pts.length < MIN_POINTS[last.kind]) return;
+  const shapes = state.shapes.slice();
+  shapes[shapes.length - 1] = { ...last, done: true };
+  set({ shapes });
+}

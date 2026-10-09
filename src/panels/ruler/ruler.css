@@ -121,3 +121,28 @@
   line-height: 1.6;
   color: var(--muted);
 }
+.ruler-sub {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.ruler-legs {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.ruler-legs output {
+  color: var(--text, inherit);
+  font-weight: 600;
+}
+.ruler-plan canvas {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #0b1214;
+}
