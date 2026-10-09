@@ -52,7 +52,8 @@ export default function Stability() {
     canvas = useRef<HTMLCanvasElement>(null),
     source = useRef(frame.source);
   source.current = frame.source;
-  const tracked = !!mode.tracked;
+  const tracked = !!mode.tracked,
+    generation = frame.source?.generation;
   useEffect(() => {
     setSnapshot(null);
     const size = (): SourceSize => {
@@ -77,7 +78,8 @@ export default function Stability() {
       setSnapshot(next);
     });
     return () => store.close();
-  }, [mode.id, tracked]);
+    // A new source starts the figures over at once, not at its first result.
+  }, [mode.id, tracked, generation]);
   const kinds = snapshot?.kinds ?? [],
     secs = (ms: number) => Math.round(ms / 1000),
     id = snapshot?.identity;

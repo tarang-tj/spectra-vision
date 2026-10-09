@@ -9,13 +9,21 @@ export function iou(a: Box, b: Box) {
 /** How tracks are matched and kept. Times are in the clock of `update`. */
 export type TrackerOptions = {
   /** Frames a new object must be seen in, one after the other, before it gets
-   * an id and is returned. 1 shows every detection at once. A tentative object
-   * that is missed even once is forgotten, so a one-frame flicker never takes
-   * an id. */
+   * an id and is returned. 1 shows every detection at once. Hits need not
+   * follow each other, but a tentative object missed more than
+   * `tentativeMisses` times is forgotten, so a flicker never takes an id. */
   minHits: number;
   /** A confirmed track survives this many missed frames in a row. */
   maxMisses: number;
-  /** A track not seen for this long (ms) is forgotten, whatever the frame rate. */
+  /** A tentative track survives this many misses before it is forgotten, so
+   * an object that is found on alternate frames is still confirmed. */
+  tentativeMisses: number;
+  /** When results arrive further apart than this (ms), a new object is
+   * confirmed at once: waiting a whole extra result costs more than a flicker. */
+  slowGapMs: number;
+  /** A track not seen for this long (ms) is forgotten. The limit grows to 2.5
+   * times the last gap between results, and a track is never forgotten before
+   * it has had one result to match. */
   maxAgeMs: number;
   /** A detection may join a track when its box overlaps the track's by more
    * than this (IoU), or when the centres are closer than `maxCentre`. */
@@ -29,6 +37,8 @@ export type TrackerOptions = {
 export const DEFAULT_TRACKER: TrackerOptions = {
   minHits: 1,
   maxMisses: 10,
+  tentativeMisses: 2,
+  slowGapMs: 400,
   maxAgeMs: 900,
   minIou: 0.15,
   maxCentre: 0.075,
@@ -109,6 +119,8 @@ function assign(gain: number[][], rows: number, cols: number): number[] {
 export class Tracker {
   private nextId = 1;
   private tracks: Live[] = [];
+  private prevTime = NaN;
+  private lastGap = 0;
   private readonly o: TrackerOptions;
   constructor(options: Partial<TrackerOptions> = {}) {
     this.o = { ...DEFAULT_TRACKER, ...options };
@@ -116,10 +128,17 @@ export class Tracker {
   reset() {
     this.nextId = 1;
     this.tracks = [];
+    this.prevTime = NaN;
+    this.lastGap = 0;
   }
   update(detections: Detection[], time: number): Track[] {
     const o = this.o,
-      previous = this.tracks.filter((t) => time - t.lastSeen < o.maxAgeMs);
+      limit = Math.max(o.maxAgeMs, 2.5 * this.lastGap),
+      gap = time - this.prevTime,
+      slow = gap > o.slowGapMs,
+      previous = this.tracks.filter(
+        (t) => t.lastSeen >= this.prevTime || time - t.lastSeen < limit,
+      );
     // Each track's box is moved along its own velocity to where it should be now.
     const predicted = previous.map((t) => {
       const dt = Math.min(Math.max(0, time - t.lastSeen), o.maxPredictMs);
@@ -198,7 +217,8 @@ export class Tracker {
           misses: 0,
           trail: [c],
         };
-      if (!track.id && track.hits >= o.minHits) track.id = this.nextId++;
+      if (!track.id && (track.hits >= o.minHits || slow))
+        track.id = this.nextId++;
       live.push(track);
       if (track.id)
         current.push({
@@ -211,8 +231,13 @@ export class Tracker {
     // Missed tracks are retained for association only, never rendered as fresh
     // detections. A tentative one is dropped at its first miss.
     for (const t of previous)
-      if (!matched.has(t) && t.id && t.misses < o.maxMisses)
+      if (
+        !matched.has(t) &&
+        t.misses < (t.id ? o.maxMisses : o.tentativeMisses)
+      )
         live.push({ ...t, misses: t.misses + 1 });
+    if (Number.isFinite(this.prevTime)) this.lastGap = Math.max(0, gap);
+    this.prevTime = time;
     this.tracks = live;
     return current;
   }

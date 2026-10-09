@@ -89,19 +89,46 @@ describe("confirmation", () => {
   it("gives a one frame flicker no id and does not use up a number", () => {
     const t = new Tracker(STEADY_TRACKER);
     expect(t.update([det(0.4)], 0)).toEqual([]);
-    expect(t.update([], 66)).toEqual([]);
+    for (const at of [66, 132, 198]) expect(t.update([], at)).toEqual([]);
     // The flicker is forgotten: the next object starts again and takes id 1.
-    expect(t.update([det(0.4)], 132)).toEqual([]);
-    const out = t.update([det(0.41)], 198);
+    expect(t.update([det(0.8)], 264)).toEqual([]);
+    const out = t.update([det(0.81)], 330);
     expect(ids(out)).toEqual([1]);
     expect(out[0].trail).toHaveLength(2);
   });
 
-  it("needs the sightings to follow each other", () => {
-    const t = new Tracker(STEADY_TRACKER);
-    t.update([det(0.4)], 0);
-    t.update([], 66);
-    expect(t.update([det(0.4)], 132)).toEqual([]);
+  it("confirms an object found on alternate frames at 15 fps", () => {
+    const t = new Tracker(STEADY_TRACKER),
+      shown: number[][] = [];
+    for (let i = 0; i < 40; i++)
+      shown.push(ids(t.update(i % 2 ? [] : [det(0.4)], i * 66)));
+    // Hidden only on its first sighting, then shown on every frame it is found.
+    expect(shown.filter((x) => x.length).length).toBe(19);
+    expect(new Set(shown.flat())).toEqual(new Set([1]));
+  });
+
+  it("shows a still object from its second result and keeps its id at one result per second", () => {
+    for (const gap of [900, 1000, 1500, 3000]) {
+      const t = new Tracker(STEADY_TRACKER),
+        seen: number[] = [];
+      for (let i = 0; i < 12; i++)
+        seen.push(...ids(t.update([det(0.4)], i * gap)));
+      expect(seen.length, `gap ${gap}`).toBeGreaterThanOrEqual(11);
+      expect(new Set(seen).size).toBe(1);
+    }
+  });
+
+  it("still gives almost no ids to random one-frame flickers at 15 fps", () => {
+    const t = new Tracker(STEADY_TRACKER),
+      all = new Set<number>();
+    let seed = 7;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 300; i++) {
+      const d = [det(0.4)];
+      if (rnd() < 0.3) d.push(det(rnd() * 0.8, 0.1 + rnd() * 0.5));
+      for (const x of t.update(d, i * 66)) all.add(x.id);
+    }
+    expect(all.size).toBeLessThanOrEqual(5);
   });
 
   it("keeps an id for a confirmed object that is missed once", () => {

@@ -130,8 +130,8 @@ describe("LandmarkSetSmoother", () => {
     s.smooth([pts(2)], 0, ["Left"]);
     s.smooth([pts(2)], 66, ["Left"]);
     expect(s.smooth([pts(2, 0.5)], 132, ["Right"])[0][0].x).toBe(0.5);
-    // Same key: it does smooth.
-    expect(s.smooth([pts(2, 0.9)], 198, ["Right"])[0][0].x).toBeLessThan(0.9);
+    // Same key and a move below the slot-jump limit: it does smooth.
+    expect(s.smooth([pts(2, 0.6)], 198, ["Right"])[0][0].x).toBeLessThan(0.6);
   });
 
   it("drops the state of lists that left and handles an empty frame", () => {
@@ -142,5 +142,21 @@ describe("LandmarkSetSmoother", () => {
     expect(
       s.smooth([pts(2, 0.4), pts(2, 0.4)], 132, ["Left", "Right"])[1][0].x,
     ).toBe(0.4);
+  });
+});
+
+describe("LandmarkSetSmoother slots", () => {
+  it("starts a slot again when its body jumps, and not for a small move", () => {
+    const body = (x: number) => [
+      { x, y: 0.5 },
+      { x: x + 0.02, y: 0.6 },
+    ];
+    const f = new LandmarkSetSmoother({ minCutoff: 0.1, beta: 0 });
+    for (let i = 0; i < 10; i++) f.smooth([body(0.2)], i * 66);
+    // A 0.05 step is smoothed (heavily lagged), not passed through.
+    const small = f.smooth([body(0.25)], 700)[0][0].x;
+    expect(small).toBeLessThan(0.23);
+    // Another person in the same slot, 0.5 away: no sliding, the new position.
+    expect(f.smooth([body(0.75)], 766)[0][0].x).toBe(0.75);
   });
 });
