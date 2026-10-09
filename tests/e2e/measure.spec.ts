@@ -60,9 +60,9 @@ test("smoothing and precision change how landmarks are measured and the models k
     fast = page.getByRole("button", { name: "Fast", exact: true }),
     precise = page.getByRole("button", { name: "Precise", exact: true });
 
-  // Defaults: smoothing off, Fast. The Lite pose model produced 33 landmarks
+  // Defaults: smoothing on, Fast. The Lite pose model produced 33 landmarks
   // and, in the same result, 33 world landmarks in metres.
-  await expect(smooth).toHaveAttribute("aria-pressed", "false");
+  await expect(smooth).toHaveAttribute("aria-pressed", "true");
   await expect(fast).toHaveAttribute("aria-pressed", "true");
   await expect
     .poll(() => poseTask(page))
@@ -73,10 +73,10 @@ test("smoothing and precision change how landmarks are measured and the models k
       world: [33],
     });
 
-  // Smoothing: the models keep producing, the setting is kept for a reload,
-  // and the exported session still holds the model's own coordinates.
+  // Smoothing off: the models keep producing and the setting is kept for a
+  // reload.
   await smooth.click();
-  await expect(smooth).toHaveAttribute("aria-pressed", "true");
+  await expect(smooth).toHaveAttribute("aria-pressed", "false");
   await moreResults(page);
   await expect(page.getByRole("alert")).toHaveCount(0);
   const canvasInk = await page.evaluate(() => {
@@ -109,13 +109,13 @@ test("smoothing and precision change how landmarks are measured and the models k
   // Both settings are remembered on this device.
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Body", exact: true }).click();
-  await expect(smooth).toHaveAttribute("aria-pressed", "true");
+  await expect(smooth).toHaveAttribute("aria-pressed", "false");
   await expect(precise).toHaveAttribute("aria-pressed", "true");
   await expect
     .poll(() => poseTask(page), { timeout: 90_000 })
     .toMatchObject({ model: "pose_landmarker_full.task" });
 
-  // And back: Fast, smoothing off, the Lite model again.
+  // And back: Fast, smoothing on, the Lite model again.
   await fast.click();
   await smooth.click();
   await expect
