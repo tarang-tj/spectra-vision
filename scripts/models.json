@@ -13,7 +13,7 @@
     "bytes": 12138859,
     "license": "Apache-2.0 (inferred)",
     "card": "https://developers.google.com/edge/mediapipe/solutions/vision/object_detector",
-    "licenseNote": "No model card for this file states a licence. Apache-2.0 is the licence of the Google AutoML repository that publishes EfficientDet-Lite2 and of the MediaPipe project that hosts this file, the same basis as EfficientDet-Lite0."
+    "licenseNote": "No model card for this file states a licence. Apache-2.0 is the licence of the Google AutoML repository that publishes EfficientDet-Lite2 and of the MediaPipe project that hosts this file, the same basis as EfficientDet-Lite0. TensorFlow's listing of this model on Kaggle Models (efficientdet, TFLite, lite2-detection-default) states Apache 2.0, read on 2026-10-09."
   },
   {
     "file": "pose_landmarker_lite.task",
@@ -29,7 +29,7 @@
     "bytes": 5434517,
     "license": "Apache-2.0 (inferred)",
     "card": "https://developers.google.com/edge/mediapipe/solutions/vision/image_classifier",
-    "licenseNote": "No model card for this file states a licence. Apache-2.0 is the licence of the TensorFlow TPU repository that publishes EfficientNet-Lite and of the MediaPipe project that hosts this file. Trained on ImageNet (1,000 classes); the ImageNet images are not included."
+    "licenseNote": "No model card for this file states a licence. Apache-2.0 is the licence of the TensorFlow TPU repository that publishes EfficientNet-Lite and of the MediaPipe project that hosts this file. Trained on ImageNet (1,000 classes); the ImageNet images are not included. TensorFlow's listing of this model on Kaggle Models (efficientnet, TFLite, lite0-int8) states Apache 2.0, read on 2026-10-09."
   },
   {
     "file": "pose_landmarker_full.task",
