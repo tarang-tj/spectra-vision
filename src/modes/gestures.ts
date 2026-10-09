@@ -49,7 +49,7 @@ const gestures: ModeDef = {
       minHandPresenceConfidence: 0.45,
       minTrackingConfidence: 0.5,
     },
-    delegate: "CPU",
+    delegate: "AUTO",
   },
   hint: "Show a thumb up, a victory sign, a fist or an open palm.",
   demo: {

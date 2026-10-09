@@ -17,7 +17,7 @@ const hands: ModeDef = {
       minHandPresenceConfidence: 0.45,
       minTrackingConfidence: 0.5,
     },
-    delegate: "CPU",
+    delegate: "AUTO",
   },
   hint: "Pinch thumb + index to paint. Release to stop.",
   demo: {

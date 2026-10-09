@@ -7,6 +7,10 @@ export type Detection = {
   label: string;
   score: number;
   box: Box;
+  /** Objects with Finer names on: the image classifier's name for this box and
+   * its own score, present only when that score reached the floor. Never
+   * replaces `label` and `score`, which are the detector's. */
+  finer?: { label: string; score: number };
   /** Segment classes only: the fraction of mask pixels the class owns. */
   share?: number;
   /** Segment classes only: the number of mask pixels the class owns. */
@@ -20,7 +24,17 @@ export type TaskKind =
   | "face"
   | "segment"
   | "gesture";
+/** The delegate a worker really runs on. */
 export type Delegate = "CPU" | "GPU";
+/** What a task may ask for. "AUTO" means GPU where this page has a real
+ * hardware WebGL2 renderer and CPU everywhere else (vision/delegate.ts). */
+export type DelegateRequest = Delegate | "AUTO";
+/** Options that may change while a task runs. The runner applies them to the
+ * live worker (MediaPipe `setOptions`) without loading the model again. */
+export type LiveOptions = {
+  current(): Record<string, unknown>;
+  subscribe(listener: () => void): () => void;
+};
 /** One model to run. `model` is a file name under public/models (listed in
  * scripts/models.json); `options` are passed to the MediaPipe task as is. */
 export type TaskSpec = {
@@ -31,7 +45,9 @@ export type TaskSpec = {
    * scripts/models.json like any other model. */
   preciseModel?: string;
   options: Record<string, unknown>;
-  delegate: Delegate;
+  /** Options that win over `options` and can change while the task runs. */
+  live?: LiveOptions;
+  delegate: DelegateRequest;
 };
 /** Normalized output of one task for one frame. `delegate` is the one that
  * actually ran, which differs from the requested one after a GPU fallback. */
@@ -48,6 +64,16 @@ export type TaskResult = {
   handedness: string[];
   /** Kind-specific payload (blendshapes, masks, gesture names) added by later kinds. */
   extra?: Record<string, unknown>;
+};
+/** `extra.finer` of an "object" result while Finer names is on. `floor` is the
+ * lowest classifier score that is ever shown; `classified` is how many crops
+ * were classified for this frame and `ms` what that took in the worker. */
+export type FinerExtra = {
+  state: "loading" | "ready" | "failed";
+  floor: number;
+  ms: number;
+  classified: number;
+  note?: string;
 };
 /** `extra` of a "pose" or "hand" result: MediaPipe's world landmarks, one list
  * per body or hand and indexed exactly like `landmarks`. Units are metres. The

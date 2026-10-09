@@ -119,6 +119,7 @@ function Inspect() {
           </button>
         )}
         <MeasureSettings mode={mode} />
+        {mode.controls && <mode.controls />}
       </div>
       <p className="mode-tip">
         <Lightbulb size={22} />

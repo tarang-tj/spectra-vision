@@ -73,16 +73,28 @@ export function gpuUnavailable(): string | null {
   return refusal;
 }
 
+/** What "AUTO" means on this page: GPU only when the WebGL2 probe named a
+ * renderer and that renderer is not a software one. A browser that hides the
+ * renderer name, has no WebGL2 or has not been probed (unit tests, workers)
+ * gets CPU: GPU is chosen only on evidence, never on a guess. */
+export function autoDelegate(): Delegate {
+  const probe = probeWebgl();
+  if (!probe || !probe.webgl2 || !probe.renderer) return "CPU";
+  return softwareRendererReason(probe.renderer) ? "CPU" : "GPU";
+}
+
 // The lab's delegate switch: one choice per task kind, kept for the page's
 // lifetime only. With no choice a task runs on the delegate its mode asks for.
 const choices = new Map<TaskKind, Delegate>(),
   watchers = new Set<(kind: TaskKind) => void>();
 
-/** The delegate a task should start on: the lab's choice, else the mode's. */
+/** The delegate a task should start on: the lab's choice, else the mode's
+ * (with "AUTO" settled by autoDelegate). Always a real delegate. */
 export function requestedDelegate(
   spec: Pick<TaskSpec, "kind" | "delegate">,
 ): Delegate {
-  return choices.get(spec.kind) ?? spec.delegate;
+  const asked = choices.get(spec.kind) ?? spec.delegate;
+  return asked === "AUTO" ? autoDelegate() : asked;
 }
 
 /** Choose a delegate for a task kind (null: back to the mode's own choice).

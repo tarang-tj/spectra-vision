@@ -77,7 +77,7 @@ const fusion: ModeDef = {
         minPosePresenceConfidence: 0.45,
         minTrackingConfidence: 0.5,
       },
-      delegate: "CPU",
+      delegate: "AUTO",
     },
     {
       kind: "hand",
@@ -88,7 +88,7 @@ const fusion: ModeDef = {
         minHandPresenceConfidence: 0.45,
         minTrackingConfidence: 0.5,
       },
-      delegate: "CPU",
+      delegate: "AUTO",
     },
     {
       kind: "face",

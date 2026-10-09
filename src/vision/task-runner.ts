@@ -59,7 +59,7 @@ export function createTaskRunner(
   spawn: (url: string) => WorkerLike = (url) => new Worker(url),
 ): TaskRunner {
   let worker: WorkerLike | null = null,
-    requested: Delegate = spec.delegate,
+    requested: Delegate = requestedDelegate(spec),
     active: Delegate = requested,
     // The file this worker loads: the task's model, or its precise one while
     // the Precision setting asks for it.
@@ -216,14 +216,29 @@ export function createTaskRunner(
       if (disposed) return;
       fail("Vision worker failed. Retry or use a current Chrome/Edge browser.");
     };
+    // `live` holds functions, which cannot be posted: its current values are
+    // folded into the options instead.
+    const { live, ...plain } = spec;
     worker.postMessage({
       type: "init",
       base,
-      task: { ...spec, model, delegate: active },
+      task: {
+        ...plain,
+        options: { ...spec.options, ...live?.current() },
+        model,
+        delegate: active,
+      },
     });
     watch();
   };
   start();
+  // A live option (such as how many people to follow) changed: tell the
+  // running worker. One that is still loading keeps the message until its
+  // task exists (public/vision-worker.js).
+  const unwatchLive = spec.live?.subscribe(() => {
+    if (disposed || !worker) return;
+    worker.postMessage({ type: "options", options: spec.live!.current() });
+  });
   // The lab's delegate switch: load this task again on the delegate chosen.
   const unwatch = onDelegateChoice((kind) => {
     const next = requestedDelegate(spec);
@@ -280,6 +295,7 @@ export function createTaskRunner(
       ready = false;
       unwatch();
       unwatchPrecision();
+      unwatchLive?.();
       stop();
     },
   };

@@ -2,6 +2,8 @@ import { strokePath } from "../vision/draw";
 import { POSE_EDGES } from "../vision/geometry";
 import { COLORS } from "../vision/types";
 import type { Point } from "../vision/types";
+import { peopleOption } from "./lib/people";
+import PeopleSetting from "./lib/people-setting";
 import type { ModeDef } from "./types";
 
 // Pose landmarks below this visibility are treated as not seen.
@@ -23,8 +25,11 @@ const body: ModeDef = {
       minPosePresenceConfidence: 0.45,
       minTrackingConfidence: 0.5,
     },
-    delegate: "CPU",
+    // Followed people: the People setting (modes/lib/people.ts).
+    live: peopleOption,
+    delegate: "AUTO",
   },
+  controls: PeopleSetting,
   hint: "Step back. Keep your whole body in the frame.",
   demo: {
     still: "demo/studio.png",
