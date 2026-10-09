@@ -7,11 +7,29 @@
     "license": "Apache-2.0"
   },
   {
+    "file": "efficientdet_lite2.tflite",
+    "url": "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite2/float16/1/efficientdet_lite2.tflite",
+    "sha256": "5d4ebec1029bc9907aeadb9e7b4ac9cb1da6a19d01ad375210a9ae18ba173302",
+    "bytes": 12138859,
+    "license": "Apache-2.0 (inferred)",
+    "card": "https://developers.google.com/edge/mediapipe/solutions/vision/object_detector",
+    "licenseNote": "No model card for this file states a licence. Apache-2.0 is the licence of the Google AutoML repository that publishes EfficientDet-Lite2 and of the MediaPipe project that hosts this file, the same basis as EfficientDet-Lite0."
+  },
+  {
     "file": "pose_landmarker_lite.task",
     "url": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
     "sha256": "59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a",
     "bytes": 5777746,
     "license": "Apache-2.0"
+  },
+  {
+    "file": "efficientnet_lite0.tflite",
+    "url": "https://storage.googleapis.com/mediapipe-models/image_classifier/efficientnet_lite0/int8/1/efficientnet_lite0.tflite",
+    "sha256": "bc2ffe19c1118de0c0c2a9088992da5589722656e0fba81421385300a4a34b16",
+    "bytes": 5434517,
+    "license": "Apache-2.0 (inferred)",
+    "card": "https://developers.google.com/edge/mediapipe/solutions/vision/image_classifier",
+    "licenseNote": "No model card for this file states a licence. Apache-2.0 is the licence of the TensorFlow TPU repository that publishes EfficientNet-Lite and of the MediaPipe project that hosts this file. Trained on ImageNet (1,000 classes); the ImageNet images are not included."
   },
   {
     "file": "pose_landmarker_full.task",

@@ -1,5 +1,13 @@
+import { useEffect, useSyncExternalStore } from "react";
 import { ChevronRight, Lightbulb } from "lucide-react";
 import MeasureSettings from "../components/MeasureSettings";
+import {
+  filterSummary,
+  getFilter,
+  onFilterChange,
+  resetFilter,
+  shows,
+} from "../modes/lib/object-filter";
 import { useStudio } from "../studio-context";
 import { COLORS } from "../vision/types";
 import type { PanelDef } from "./types";
@@ -11,12 +19,32 @@ function Inspect() {
     { rows, mode, count } = studio,
     { result, tracks, mirror, settings } = studio.frame,
     { confidence, selected } = settings;
+  // The Objects class filter (modes/lib/object-filter.ts): when it hides
+  // boxes, this list says so instead of claiming nothing was detected.
+  const filter = useSyncExternalStore(onFilterChange, getFilter),
+    summary = mode.id === "objects" ? filterSummary(filter) : "",
+    hidden = summary ? tracks.filter((t) => !shows(t.label, filter)).length : 0,
+    hiddenSelected =
+      !!summary &&
+      selected !== null &&
+      tracks.some((t) => t.id === selected && !shows(t.label, filter));
+  useEffect(() => {
+    if (hiddenSelected) studio.select(null);
+  }, [hiddenSelected, studio]);
   return (
     <>
       <div className="frame-list">
         <h2>
           In the frame <span className="count">{count || "—"}</span>
         </h2>
+        {summary && (
+          <p className="empty" role="status" data-testid="inspect-filter">
+            {summary}. {hidden} {hidden === 1 ? "box is" : "boxes are"} hidden.{" "}
+            <button className="button compact" onClick={resetFilter}>
+              Reset filter
+            </button>
+          </p>
+        )}
         <div className="detections" aria-live="polite">
           {rows.length ? (
             rows.map((r) => (
@@ -34,9 +62,11 @@ function Inspect() {
             ))
           ) : (
             <p className="empty">
-              {result
-                ? "Nothing detected yet. Try brighter light or move closer."
-                : "Waiting for the first frame."}
+              {summary && hidden
+                ? "Every box found is hidden by the class filter."
+                : result
+                  ? "Nothing detected yet. Try brighter light or move closer."
+                  : "Waiting for the first frame."}
             </p>
           )}
         </div>
@@ -119,6 +149,7 @@ function Inspect() {
           </button>
         )}
         <MeasureSettings mode={mode} />
+        {mode.controls && <mode.controls />}
       </div>
       <p className="mode-tip">
         <Lightbulb size={22} />

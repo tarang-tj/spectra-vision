@@ -5,12 +5,10 @@
 import type { Frame } from "../../vision/frame";
 import { derive } from "./derive";
 import { orderCorners, type Pt } from "./homography";
-import { bindSource, clear, getState } from "./store";
-
-const REF = "#ffd18d";
-const LINE = "#a4ffd9";
-const INK = "#0b1214";
-const FONT = "600 12px system-ui, sans-serif";
+import { dot, INK, LINE, REF, tag } from "./overlay-parts";
+import { drawShapes } from "./overlay-shapes";
+import { takeSnapshot, type Snapshot } from "./snapshot";
+import { bindSource, bindStillness, getState } from "./store";
 
 /** Shared between the overlay and the pointer code. */
 export const view = {
@@ -18,53 +16,25 @@ export const view = {
   still: true,
   /** The source is a video or camera (its points cannot outlive a freeze). */
   video: false,
+  /** Copy of the frozen picture for the top-down view (null while moving). */
+  snap: null as Snapshot | null,
   /** The point being placed or dragged, in source pixels and canvas pixels. */
   loupe: null as { at: Pt; canvas: { x: number; y: number } } | null,
 };
+
+/** The generation a snapshot was last tried for (reset when the picture moves). */
+let snapTried: number | null = null;
+
+/** Forget the copy of the picture (the panel closed). */
+export function dropSnapshot() {
+  view.snap = null;
+  snapTried = null;
+}
 
 const sizeOf = (el: HTMLImageElement | HTMLVideoElement) =>
   el instanceof HTMLVideoElement
     ? { w: el.videoWidth, h: el.videoHeight }
     : { w: el.naturalWidth, h: el.naturalHeight };
-
-function dot(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  color: string,
-  label: string,
-) {
-  ctx.beginPath();
-  ctx.arc(x, y, 7, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.globalAlpha = 0.35;
-  ctx.fill();
-  ctx.globalAlpha = 1;
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = color;
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-  ctx.fill();
-  if (label) tag(ctx, label, x + 10, y - 10, color);
-}
-
-function tag(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number,
-  color: string,
-) {
-  ctx.font = FONT;
-  const w = ctx.measureText(text).width + 10;
-  ctx.fillStyle = INK;
-  ctx.globalAlpha = 0.85;
-  ctx.fillRect(x - 5, y - 11, w, 18);
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = color;
-  ctx.fillText(text, x, y + 2);
-}
 
 function loupe(ctx: CanvasRenderingContext2D, frame: Frame) {
   const l = view.loupe,
@@ -120,12 +90,19 @@ export function drawRuler(ctx: CanvasRenderingContext2D, frame: Frame) {
   view.still = frame.paused || el instanceof HTMLImageElement;
   // Points belong to a frozen picture; on a moving one they would mislead.
   view.video = el instanceof HTMLVideoElement;
+  bindStillness(view.video, view.still);
   if (!view.still) {
-    // Points belong to one frozen frame. Once a video moves on they describe
-    // a picture that is gone, so they and their results are dropped.
-    if (view.video && (getState().corners.length || getState().measures.length))
-      clear();
+    view.snap = null;
+    snapTried = null;
     return;
+  }
+  // One copy per frozen picture; a copy that failed is not retried every frame.
+  if (
+    (!view.snap || view.snap.generation !== frame.source.generation) &&
+    snapTried !== frame.source.generation
+  ) {
+    snapTried = frame.source.generation;
+    view.snap = takeSnapshot(el, w, h, frame.source.generation);
   }
   const s = getState(),
     d = derive(s),
@@ -133,7 +110,7 @@ export function drawRuler(ctx: CanvasRenderingContext2D, frame: Frame) {
 
   if (s.corners.length) {
     const ring = d.sheet
-      ? d.sheet.ordered
+      ? (d.sheet.raw ?? d.sheet.ordered)
       : s.corners.length === 4
         ? orderCorners(s.corners)
         : s.corners;
@@ -154,8 +131,9 @@ export function drawRuler(ctx: CanvasRenderingContext2D, frame: Frame) {
         [0, 1, p1.x - p0.x],
         [1, 2, p2.y - p1.y],
       ].forEach(([i, j, mm]) => {
-        const a = at(d.sheet!.ordered[i]),
-          b = at(d.sheet!.ordered[j]);
+        const ring = d.sheet!.raw ?? d.sheet!.ordered,
+          a = at(ring[i]),
+          b = at(ring[j]);
         tag(
           ctx,
           `${Number(mm.toFixed(1))} mm`,
@@ -193,5 +171,6 @@ export function drawRuler(ctx: CanvasRenderingContext2D, frame: Frame) {
     }
     dot(ctx, a.x, a.y, LINE, "");
   });
+  drawShapes(ctx, s, d, at);
   loupe(ctx, frame);
 }

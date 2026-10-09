@@ -205,6 +205,9 @@ export type Sheet = {
   /** Plane corners (mm), matching `ordered`. */
   plane: Pt[];
   h: Mat3;
+  /** The corners as tapped (before any lens correction), in `ordered` order.
+   * The error bar perturbs these; `ordered` holds what the solve used. */
+  raw?: Pt[];
 };
 
 /** Assign the reference's long side by the longer-looking pair of opposite

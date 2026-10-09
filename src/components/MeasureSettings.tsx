@@ -5,14 +5,14 @@ import { usePrecision, useSmoothing } from "../vision/settings";
 import type { Precision } from "../vision/settings";
 import "../styles/measure-settings.css";
 
-const LANDMARKS = new Set(["pose", "hand", "face"]);
+const LANDMARKS = new Set(["pose", "hand", "face", "gesture"]);
 const LEVELS: { id: Precision; label: string }[] = [
   { id: "fast", label: "Fast" },
   { id: "precise", label: "Precise" },
 ];
 
-/** The two settings that change how landmarks are measured, shown only where
- * the mode has something for them to act on. Both are remembered on this
+/** Smoothing for modes that draw landmarks and Precision for modes whose
+ * model has a larger variant, each shown only where it has something to act on. Both are remembered on this
  * device (vision/settings.ts). */
 export default function MeasureSettings({ mode }: { mode: ModeDef }) {
   const [smooth, setSmooth] = useSmoothing(),
@@ -20,22 +20,26 @@ export default function MeasureSettings({ mode }: { mode: ModeDef }) {
     specs = tasksOf(mode),
     landmarks = specs.some((spec) => LANDMARKS.has(spec.kind)),
     precise = specs.some((spec) => spec.preciseModel);
-  if (!landmarks) return null;
+  if (!landmarks && !precise) return null;
   return (
     <div className="measure-settings">
-      <button
-        className="button compact"
-        aria-pressed={smooth}
-        onClick={() => setSmooth(!smooth)}
-      >
-        Smooth landmarks
-      </button>
-      <p>
-        Filters what is drawn. Exports and measurements keep the raw values.
-      </p>
+      {landmarks && (
+        <>
+          <button
+            className="button compact"
+            aria-pressed={smooth}
+            onClick={() => setSmooth(!smooth)}
+          >
+            Smooth landmarks
+          </button>
+          <p>
+            Filters what is drawn. Exports and measurements keep the raw values.
+          </p>
+        </>
+      )}
       {precise && (
         <>
-          <div role="group" aria-label="Pose precision">
+          <div role="group" aria-label="Model precision">
             {LEVELS.map((level) => (
               <button
                 key={level.id}
@@ -48,8 +52,8 @@ export default function MeasureSettings({ mode }: { mode: ModeDef }) {
             ))}
           </div>
           <p>
-            Fast runs the Lite pose model. Precise loads the Full pose model
-            (9.4 MB), which is slower.
+            Fast runs the smaller model. Precise loads a larger one on first
+            use, which is slower.
           </p>
         </>
       )}

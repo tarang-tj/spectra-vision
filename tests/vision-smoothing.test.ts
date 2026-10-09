@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { describe as stats } from "../src/measure/series";
 import { telemetry } from "../src/telemetry/bus";
 import { onVisionResult } from "../src/vision/result-feed";
-import { ResultSmoother } from "../src/vision/smooth-result";
+import { LandmarkSetSmoother } from "../src/measure/one-euro";
+import { ONE_EURO_BY_TASK, ResultSmoother } from "../src/vision/smooth-result";
 import type {
   Point,
   TaskKind,
@@ -107,6 +108,53 @@ describe("ResultSmoother", () => {
     const next = smoother.apply(result([task("pose", 132, far)], "fusion", 2))!;
     expect(next.landmarks[0][0].x).toBe(0.9);
     expect(smoother.apply(null)).toBeNull();
+  });
+});
+
+describe("per task settings", () => {
+  // Real still-input jitter is about a tenth of a percent of the frame, much
+  // less than the synthetic amplitude above.
+  const hand = (i: number): Point[][] => [
+    [
+      { x: 0.5 + 0.001 * jitter(i), y: 0.5 + 0.001 * jitter(i + 99), z: 0 },
+      { x: 0.4 + 0.001 * jitter(i + 7), y: 0.6 + 0.001 * jitter(i + 31), z: 0 },
+    ],
+  ];
+
+  it("smooths the hands of a gesture result and keeps its other fields", () => {
+    const smoother = new ResultSmoother(),
+      raw: number[] = [],
+      out: number[] = [];
+    let last: TaskResult | undefined;
+    for (let i = 0; i < 150; i++) {
+      const t = task("gesture", i * 66, hand(i), ["Right"]);
+      t.extra = {
+        gestures: [{ name: "Open_Palm", score: 0.9, handedness: "Right" }],
+      };
+      const s = smoother.apply(result([t], "gestures"))!;
+      raw.push(t.landmarks[0][0].x);
+      out.push(s.tasks.gesture!.landmarks[0][0].x);
+      last = s.tasks.gesture;
+      expect(last!.extra).toBe(t.extra);
+      expect(last!.handedness).toEqual(["Right"]);
+    }
+    expect(last!.kind).toBe("gesture");
+    expect(stats(out.slice(20)).sd).toBeLessThan(stats(raw.slice(20)).sd * 0.5);
+  });
+
+  it("uses each task's own One Euro settings", () => {
+    for (const kind of ["pose", "hand", "face", "gesture"] as const) {
+      const smoother = new ResultSmoother(),
+        direct = new LandmarkSetSmoother(ONE_EURO_BY_TASK[kind]);
+      for (let i = 0; i < 40; i++) {
+        const points = hand(i),
+          got = smoother.apply(result([task(kind, i * 66, points, ["Left"])]))!;
+        expect(got.tasks[kind]!.landmarks).toEqual(
+          direct.smooth(points, i * 66, ["Left"]),
+        );
+      }
+    }
+    expect(ONE_EURO_BY_TASK.hand).toEqual(ONE_EURO_BY_TASK.gesture);
   });
 });
 

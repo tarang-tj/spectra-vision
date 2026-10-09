@@ -435,7 +435,7 @@ type StagePointerEvent = {
 
 The `pose` and `hand` tasks put MediaPipe's `worldLandmarks` in `extra.world` (type `WorldExtra`, `src/vision/types.ts`): `Point[][]`, one list per body or hand, indexed exactly like `landmarks`, in metres, `[]` when nothing was seen. The origin is the hip midpoint (pose) or the hand's centre (hand), so they give sizes, speeds and angles but not position in the room. MediaPipe tasks-vision 1.1.0 returns them for both kinds (checked in a real browser, `tests/e2e/measure.spec.ts`). Never depend on them: a panel must still work from image landmarks.
 
-### Smooth landmarks (setting, off by default)
+### Smooth landmarks (setting, on by default since 2.2)
 
 `src/vision/settings.ts` (`useSmoothing()`, `smoothingOn()`), switch in the Inspect panel. The stage runs pose, hand and face landmarks through `ResultSmoother` (`smooth-result.ts`, One Euro) **for drawing only**: `frame.result` seen by modes and effects is smoothed, while `useStudio().frame`, the result feed, the session export and `extra.world` always hold the raw values. A measuring panel must measure the raw values or filter on its own terms. Remembered in `localStorage` (`spectra.smooth.v1`).
 
@@ -460,6 +460,18 @@ function Sway() {
   return <p>{m ? formatMeasured(m) : "not seen"}</p>; // value ± error unit; show m.basis beside it
 }
 ```
+
+## Added in 2.2
+
+- **`delegate: "AUTO"`** on a `TaskSpec`: resolved by `autoDelegate()` in `src/vision/delegate.ts` to GPU only when the WebGL2 probe names a renderer that is not software, and to CPU otherwise (no probe, hidden renderer name, SwiftShader, llvmpipe). The runner, telemetry and Lab only ever see CPU or GPU. The Lab's manual switch wins over AUTO, and the time-bounded GPU-to-CPU fallback still applies.
+- **Live options**: `TaskSpec.live` holds options that may change while the task runs. A change posts `{ type: "options" }` to the running worker, with no reload. Body's People setting (1 to 4, `spectra.people.v1`) uses it.
+- **Mode controls**: a `ModeDef` may export `controls`, a component the Inspect panel renders under the shared detection settings.
+- **Finer names**: the Objects worker takes an option `finer` (`null`, or `{ model, floor, perPass, everyMs }`). When set it runs an `ImageClassifier` on the crop of each box, throttled, inside the same frame. A kept answer is `detection.finer = { label, score }` and `extra.finer = { state, floor, ms, classified }`. The detector's `label` and `score` are never changed. Off by default, in which case no classifier is fetched and results and exports are unchanged.
+- **Object filter and Library**: `src/modes/lib/object-filter.ts` filters what Objects draws and lists; `src/panels/library/` lists every class the loaded models can name (`label-maps.json` is extracted from the model files and checked by `tests/library-labels.test.ts`) and counts sightings from the result feed.
+- **Tracker**: `src/vision/tracker.ts` predicts each track from its velocity, matches globally, tolerates misses and can require hits before showing an id. `DEFAULT_TRACKER` keeps first-frame ids; the app uses `STEADY_TRACKER` (two hits) in `useSession.ts`.
+- **Smoothing**: per-task One Euro parameters in `src/vision/smooth-result.ts`, now covering Gestures. It filters drawing only; the result feed, exports and the measuring panels read raw results.
+- **Stability meter**: `src/panels/lab/stability*` measures landmark and box spread in source pixels over 3 s, raw beside smoothed, and identity switches over 60 s. It listens only while the Lab tab is mounted.
+- **Ruler shapes**: `src/panels/ruler/` adds paths and areas (`shapes.ts`, `derive-shapes.ts`), a rectified top-down view (`topdown.ts`), an optional one-term radial lens fit (`lens.ts`) and SVG and CSV export (`export-plan.ts`). Every value is the direct geometric value; every error is 2 standard deviations of the seeded Monte Carlo over all tapped points.
 
 ## Telemetry bus
 

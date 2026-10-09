@@ -1,22 +1,33 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useStudio } from "../../studio-context";
 import { resultsText, type Derived } from "./derive";
-import { BASIS, DEFAULT_SAMPLES, TAP_SIGMA_SCREEN_PX } from "./monte-carlo";
+import { DEFAULT_SAMPLES, TAP_SIGMA_SCREEN_PX } from "./monte-carlo";
+import ShapeResults from "./shape-results";
 import type { RulerState } from "./store";
 
 /** Value ± error for each measurement, what the error covers, and a copy
  * button. Copying writes text to the clipboard; nothing is uploaded. */
-export default function Results({ s, d }: { s: RulerState; d: Derived }) {
+export default function Results({
+  s,
+  d,
+  show,
+}: {
+  s: RulerState;
+  d: Derived;
+  /** False when the picture is moving or there is none: any number shown then
+   * would belong to a frame that is no longer on screen. */
+  show: boolean;
+}) {
   const { notice } = useStudio();
   async function copy() {
     try {
-      await navigator.clipboard.writeText(resultsText(s, d, BASIS));
+      await navigator.clipboard.writeText(resultsText(s, d));
       notice("Results copied.");
     } catch {
       notice("Copy was blocked by the browser. Select the results instead.");
     }
   }
-  if (!d.rows.length) return null;
+  if (!show || (!d.rows.length && !d.shapes.length)) return null;
   return (
     <section className="ruler-block" aria-label="Results">
       <h3>Results</h3>
@@ -38,14 +49,16 @@ export default function Results({ s, d }: { s: RulerState; d: Derived }) {
             ))}
           </li>
         ))}
+        <ShapeResults rows={d.shapes} />
       </ol>
       <p className="ruler-basis">
-        Each value is the distance between your taps. Its bar is 2 standard
-        deviations over {DEFAULT_SAMPLES} simulated tap errors of{" "}
-        {TAP_SIGMA_SCREEN_PX} screen pixels.
+        Each value is the direct geometric value from your taps. Its bar is 2
+        standard deviations over {DEFAULT_SAMPLES} simulated tap errors of{" "}
+        {TAP_SIGMA_SCREEN_PX} screen pixels, applied to every tapped point, the
+        four reference corners included.
       </p>
       <p className="ruler-basis" data-testid="ruler-basis">
-        {BASIS}
+        {d.basis}
       </p>
       <button className="button" onClick={() => void copy()}>
         Copy results

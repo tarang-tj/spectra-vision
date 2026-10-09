@@ -1,4 +1,8 @@
 import { COLORS } from "../vision/types";
+import { finerFor, finerOption, finerText } from "./lib/finer";
+import FinerSetting from "./lib/finer-setting";
+import { drawChip } from "./lib/hud";
+import { filterSummary, getFilter, shows } from "./lib/object-filter";
 import type { ModeDef } from "./types";
 
 const objects: ModeDef = {
@@ -9,9 +13,13 @@ const objects: ModeDef = {
   task: {
     kind: "object",
     model: "efficientdet_lite0.tflite",
+    preciseModel: "efficientdet_lite2.tflite",
     options: { scoreThreshold: 0.1, maxResults: 20 },
-    delegate: "CPU",
+    // Finer names (modes/lib/finer.ts): off unless the user turns it on.
+    live: finerOption,
+    delegate: "AUTO",
   },
+  controls: FinerSetting,
   hint: "Switch to Hands. Pinch to paint.",
   demo: {
     still: "demo/studio.png",
@@ -22,8 +30,18 @@ const objects: ModeDef = {
   // Tracked boxes with corner brackets and a label. A selected track dims the rest.
   drawBase(ctx, frame) {
     const { rect, mirror } = frame,
-      selected = frame.settings.selected;
+      filter = getFilter(),
+      // A selected box whose class is hidden selects nothing, so the boxes
+      // that are shown are not all dimmed for a row nobody can see.
+      selected = frame.tracks.some(
+        (t) => t.id === frame.settings.selected && !shows(t.label, filter),
+      )
+        ? null
+        : frame.settings.selected;
     frame.tracks.forEach((t, index) => {
+      // A class the filter hides is not drawn. `index` stays the track's own,
+      // which is what the effects look up.
+      if (!shows(t.label, filter)) return;
       const color = COLORS[(t.id - 1) % COLORS.length],
         b = t.box,
         q = frame.project({ x: mirror ? b.x + b.w : b.x, y: b.y }),
@@ -53,7 +71,8 @@ const objects: ModeDef = {
         ctx.lineTo(x, y + c * sy);
       });
       ctx.stroke();
-      const label = `${t.label}  ${(t.score * 100).toFixed(0)}% · ${String(t.id).padStart(2, "0")}`;
+      const finer = finerFor(t),
+        label = `${t.label}  ${(t.score * 100).toFixed(0)}% · ${finer ? `${finerText(finer)} · ` : ""}${String(t.id).padStart(2, "0")}`;
       ctx.font = "600 12px Inter Variable, sans-serif";
       const tw = ctx.measureText(label).width + 14,
         lx = Math.min(Math.max(q.x, rect.x), rect.x + rect.w - tw),
@@ -65,14 +84,23 @@ const objects: ModeDef = {
       frame.emit("after", "object", index);
       ctx.restore();
     });
+    // Say plainly that boxes are being hidden.
+    const note = filterSummary(filter);
+    if (note)
+      drawChip(ctx, frame, note, rect.x + 8, rect.y + rect.h - 40, "#ffd18d");
   },
   inspector: (frame) =>
-    frame.tracks.map((t) => ({
-      key: t.id,
-      label: t.label,
-      detail: `${Math.round(t.score * 100)}%`,
-      point: { x: t.box.x + t.box.w / 2, y: t.box.y + t.box.h / 2 },
-      color: COLORS[(t.id - 1) % COLORS.length],
-    })),
+    frame.tracks
+      .filter((t) => shows(t.label))
+      .map((t) => {
+        const finer = finerFor(t);
+        return {
+          key: t.id,
+          label: t.label,
+          detail: `${Math.round(t.score * 100)}%${finer ? ` · ${finerText(finer)}` : ""}`,
+          point: { x: t.box.x + t.box.w / 2, y: t.box.y + t.box.h / 2 },
+          color: COLORS[(t.id - 1) % COLORS.length],
+        };
+      }),
 };
 export default objects;

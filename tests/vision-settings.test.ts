@@ -16,20 +16,20 @@ afterEach(() => vi.unstubAllGlobals());
 const load = () => import("../src/vision/settings");
 
 describe("measurement settings", () => {
-  it("default to smoothing off and Fast", async () => {
+  it("default to smoothing on and Fast", async () => {
     const s = await load();
-    expect(s.smoothingOn()).toBe(false);
+    expect(s.smoothingOn()).toBe(true);
     expect(s.getPrecision()).toBe("fast");
   });
   it("are remembered on this device and read back on the next visit", async () => {
     const s = await load();
-    s.setSmoothing(true);
+    s.setSmoothing(false);
     s.setPrecision("precise");
-    expect(store.get("spectra.smooth.v1")).toBe("on");
+    expect(store.get("spectra.smooth.v1")).toBe("off");
     expect(store.get("spectra.precision.v1")).toBe("precise");
     vi.resetModules();
     const again = await load();
-    expect(again.smoothingOn()).toBe(true);
+    expect(again.smoothingOn()).toBe(false);
     expect(again.getPrecision()).toBe("precise");
   });
   it("ignore a stored value they do not know", async () => {
@@ -58,8 +58,8 @@ describe("measurement settings", () => {
       },
     });
     const s = await load();
-    s.setSmoothing(true);
-    expect(s.smoothingOn()).toBe(true);
+    s.setSmoothing(false);
+    expect(s.smoothingOn()).toBe(false);
   });
   it("pick the precise model only where a task has one", async () => {
     const s = await load(),

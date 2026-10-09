@@ -2,7 +2,7 @@
 // Two page-wide settings that change how landmarks are measured, kept in
 // localStorage so they are remembered on this device and never leave it:
 //   smoothing  filter the landmarks that are DRAWN (the session export and the
-//              result feed always keep the raw values). Off by default.
+//              result feed always keep the raw values). On by default.
 //   precision  "fast" runs each task's `model`; "precise" runs its
 //              `preciseModel` where it has one. Fast by default, so CI and
 //              slow machines keep the small models on CPU.
@@ -52,7 +52,7 @@ function createSetting<T extends string>(
   };
 }
 
-const smoothing = createSetting("spectra.smooth.v1", "off", ["off", "on"]),
+const smoothing = createSetting("spectra.smooth.v1", "on", ["off", "on"]),
   precision = createSetting<Precision>("spectra.precision.v1", "fast", [
     "fast",
     "precise",

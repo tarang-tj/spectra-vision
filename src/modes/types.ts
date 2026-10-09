@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import { isRecord } from "../registry";
 import type { Frame, FrameData } from "../vision/frame";
 import type { Point, TaskSpec, VisionResult } from "../vision/types";
@@ -38,6 +39,9 @@ export type ModeDef = {
    * trail (frame.tracks, the motion map). Only for detections that are
    * separate objects; off by default. */
   tracked?: boolean;
+  /** Extra controls for this mode, shown with the inspector's model settings
+   * (for example Body's People). Rendered by the Inspect panel. */
+  controls?: ComponentType;
   /** Extra, optional keys for this result's entry in the exported session
    * (blendshapes, gestures, per-task results). The v1 keys of an entry are
    * fixed and cannot be replaced from here. */

@@ -17,10 +17,10 @@ const segment: ModeDef = {
     kind: "segment",
     model: "selfie_multiclass_256x256.tflite",
     options: { outputCategoryMask: false, outputConfidenceMasks: true },
-    // This model is about nine times faster on a real GPU than on CPU. The
-    // worker refuses a software-rendered GPU, and the page then restarts the
-    // task on CPU, so the delegate shown is always the one that ran.
-    delegate: "GPU",
+    // This model is about ten times faster on a real GPU than on CPU. AUTO
+    // picks the GPU only where the page has a hardware renderer (the worker
+    // still refuses a software one), so the delegate shown is the one that ran.
+    delegate: "AUTO",
   },
   hint: "Select a class to tint it. Select Background to blur it.",
   demo: {

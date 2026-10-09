@@ -1,0 +1,65 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+.library-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.library-note {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.library-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.library-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.library-search {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+.library-search input {
+  min-height: 40px;
+  padding: 0 10px;
+}
+.library-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.library-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 40px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.library-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  flex: 1;
+}
+.library-list input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
+.library-list small {
+  color: var(--muted);
+  text-align: right;
+}

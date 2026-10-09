@@ -219,11 +219,13 @@ input[type="range"]::-moz-range-thumb {
   }
   /* The list takes the room left in the rail (the effect switches used to
      sit here), and is never shorter than its three v1 rows. */
+  /* It grows but never shrinks under its own content: when a mode's settings
+     make the panel taller than the rail, the panel scrolls instead of the
+     list collapsing under the motion map. */
   .frame-list {
     display: flex;
     flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 1 0 auto;
   }
   .detections {
     flex: 1 1 140px;

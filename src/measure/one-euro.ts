@@ -107,11 +107,19 @@ export class LandmarkSmoother {
   }
 }
 
+/** Centre jump (fraction of the frame, between two results) that restarts a slot. */
+export const SLOT_JUMP = 0.2;
+
 /** Several lists at once (two hands, two faces). A list keeps its filters only
  * while it keeps its `key` (for hands, the handedness label), so two hands that
  * swap places in the output are never blended into each other. */
 export class LandmarkSetSmoother {
-  private lists: { key: string; smoother: LandmarkSmoother }[] = [];
+  private lists: {
+    key: string;
+    smoother: LandmarkSmoother;
+    cx: number;
+    cy: number;
+  }[] = [];
 
   constructor(private readonly options: OneEuroOptions = {}) {}
 
@@ -132,7 +140,25 @@ export class LandmarkSetSmoother {
         list = this.lists[i] = {
           key,
           smoother: new LandmarkSmoother(this.options),
+          cx: NaN,
+          cy: NaN,
         };
+      // Slots are matched by index, so when people change order or one leaves,
+      // a slot can suddenly hold someone else. A centre that jumps by more
+      // than SLOT_JUMP of the frame between two results is a different body:
+      // start its filters again instead of sliding the old skeleton across.
+      let cx = 0,
+        cy = 0;
+      for (const p of points) {
+        cx += p.x;
+        cy += p.y;
+      }
+      cx /= points.length || 1;
+      cy /= points.length || 1;
+      if (Math.hypot(cx - list.cx, cy - list.cy) > SLOT_JUMP)
+        list.smoother.reset();
+      list.cx = cx;
+      list.cy = cy;
       return list.smoother.smooth(points, timeMs);
     });
   }

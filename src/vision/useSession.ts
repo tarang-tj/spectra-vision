@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { tasksOf } from "../modes";
 import type { ModeDef } from "../modes";
 import { exportedSize, frameLimit } from "../session-export";
-import { Tracker } from "./tracker";
+import { STEADY_TRACKER, Tracker } from "./tracker";
 import type { Source, Track, VisionResult } from "./types";
 
 const NO_TRACKS: Track[] = [];
@@ -28,7 +28,7 @@ export function useSession(
       tracks: Track[];
       fps: number | null;
     }>({ key, tracks: NO_TRACKS, fps: null });
-  const tracker = useRef(new Tracker()),
+  const tracker = useRef(new Tracker(STEADY_TRACKER)),
     history = useRef<unknown[]>([]),
     counted = useRef(0),
     limit = useRef(1),

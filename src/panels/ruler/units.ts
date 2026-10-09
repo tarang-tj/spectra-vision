@@ -15,3 +15,13 @@ export const fromMm = (mm: number, unit: Unit): number => mm / MM_PER[unit];
 export const toMm = (value: number, unit: Unit): number => value * MM_PER[unit];
 export const isUnit = (value: unknown): value is Unit =>
   typeof value === "string" && (UNITS as readonly string[]).includes(value);
+
+/** Square millimetres to the chosen unit squared. */
+export const areaFromMm2 = (mm2: number, unit: Unit): number =>
+  mm2 / MM_PER[unit] ** 2;
+/** Label for an area in `unit`, e.g. "cm²". */
+export const areaUnit = (unit: Unit): string => `${unit}²`;
+/** The larger everyday area unit that fits the chosen length unit: square
+ * metres for metric units, square feet for inches and feet. */
+export const bigAreaUnit = (unit: Unit): Unit =>
+  unit === "in" || unit === "ft" ? "ft" : "m";

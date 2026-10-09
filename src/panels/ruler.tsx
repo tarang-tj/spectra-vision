@@ -1,9 +1,19 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useStudio } from "../studio-context";
 import { derive } from "./ruler/derive";
+import LensSection from "./ruler/lens-section";
+import PlanPanel from "./ruler/plan-panel";
 import ReferencePicker from "./ruler/reference-picker";
 import Results from "./ruler/results";
-import { clear, setUnit, toggleSwap, undo, useRuler } from "./ruler/store";
+import ShapeTools, { openShape } from "./ruler/shape-tools";
+import {
+  clear,
+  isEmpty,
+  setUnit,
+  toggleSwap,
+  undo,
+  useRuler,
+} from "./ruler/store";
 import { UNITS } from "./ruler/units";
 import { useRulerStage } from "./ruler/use-stage";
 import type { PanelDef } from "./types";
@@ -16,19 +26,40 @@ function Ruler() {
   const s = useRuler(),
     d = derive(s),
     { paused, frame } = useStudio(),
-    { freeze, resume } = useRulerStage(),
-    still = paused || frame.source?.element instanceof HTMLImageElement,
-    pending = s.measures.some((m) => m.b === null);
+    hasSource = !!frame.source,
+    still =
+      hasSource &&
+      (paused || frame.source?.element instanceof HTMLImageElement),
+    { freeze, resume } = useRulerStage(still),
+    // Values belong to the picture they were measured on: not to a frame of
+    // another photo that has not been drawn over yet.
+    show = still && s.generation === frame.source?.generation,
+    pending = s.measures.some((m) => m.b === null),
+    open = openShape(s);
 
   let step: string;
-  if (!d.reference) step = d.problem ?? "";
+  if (!hasSource) step = "Choose a camera, photo or demo first.";
   else if (!still)
     step =
-      "Freeze the picture, or tap it, then tap the four corners of the reference.";
+      s.tool === "edge" || d.reference
+        ? "Freeze the picture, then tap on it. A moving picture cannot be measured."
+        : (d.problem ?? "");
+  else if (s.tool === "edge")
+    step =
+      "Tap three or more points along an edge that is straight in reality, then press Finish edge. Do at least two edges.";
+  else if (!d.reference) step = d.problem ?? "";
   else if (s.corners.length < 4)
     step = `Tap corner ${s.corners.length + 1} of 4 of the ${d.reference.label}, in any order.`;
   else if (d.problem) step = d.problem;
-  else if (pending) step = "Tap the other end of the span.";
+  else if (s.tool === "path" || s.tool === "area") {
+    const n = open?.pts.length ?? 0,
+      finish = s.tool === "area" ? "Close outline" : "Finish path";
+    if (!n)
+      step = `Tap each point of the ${s.tool === "area" ? "outline" : "path"} in order.`;
+    else if (n < 3)
+      step = `${n} point${n === 1 ? "" : "s"} placed. Tap at least ${3 - n} more.`;
+    else step = `${n} points placed. Tap more, or press ${finish}.`;
+  } else if (pending) step = "Tap the other end of the span.";
   else
     step = "Tap two points to measure between them. Drag any handle to adjust.";
 
@@ -53,7 +84,7 @@ function Ruler() {
         </p>
       ))}
       <div className="ruler-group" role="group" aria-label="Ruler actions">
-        {still && paused ? (
+        {hasSource && still && paused ? (
           <button className="button" onClick={resume}>
             Resume live view
           </button>
@@ -64,10 +95,10 @@ function Ruler() {
             </button>
           )
         )}
-        <button className="button" onClick={undo} disabled={!s.corners.length}>
+        <button className="button" onClick={undo} disabled={isEmpty(s)}>
           Undo
         </button>
-        <button className="button" onClick={clear} disabled={!s.corners.length}>
+        <button className="button" onClick={clear} disabled={isEmpty(s)}>
           Clear
         </button>
         {d.sheet && (
@@ -91,11 +122,19 @@ function Ruler() {
           ))}
         </div>
       </section>
-      <Results s={s} d={d} />
+      <ShapeTools s={s} />
+      <Results s={s} d={d} show={show} />
+      <PlanPanel s={s} d={d} show={show} />
+      <LensSection s={s} d={d} />
       <ul className="ruler-guidance">
         <li>
           The long side of the reference is guessed from how it looks. If the
           labels on its edges are swapped, press Swap sides.
+        </li>
+        <li>
+          For a whole room, one sheet of paper gives wide error bars, because
+          the bar grows with distance from the reference. Lay a bigger object of
+          known size flat on the floor and enter it as Custom to tighten them.
         </li>
         <li>
           Measure only points that lie on the same surface as the reference.

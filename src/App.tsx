@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { getFilter, onFilterChange } from "./modes/lib/object-filter";
 import Header from "./components/Header";
 import CameraPicker from "./components/CameraPicker";
 import CameraStage from "./components/CameraStage";
@@ -81,7 +88,9 @@ export default function App() {
       }),
       [vision.result, tracks, mirror, settings, input.source, aspect],
     ),
-    rows = useMemo(() => mode.inspector(data), [mode, data]),
+    // The Objects class filter changes the rows without a new result.
+    filterVersion = useSyncExternalStore(onFilterChange, getFilter),
+    rows = useMemo(() => mode.inspector(data), [mode, data, filterVersion]),
     count = useMemo(
       () => mode.count?.(data) ?? rows.length,
       [mode, data, rows],

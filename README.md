@@ -63,7 +63,11 @@ The **Ruler** tab measures real distances on one flat surface, in any mode, with
 
 1. Lay a reference of known size flat on the surface: a US Letter or A4 sheet, a bank card, or a custom size. A sheet of paper is better than a card for anything room sized.
 2. Freeze the frame, or upload a photo, and tap the reference's four corners. Drag a handle to refine it; a loupe magnifies the spot under the pointer.
-3. Tap two points on the same surface to measure between them.
+3. Choose a shape and tap its points on the same surface: a **span** (two points), a **path** (three or more, with each leg and the total) or an **area** (an outline you close, giving area and perimeter).
+
+A **top-down view** redraws the surface to scale from the frozen frame, with the shapes, their labels and a scale bar; anything beyond the horizon or too far away to resolve is left blank. **Save plan** downloads that drawing as an SVG and every measurement as a CSV, with the photo included only if you tick the box. An optional **lens correction** fits one radial term from edges you mark as straight (at least two edges of four or more points each). It is applied only when those edges are bent clearly beyond tap noise, the fit at least halves that bend, and an edge left out of the fit agrees; otherwise the panel says it was not applied and why. Either way it shows the distance from straight before and after in pixels. When some of an error bar's simulated taps could not be used, the row says what share was kept and that the bar is a lower bound.
+
+For a room, one sheet of paper gives a wide error (roughly 10 to 25 percent on a room-sized area), because every measurement is extrapolated from four corners. Lay out a larger reference you have measured once, such as a taped rectangle or a rug, and enter it as a custom size.
 
 Each result is shown as a value plus or minus an error. The value is the distance between your taps. The error is two standard deviations of 400 repeats of the calculation with every tapped point moved by a small random amount (a standard deviation of 1.5 screen pixels), and it covers tap placement only. It does not cover lens distortion, points that are off the surface, or a bent or misprinted reference. The error grows as you measure further from the reference, and the panel warns when a span is more than 10 times the reference's long side. A tap beyond the surface's horizon reads "not measured". On a camera or video the points belong to the frozen frame and are cleared when the picture runs again. Ruler has been checked against synthetic images with known answers, not yet against a tape measure.
 
@@ -79,9 +83,15 @@ The **Presence** tab measures how a person presents on camera, from the Fusion m
 
 Every figure carries the noise measured during calibration, and the thresholds are shown and adjustable. Head direction and stillness are shares of the time the face or body was actually seen, and each row states that time next to the session's length, so time spent turned away or out of frame is visible instead of dropped. Hand starts show the raw count beside the rate. A signal the models never saw says "not seen". A session ends by itself at 40,000 samples, which is roughly 45 minutes. Presence gives no score, grade or advice. Nothing is saved unless you export the summary as JSON or Markdown. It has been checked on synthetic motion and on the demo input, which shows no face, so the head and expression figures have not yet been checked on a real person.
 
+### Library
+
+The **Library** tab lists every class the loaded models can name: the object detector's 80, and about 1,000 more once **Finer names** is on. Search it, see how many frames each class was seen in this session, and choose which classes Objects shows (only these, or hide these). The stage says when a filter is on, and one button resets it. Finer names runs a second model on the crop of each tracked object, about once a second per object, and shows its name beside the detector's with its own score, never under 30 percent and never in place of the detector's label. Its classes come from ImageNet, which has no "person", so a person may get a clothing name.
+
 ### Detection settings
 
-The Inspect tab has two detection settings, both at their old behaviour by default. **Smooth landmarks** steadies drawn body, hand and face points with a One Euro filter; exported sessions always keep the raw values. **Precise** loads the larger BlazePose Full model (9.4 MB, Apache-2.0) for Body and Fusion in place of the Lite one; it is slower without a GPU.
+The Inspect tab holds the detection settings for the current mode. **Smooth landmarks** (on by default) steadies drawn body, hand, face and gesture points with a One Euro filter; exported sessions and the measuring panels always keep the raw values. **Precise** loads a larger model on first use where one exists: BlazePose Full (9.4 MB) for Body and Fusion, EfficientDet-Lite2 (12.1 MB) for Objects. It is slower, most of all without a GPU. **People** lets Body follow up to four people, ordered left to right; it does not keep identities between frames. Models now run on the GPU automatically when the browser reports a real graphics card, and on the CPU otherwise; the Lab shows which one is really running and lets you switch.
+
+Objects keep their ids through short misses and crossings, and a new object needs two sightings before it is shown, so one-frame flickers get no id.
 
 ### Lab
 
@@ -89,6 +99,7 @@ The **Lab** tab in the right rail measures the app on your device. Nothing it sh
 
 - Inference latency of each running model over the last 10 seconds: p50, p95, maximum and sample count, with a chart.
 - Processed and rendered frames per second, and dropped frames.
+- A stability meter: how much the landmarks or boxes of the running mode move, in source pixels over 3 seconds, raw beside smoothed, and identity switches over the last minute. On a moving input the figure includes the real motion.
 - A CPU or GPU switch per model. The line under it says what is really running. A GPU request falls back to CPU, with the reason shown, when the browser draws WebGL in software, has no WebGL2, or does not start the GPU path in bounded time.
 - How long each model took to load, and a card for each model in use with its file, size, SHA-256 and license.
 - A benchmark you run yourself: choose modes and delegates, then **Run benchmark**. Each run measures 20 seconds after a 2-second warm-up on whatever source is on the stage (a demo source follows the mode being measured) and can be saved as `spectra-benchmark.json` or `spectra-benchmark.md`, with the device, browser, GPU name and protocol recorded in the file.
@@ -181,19 +192,19 @@ Camera / local file / labeled still or animated demo
 
 React and TypeScript manage controls and source ownership. Modes, effects and inspector panels are plugins: one file in `src/modes`, `src/effects` or `src/panels` is one entry, found at build time. A dedicated worker per model performs synchronous inference away from the UI thread; the main thread renders the stage. Results from a replaced source or a previous mode are discarded and never reach a mode's drawing or inspector. Model initialization has a timeout and retry path, and mode changes terminate the previous workers. Model inference is capped at roughly 15 updates/second per model; canvas rendering is capped at roughly 30 draws/second. Actual throughput depends on your device. [docs/architecture.md](docs/architecture.md) has the plugin contracts.
 
-| Path                                                                   | Responsibility                                                                    |
-| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `src/modes/`, `src/effects/`, `src/panels/`                            | The seven modes, ten effects and the Inspect, Lab, Ruler and Presence panels      |
-| `src/vision/useSource.ts`                                              | Permission, file decoding, camera ownership, cancellation and cleanup             |
-| `src/vision/useVision.ts`, `task-runner.ts`, `public/vision-worker.js` | Model lifecycle, bounded frame transfer, delegate fallback, stale-result guards   |
-| `src/vision/useSession.ts`, `tracker.ts`                               | Object association, measured frame rate and the frames kept for export            |
-| `src/stage/`                                                           | The render loop, draw order, effect lifecycle and the shared WebGL2 layer         |
-| `src/gl/`                                                              | WebGL2 kit for effects: shaders, targets, bloom, particles, line batches          |
-| `src/shell/`, `src/components/`                                        | Shortcuts, command palette, immersive view, recorder, service worker registration |
-| `src/telemetry/`                                                       | Measured events and the statistics the Lab shows                                  |
-| `public/sw.js`                                                         | Offline cache rules                                                               |
-| `scripts/models.json` / `setup-assets.mjs`                             | Pinned model URLs, verified hashes, runtime and notices                           |
-| `tests/`                                                               | Unit tests and real-model browser workflows                                       |
+| Path                                                                   | Responsibility                                                                        |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `src/modes/`, `src/effects/`, `src/panels/`                            | The seven modes, ten effects and the Inspect, Lab, Library, Ruler and Presence panels |
+| `src/vision/useSource.ts`                                              | Permission, file decoding, camera ownership, cancellation and cleanup                 |
+| `src/vision/useVision.ts`, `task-runner.ts`, `public/vision-worker.js` | Model lifecycle, bounded frame transfer, delegate fallback, stale-result guards       |
+| `src/vision/useSession.ts`, `tracker.ts`                               | Object association, measured frame rate and the frames kept for export                |
+| `src/stage/`                                                           | The render loop, draw order, effect lifecycle and the shared WebGL2 layer             |
+| `src/gl/`                                                              | WebGL2 kit for effects: shaders, targets, bloom, particles, line batches              |
+| `src/shell/`, `src/components/`                                        | Shortcuts, command palette, immersive view, recorder, service worker registration     |
+| `src/telemetry/`                                                       | Measured events and the statistics the Lab shows                                      |
+| `public/sw.js`                                                         | Offline cache rules                                                                   |
+| `scripts/models.json` / `setup-assets.mjs`                             | Pinned model URLs, verified hashes, runtime and notices                               |
+| `tests/`                                                               | Unit tests and real-model browser workflows                                           |
 
 ## Practical limits
 
