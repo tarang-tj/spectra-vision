@@ -107,6 +107,17 @@ describe("confirmation", () => {
     expect(new Set(shown.flat())).toEqual(new Set([1]));
   });
 
+  it("confirms an object found only every 5th frame at 15 fps", () => {
+    const t = new Tracker(STEADY_TRACKER),
+      seen: number[] = [];
+    for (let i = 0; i < 100; i++)
+      if (i % 5 === 0) seen.push(...ids(t.update([det(0.4)], i * 66)));
+      else t.update([], i * 66);
+    // Hidden only on its first sighting (20 sightings), one id throughout.
+    expect(seen).toHaveLength(19);
+    expect(new Set(seen).size).toBe(1);
+  });
+
   it("shows a still object from its second result and keeps its id at one result per second", () => {
     for (const gap of [900, 1000, 1500, 3000]) {
       const t = new Tracker(STEADY_TRACKER),

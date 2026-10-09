@@ -39,6 +39,32 @@ function bent(k: number): Pt[][] {
   ].map((l) => l.map((p) => invertLens(lens, p)));
 }
 
+describe("lens inversion", () => {
+  const W = 1920,
+    H = 1080;
+  it("returns every tapped point of the picture to a millionth of a pixel", () => {
+    for (const k of [-0.29, -0.1, 0.05, 0.3, 0.59]) {
+      const lens = lensFor(k, W, H);
+      let worst = 0;
+      for (let x = 0; x <= W; x += 96)
+        for (let y = 0; y <= H; y += 90) {
+          const p = { x, y },
+            back = invertLens(lens, applyLens(lens, p));
+          worst = Math.max(worst, Math.hypot(back.x - p.x, back.y - p.y));
+        }
+      expect(worst, `k=${k}`).toBeLessThan(1e-6);
+    }
+  });
+  it("says there is no tapped point for a position outside the corrected picture", () => {
+    // Strong barrel correction pulls the corners in: the frame's own corner is
+    // then outside what any tap can reach.
+    const lens = lensFor(-0.29, W, H),
+      none = invertLens(lens, { x: 0, y: 0 });
+    expect(Number.isFinite(none.x) || Number.isFinite(none.y)).toBe(false);
+    expect(none.x).toBeLessThan(0);
+  });
+});
+
 describe("radial lens fit", () => {
   it("moves a point out and back", () => {
     const lens = lensFor(0.2, W, H),

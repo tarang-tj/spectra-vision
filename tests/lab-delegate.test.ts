@@ -160,6 +160,8 @@ describe("task runner: bounded GPU start and the delegate switch", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
   });
   afterEach(() => {
+    // A GPU failure is remembered for the page: forget it between tests.
+    chooseDelegate("hand", "GPU");
     chooseDelegate("hand", null);
     vi.useRealTimers();
     vi.restoreAllMocks();

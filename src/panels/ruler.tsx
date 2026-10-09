@@ -72,7 +72,8 @@ function Ruler() {
         Lay a sheet of known size flat on the surface you want to measure, in
         the same plane as the things you measure. Works on one flat surface
         only. The further a span is from the reference, the larger its error. A
-        sheet of paper beats a card for rooms.
+        sheet of paper beats a card for rooms. Points under the stage buttons
+        cannot be tapped.
       </p>
       <ReferencePicker s={s} />
       <p className="ruler-step" role="status" data-testid="ruler-step">

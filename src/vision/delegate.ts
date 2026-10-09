@@ -1,15 +1,14 @@
 import type { Delegate, TaskKind, TaskSpec } from "./types";
 import { probeWebgl } from "./webgl-probe";
 
-/** Decide how to recover when a vision task fails. A GPU task that has not
- * produced a single result yet is retried once on CPU; anything else (a CPU
- * failure, or a GPU task that was working and then broke) is a real error.
- * Returns the delegate to retry with, or null to surface the error. */
-export function fallbackDelegate(
-  active: Delegate,
-  produced: boolean,
-): Delegate | null {
-  return active === "GPU" && !produced ? "CPU" : null;
+/** Decide how to recover when a vision task fails. A GPU task is retried once
+ * on CPU, whether or not it had produced results (a lost context, a driver
+ * reset or a tab moved to another GPU breaks a task that worked). A CPU
+ * failure is a real error, and because a task that fell back is on CPU, it
+ * can never fall back twice. Returns the delegate to retry with, or null to
+ * surface the error. */
+export function fallbackDelegate(active: Delegate): Delegate | null {
+  return active === "GPU" ? "CPU" : null;
 }
 
 /** How long a GPU task may take to load before it is given up on, counted
@@ -47,13 +46,16 @@ export function gpuStartTimeout(progress: StartProgress): string | null {
 }
 
 /** Why a renderer of this name cannot serve the GPU delegate, or null when it
- * can. A software renderer (SwiftShader, llvmpipe) does run the GPU path, but
+ * can. A software renderer (SwiftShader, llvmpipe, lavapipe, WARP, Mesa OffScreen,
+ * Generic Renderer) does run the GPU path, but
  * so slowly that one abandoned start keeps the browser's GPU process busy long
  * after the fallback (measured: 16 s to minutes), and a worker cannot be
  * interrupted inside that call. So it is refused before it starts. */
 export function softwareRendererReason(name: string | null): string | null {
   if (name === null) return "this browser gave no WebGL2 context";
-  return /swiftshader|llvmpipe|softpipe|software|basic render/i.test(name)
+  return /swiftshader|llvmpipe|lavapipe|softpipe|\bwarp\b|mesa offscreen|generic renderer|software|basic render/i.test(
+    name,
+  )
     ? `this browser draws WebGL in software (${name})`
     : null;
 }
@@ -88,6 +90,19 @@ export function autoDelegate(): Delegate {
 const choices = new Map<TaskKind, Delegate>(),
   watchers = new Set<(kind: TaskKind) => void>();
 
+// GPU failures seen on this page, per task kind, with the reason. A runner
+// that starts while one is on record begins on CPU instead of repeating it.
+const gpuFailures = new Map<TaskKind, string>();
+
+/** Record that GPU failed for this kind, so the next runner starts on CPU. */
+export const rememberGpuFailure = (kind: TaskKind, reason: string) => {
+  gpuFailures.set(kind, reason);
+};
+
+/** Why GPU failed earlier on this page for this kind, or null. */
+export const gpuFailure = (kind: TaskKind): string | null =>
+  gpuFailures.get(kind) ?? null;
+
 /** The delegate a task should start on: the lab's choice, else the mode's
  * (with "AUTO" settled by autoDelegate). Always a real delegate. */
 export function requestedDelegate(
@@ -98,9 +113,11 @@ export function requestedDelegate(
 }
 
 /** Choose a delegate for a task kind (null: back to the mode's own choice).
- * Running tasks of that kind restart on it. */
+ * Running tasks of that kind restart on it. Choosing GPU also clears the
+ * remembered GPU failure and tries again, even if GPU was already chosen. */
 export function chooseDelegate(kind: TaskKind, delegate: Delegate | null) {
-  if ((choices.get(kind) ?? null) === delegate) return;
+  const retry = delegate === "GPU" && gpuFailures.delete(kind);
+  if ((choices.get(kind) ?? null) === delegate && !retry) return;
   if (delegate) choices.set(kind, delegate);
   else choices.delete(kind);
   for (const watcher of [...watchers]) watcher(kind);
