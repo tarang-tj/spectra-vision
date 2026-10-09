@@ -65,7 +65,7 @@ The **Ruler** tab measures real distances on one flat surface, in any mode, with
 2. Freeze the frame, or upload a photo, and tap the reference's four corners. Drag a handle to refine it; a loupe magnifies the spot under the pointer.
 3. Tap two points on the same surface to measure between them.
 
-Each result is shown as a value plus or minus an error. The value is the distance between your taps. The error is two standard deviations of 400 repeats of the calculation with every tapped point moved by a small random amount, and it covers tap placement only. It does not cover lens distortion, points that are off the surface, or a bent or misprinted reference. The error grows as you measure further from the reference, and the panel warns when a span is more than 10 times the reference's long side. A tap beyond the surface's horizon reads "not measured". On a camera or video the points belong to the frozen frame and are cleared when the picture runs again. Ruler has been checked against synthetic images with known answers, not yet against a tape measure.
+Each result is shown as a value plus or minus an error. The value is the distance between your taps. The error is two standard deviations of 400 repeats of the calculation with every tapped point moved by a small random amount (a standard deviation of 1.5 screen pixels), and it covers tap placement only. It does not cover lens distortion, points that are off the surface, or a bent or misprinted reference. The error grows as you measure further from the reference, and the panel warns when a span is more than 10 times the reference's long side. A tap beyond the surface's horizon reads "not measured". On a camera or video the points belong to the frozen frame and are cleared when the picture runs again. Ruler has been checked against synthetic images with known answers, not yet against a tape measure.
 
 ### Presence (beta)
 
@@ -81,7 +81,7 @@ Every figure carries the noise measured during calibration, and the thresholds a
 
 ### Detection settings
 
-The Inspect tab has two switches, both off by default. **Smooth landmarks** steadies drawn body, hand and face points with a One Euro filter; exported sessions always keep the raw values. **Precise** loads the larger BlazePose Full model (9.4 MB, Apache-2.0) for Body and Fusion in place of the Lite one; it is slower without a GPU.
+The Inspect tab has two detection settings, both at their old behaviour by default. **Smooth landmarks** steadies drawn body, hand and face points with a One Euro filter; exported sessions always keep the raw values. **Precise** loads the larger BlazePose Full model (9.4 MB, Apache-2.0) for Body and Fusion in place of the Lite one; it is slower without a GPU.
 
 ### Lab
 

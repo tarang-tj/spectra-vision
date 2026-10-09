@@ -38,11 +38,9 @@ export function handRows(
     return {
       id,
       label: name,
-      denominator: {
-        what: `a hand labelled ${label} was seen`,
-        seenMs,
-        coveredMs: sum(w),
-      },
+      // Not a `denominator`: this share is the seen time over the covered
+      // time itself, so the two times are stated as plain detail.
+      detail: `${(seenMs / 1000).toFixed(1)} s of ${(sum(w) / 1000).toFixed(1)} s`,
       measured: measured(
         percent,
         step,
