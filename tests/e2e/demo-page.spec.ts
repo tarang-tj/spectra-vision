@@ -23,7 +23,7 @@ for (const viewport of [
   { width: 1536, height: 1024 },
   { width: 390, height: 844 },
 ])
-  test(`watch page plays the version 2 demo with captions at ${viewport.width} px`, async ({
+  test(`watch page plays the version 2.2 demo with captions at ${viewport.width} px`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);
@@ -37,10 +37,10 @@ for (const viewport of [
     const loaded = await facts(page);
     expect(loaded.error).toBeNull();
     expect(new URL(loaded.source).pathname).toBe(
-      new URL("spectra-demo-v2.0.0.mp4", page.url()).pathname,
+      new URL("spectra-demo-v2.2.0.mp4", page.url()).pathname,
     );
-    expect(loaded.duration).toBeGreaterThanOrEqual(60);
-    expect(loaded.duration).toBeLessThanOrEqual(75);
+    expect(loaded.duration).toBeGreaterThanOrEqual(75);
+    expect(loaded.duration).toBeLessThanOrEqual(95);
     expect([loaded.width, loaded.height]).toEqual([1920, 1080]);
     const poster = await page.request.get(loaded.poster);
     expect(poster.status()).toBe(200);
@@ -85,7 +85,7 @@ for (const viewport of [
     );
     expect(sought.time).toBeCloseTo(38, 1);
     expect(sought.state).toBeGreaterThanOrEqual(2);
-    expect(sought.caption).toContain("Fusion runs the pose");
+    expect(sought.caption).toContain("The Ruler now measures a room");
 
     // Nothing spills sideways, and the way back to the studio stays in the
     // deployed folder.

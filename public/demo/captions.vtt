@@ -1,71 +1,61 @@
 WEBVTT
 
-00:00:00.600 --> 00:00:05.565
-This is Spectra version two, a computer
-vision studio that runs in your browser.
+00:00:00.450 --> 00:00:05.200
+This is SPECTRA, a computer vision studio that runs entirely in your browser.
 
-00:00:05.665 --> 00:00:09.435
-Objects mode tracks each
-detected box with an ID.
+00:00:05.200 --> 00:00:07.818
+Objects tracks each box with an ID.
 
-00:00:09.867 --> 00:00:13.402
-Body draws a skeleton from
-thirty-three pose landmarks.
+00:00:07.918 --> 00:00:11.453
+The new Library lists every class the detector can name.
 
-00:00:13.833 --> 00:00:17.667
-In Hands, a pinch of thumb and
-index finger paints with light.
+00:00:12.248 --> 00:00:14.994
+Hide one, and its boxes leave the stage.
 
-00:00:17.767 --> 00:00:21.985
-The inputs are the app's own demo
-photos, panned as short clips.
+00:00:16.780 --> 00:00:21.723
+Finer names adds a second model's name beside each label, with its own score.
 
-00:00:22.400 --> 00:00:29.242
-New in version two: Face fits a mesh of four hundred
-seventy-eight points and scores smile, jaw and brows.
+00:00:21.873 --> 00:00:25.238
+Its classes have no person, so person stays hidden.
 
-00:00:29.667 --> 00:00:32.306
-Segment cuts the person out of the background.
+00:00:25.800 --> 00:00:28.781
+Then a quick pass through the other modes, with Aura on.
 
-00:00:32.733 --> 00:00:36.482
-Gestures names the hand shape
-it sees, here an open palm.
+00:00:28.931 --> 00:00:31.314
+Each take skips its model's load time.
 
-00:00:36.900 --> 00:00:40.499
-Fusion runs the pose, hand
-and face models together.
+00:00:37.351 --> 00:00:41.740
+The Ruler now measures a room, here a synthetic floor with known sizes.
 
-00:00:40.900 --> 00:00:43.326
-Effects are drawn from the model output.
+00:00:43.439 --> 00:00:47.273
+The reference is 1.2 by 0.9 metres.
 
-00:00:43.426 --> 00:00:45.532
-Plasma arcs between fingertips.
+00:00:51.047 --> 00:00:54.390
+The taped outline is 3.84 square metres.
 
-00:00:45.933 --> 00:00:48.167
-Hologram is built from the cutout.
+00:00:56.508 --> 00:01:01.601
+SPECTRA reads 3.8, plus or minus 0.3 square metres.
 
-00:00:48.600 --> 00:00:50.578
-Aura glows around the body.
+00:01:01.701 --> 00:01:05.705
+The bar is about nine percent and covers tap placement only.
 
-00:00:51.000 --> 00:00:56.391
-The Lab charts measured latency and
-switches a model between CPU and GPU.
+00:01:05.805 --> 00:01:10.279
+The top-down view redraws the floor to scale, and Save plan exports it.
 
-00:00:56.800 --> 00:00:59.653
-Its benchmark measures twenty seconds per run.
+00:01:10.429 --> 00:01:13.751
+Presence measures head direction, hand movement and sway.
 
-00:01:00.067 --> 00:01:03.368
-The video skips the wait
-and shows the real result.
+00:01:13.901 --> 00:01:17.458
+Each has an error, and it says not seen when it cannot see.
 
-00:01:03.933 --> 00:01:06.210
+00:01:20.981 --> 00:01:25.028
+In the Lab, the stability meter shows raw jitter beside smoothed.
+
+00:01:26.142 --> 00:01:28.419
 The same studio fits a phone screen.
 
-00:01:06.633 --> 00:01:08.718
-Everything runs in your browser.
-
-00:01:08.818 --> 00:01:10.391
+00:01:29.942 --> 00:01:31.515
 Nothing is uploaded.
 
-00:01:10.967 --> 00:01:12.604
+00:01:31.615 --> 00:01:33.251
 The link is on screen.
