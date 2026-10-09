@@ -216,18 +216,38 @@ export function fitRadial(
   return out(null);
 }
 
+/** No tapped point maps to the asked position: far off the picture, so
+ * callers that test "is it on the photo" leave it blank. */
+const NOWHERE: Pt = { x: -Infinity, y: -Infinity };
+
 /** The tapped (distorted) position that `applyLens` would move to `q`.
- * Fixed-point iteration; converges for the small coefficients allowed here. */
+ * `applyLens` scales the offset from the centre by 1 + k r^2 / norm^2, so the
+ * inverse is one equation in the radius, r + k r^3 / norm^2 = |q - c|, solved
+ * by Newton's method from the centre outwards. The earlier fixed-point loop
+ * was about a pixel off near the coefficient limits and diverged at the
+ * corners for strong barrel values. With a negative coefficient the corrected
+ * picture is smaller than the frame, so a position outside it has no tapped
+ * point at all: that returns a point off the picture, never a guess. */
 export function invertLens(lens: Lens | null, q: Pt): Pt {
   if (!lens || lens.k === 0) return q;
-  let x = q.x,
-    y = q.y;
-  for (let i = 0; i < 20; i++) {
-    const dx = x - lens.cx,
-      dy = y - lens.cy,
-      f = 1 + (lens.k * (dx * dx + dy * dy)) / (lens.norm * lens.norm);
-    x = lens.cx + (q.x - lens.cx) / f;
-    y = lens.cy + (q.y - lens.cy) / f;
+  const dx = q.x - lens.cx,
+    dy = q.y - lens.cy,
+    target = Math.hypot(dx, dy);
+  if (target === 0) return q;
+  const a = lens.k / (lens.norm * lens.norm);
+  // Start inside the fold and stay there: the forward map rises from the
+  // centre up to the fold radius, so the wanted root is the first one.
+  const fold = a < 0 ? Math.sqrt(-1 / (3 * a)) : Infinity;
+  let r = Math.min(target, fold * 0.5);
+  for (let i = 0; i < 40; i++) {
+    const slope = 1 + 3 * a * r * r;
+    if (slope <= 1e-9) return NOWHERE;
+    const step = (r + a * r * r * r - target) / slope;
+    r -= step;
+    if (r < 0 || r >= fold) return NOWHERE;
+    if (Math.abs(step) < 1e-10) break;
   }
-  return { x, y };
+  if (Math.abs(r + a * r * r * r - target) > 1e-6) return NOWHERE;
+  const scale = r / target;
+  return { x: lens.cx + dx * scale, y: lens.cy + dy * scale };
 }
