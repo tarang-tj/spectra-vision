@@ -516,6 +516,27 @@ function handlerFor(kind) {
   }
 }
 
+// A WebGL context of this worker's own, held only while a GPU task runs. When
+// the browser's graphics process dies or the GPU is reset, every context is
+// lost together, so this one says what MediaPipe's own context will not.
+let gpuWatch = null;
+function watchGpu() {
+  if (gpuWatch) return;
+  try {
+    const gl = new OffscreenCanvas(1, 1).getContext("webgl2");
+    if (gl) gpuWatch = gl;
+  } catch {
+    /* No WebGL2 in this worker: nothing to watch. */
+  }
+}
+const gpuLost = () => {
+  try {
+    return !!gpuWatch && gpuWatch.isContextLost();
+  } catch {
+    return false;
+  }
+};
+
 self.onmessage = async ({ data }) => {
   try {
     if (data.type === "init") {
@@ -553,6 +574,7 @@ self.onmessage = async ({ data }) => {
         if (Object.keys(rest).length) await task.setOptions(rest);
         if (asked !== undefined) wanted = asked;
       }
+      if (spec.delegate === "GPU") watchGpu();
       // The detector is ready now; the classifier loads in the background.
       void setFiner(spec.kind === "object" ? wanted : null, data.base);
       self.postMessage({
@@ -586,6 +608,12 @@ self.onmessage = async ({ data }) => {
         await task.setOptions({ runningMode: "VIDEO" });
         sourceGeneration = generation;
       }
+      // A lost GPU does not make the model throw: it goes on returning empty
+      // results. Fail loudly instead, so the page restarts this task on CPU.
+      if (gpuLost())
+        throw new Error(
+          "the graphics process ended and the GPU context was lost",
+        );
       const time = Math.max(data.time, lastTime + 1);
       lastTime = time;
       const start = performance.now();

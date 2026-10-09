@@ -226,6 +226,10 @@ A task asks for `"CPU"` or `"GPU"` in its `TaskSpec`. The three v1 modes, Face, 
 - **Time bounds.** A GPU task that hangs posts no error, so the start is bounded: `GPU_READY_LIMIT_MS` (8 s, from the worker's "downloaded" message to "ready"; the worker fetches the model and the wasm itself and says when the bytes are in, so a slow connection is not counted against the GPU) and `GPU_FIRST_RESULT_LIMIT_MS` (5 s from the first frame sent to the first result). Past either, `gpuStartTimeout` gives the reason and the runner restarts on CPU. The check runs on a 250 ms timer only while a GPU task is loading or owes its first result. The decision is bounded; how fast CPU then recovers on a renderer slow enough to trigger it is not.
 - The delegate in use is on every `TaskResult` and on the `model` telemetry event, with a `note` saying why it differs from the one requested.
 
+### A lost GPU
+
+When the browser's graphics process ends or the GPU is reset, MediaPipe's GPU task does not throw: it goes on returning empty results, so a mode would show nothing while the Lab still said "Running on GPU". The worker therefore holds one WebGL2 context of its own while a GPU task runs and checks `isContextLost()` before every frame; a lost context is posted as an error, and the runner restarts the task on CPU with a note. `scripts/gpu-loss-check.mjs` is the manual check: it opens the app in system Chrome on the real GPU, ends that browser's graphics process and reports whether the mode fell back and kept finding things. CI has no GPU, so there the path is covered by `tests/modes-worker-gpu-loss.test.ts` with a stand-in context.
+
 ### WebGL probe
 
 `probeWebgl()` opens one throwaway 1 x 1 WebGL2 context, reads the renderer name, releases the context and keeps the answer. The delegate refusal and the effects tray both use it, so the page asks once. When the browser has no WebGL2 it logs one `console.warn`; nothing in that path logs an error.
