@@ -60,6 +60,13 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  /* The strip spans the stage: only the controls inside it take pointer
+     events, so taps in the gaps reach the picture (the Ruler needs them). */
+  pointer-events: none;
+}
+.playback > *,
+.stage-tools {
+  pointer-events: auto;
 }
 .playback {
   min-width: 0;
