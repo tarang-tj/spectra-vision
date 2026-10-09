@@ -1,7 +1,10 @@
 import { telemetry } from "../telemetry/bus";
 import { beginStatus } from "../telemetry/task-status";
 import {
+  chosenDelegate,
   fallbackDelegate,
+  gpuFailure,
+  rememberGpuFailure,
   gpuStartTimeout,
   gpuUnavailable,
   onDelegateChoice,
@@ -22,7 +25,8 @@ export type RunnerEvents = {
   onError(message: string): void;
 };
 /** Owns one vision worker for one task: start, one in-flight frame at a time,
- * a GPU to CPU restart when GPU fails or does not get going in bounded time,
+ * a GPU to CPU restart when GPU fails (before or after it worked) or does not
+ * get going in bounded time,
  * a restart when the lab switches the delegate, and teardown. */
 export type TaskRunner = {
   readonly spec: TaskSpec;
@@ -76,14 +80,27 @@ export function createTaskRunner(
     clock = 0,
     firstSent = 0,
     watchdog: ReturnType<typeof setTimeout> | undefined,
-    note = "";
+    note = "",
+    // True while this runner is on CPU because GPU failed (here or earlier).
+    failedOver = false;
   // Settle what to run on: the requested delegate, unless GPU is requested
   // where it is known not to be usable. Then it is CPU from the start.
   const choose = () => {
     requested = requestedDelegate(spec);
-    const refused = requested === "GPU" ? gpuUnavailable() : null;
-    active = refused ? "CPU" : requested;
-    note = refused ? `GPU was requested but ${refused}. Running on CPU.` : "";
+    const refused = requested === "GPU" ? gpuUnavailable() : null,
+      // A GPU failure earlier on this page stands until the Lab's GPU choice
+      // clears it; an explicit GPU choice is never overridden by it.
+      failed =
+        requested === "GPU" && chosenDelegate(spec.kind) !== "GPU"
+          ? gpuFailure(spec.kind)
+          : null;
+    active = refused || failed ? "CPU" : requested;
+    failedOver = !refused && !!failed;
+    note = refused
+      ? `GPU was requested but ${refused}. Running on CPU.`
+      : failed
+        ? `GPU failed earlier on this page (${failed}). Running on CPU. Choose GPU in the Lab to try again.`
+        : "";
   };
   choose();
   let status = beginStatus(spec.kind, model, requested, active, note);
@@ -103,7 +120,7 @@ export function createTaskRunner(
   const fail = (message: string) => {
     busy = false;
     ready = false;
-    const retry = fallbackDelegate(active, produced);
+    const retry = fallbackDelegate(active);
     if (!retry && model !== spec.model && !produced) {
       // The precise model never produced a frame (offline on first use, a
       // failed download): run the standard one and say so, so a saved
@@ -124,12 +141,19 @@ export function createTaskRunner(
       events.onError(message);
       return;
     }
-    // GPU never produced a frame: start over on CPU with a fresh worker.
+    // GPU failed: start over on CPU with a fresh worker, and remember it so
+    // the next runner of this kind does not repeat the failure.
     console.warn(
       `[spectra vision] ${spec.kind}: ${active} failed (${message}); using ${retry}.`,
     );
     stop();
-    note = `${active} was requested but ${message.replace(/^Vision model failed: /, "")}. Running on ${retry}.`;
+    const reason = message.replace(/^Vision model failed: /, "");
+    rememberGpuFailure(spec.kind, reason);
+    note = produced
+      ? `GPU stopped working (${reason}). Now running on ${retry}.`
+      : `${active} was requested but ${reason}. Running on ${retry}.`;
+    produced = false;
+    failedOver = true;
     active = retry;
     events.onRestart?.();
     start();
@@ -242,7 +266,10 @@ export function createTaskRunner(
   // The lab's delegate switch: load this task again on the delegate chosen.
   const unwatch = onDelegateChoice((kind) => {
     const next = requestedDelegate(spec);
-    if (disposed || kind !== spec.kind || next === requested) return;
+    // The same request still restarts a runner that failed over, so a
+    // renewed GPU choice in the Lab tries GPU again.
+    if (disposed || kind !== spec.kind || (next === requested && !failedOver))
+      return;
     stop();
     choose();
     ready = busy = produced = false;

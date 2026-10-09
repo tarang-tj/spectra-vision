@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { mergeResults } from "../src/vision/merge";
-import { fallbackDelegate } from "../src/vision/delegate";
+import { chooseDelegate, fallbackDelegate } from "../src/vision/delegate";
 import { createTaskRunner } from "../src/vision/task-runner";
 import { telemetry } from "../src/telemetry/bus";
 import type { TaskKind, TaskResult, TaskSpec } from "../src/vision/types";
@@ -90,11 +90,17 @@ describe("merging task results into one vision result", () => {
 });
 
 describe("GPU to CPU fallback", () => {
-  it("retries on CPU only when GPU never produced a result", () => {
-    expect(fallbackDelegate("GPU", false)).toBe("CPU");
-    expect(fallbackDelegate("GPU", true)).toBeNull();
-    expect(fallbackDelegate("CPU", false)).toBeNull();
-    expect(fallbackDelegate("CPU", true)).toBeNull();
+  // Changed from "only when GPU never produced a result": a GPU task that
+  // worked and then failed (lost context, driver reset) now also retries on
+  // CPU. The produced argument is gone; CPU still never retries.
+  it("retries a failed GPU task on CPU, with or without earlier results", () => {
+    expect(fallbackDelegate("GPU")).toBe("CPU");
+    expect(fallbackDelegate("CPU")).toBeNull();
+  });
+  afterEach(() => {
+    // Forget the GPU failure these tests record for "pose".
+    chooseDelegate("pose", "GPU");
+    chooseDelegate("pose", null);
   });
 
   // A stand-in for the Worker object, so the runner's real restart path runs.
@@ -176,14 +182,20 @@ describe("GPU to CPU fallback", () => {
     runner.dispose();
     expect(workers[1].terminated).toBe(true);
   });
-  it("does not fall back once GPU has produced a result, or for a CPU task", () => {
+  // Changed from "does not fall back once GPU has produced a result": that
+  // rule is the gap this fix closes. A working GPU task that breaks now
+  // restarts once on CPU; a CPU task's failure is still a real error.
+  it("falls back once when a working GPU task breaks, but not for a CPU task", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     const working = harness(gpu);
     working.workers[0].reply({ type: "ready", delegate: "GPU" });
     working.workers[0].reply({ type: "result", result: result("pose", 5, 3) });
     expect(working.events.onResult.mock.calls[0][0].delegate).toBe("GPU");
     working.workers[0].reply({ type: "error", error: "lost" });
-    expect(working.workers).toHaveLength(1);
-    expect(working.events.onError).toHaveBeenCalledWith("lost");
+    expect(working.workers).toHaveLength(2);
+    expect(working.workers[1].posted[0].task?.delegate).toBe("CPU");
+    expect(working.events.onError).not.toHaveBeenCalled();
+    working.runner.dispose();
     const cpu = harness({ ...gpu, delegate: "CPU" });
     cpu.workers[0].reply({ type: "error", error: "bad model" });
     expect(cpu.workers).toHaveLength(1);
