@@ -2,6 +2,7 @@
 import BenchmarkPanel from "./lab/benchmark-panel";
 import LiveCharts from "./lab/live-charts";
 import { LoadTimes, ModelCards } from "./lab/model-cards";
+import Stability from "./lab/stability";
 import type { PanelDef } from "./types";
 import "./lab/lab.css";
 
@@ -16,6 +17,7 @@ function Lab() {
         Measured in this browser, on this device. Nothing is sent anywhere.
       </p>
       <LiveCharts />
+      <Stability />
       <LoadTimes />
       <BenchmarkPanel />
       <ModelCards />

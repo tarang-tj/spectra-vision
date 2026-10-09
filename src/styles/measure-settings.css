@@ -22,3 +22,29 @@
   color: var(--muted);
   margin: 0;
 }
+
+/* The Lab's stability meter (src/panels/lab/stability.tsx). Not a .lab-block,
+   so the Lab's own chart count stays what its tests expect. */
+.lab-stability {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.lab-stability h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.lab-stability canvas {
+  display: block;
+  width: 100%;
+  height: 84px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.lab-stability [hidden] {
+  display: none;
+}

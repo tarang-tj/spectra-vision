@@ -5,7 +5,7 @@ import { usePrecision, useSmoothing } from "../vision/settings";
 import type { Precision } from "../vision/settings";
 import "../styles/measure-settings.css";
 
-const LANDMARKS = new Set(["pose", "hand", "face"]);
+const LANDMARKS = new Set(["pose", "hand", "face", "gesture"]);
 const LEVELS: { id: Precision; label: string }[] = [
   { id: "fast", label: "Fast" },
   { id: "precise", label: "Precise" },
