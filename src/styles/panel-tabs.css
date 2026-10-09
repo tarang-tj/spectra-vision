@@ -14,6 +14,14 @@
   border-radius: 5px;
   font-size: 13px;
 }
+.panel-tab-tag {
+  margin-left: 4px;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: 4px;
+  opacity: 0.75;
+}
 .panel-tabs button[aria-pressed="true"] {
   color: #07130e;
   background: var(--accent);

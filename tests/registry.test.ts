@@ -95,8 +95,8 @@ describe("the shipped registries", () => {
     expect(panels.map((p) => p.id)).toEqual([
       "inspect",
       "lab",
-      "presence",
       "ruler",
+      "presence",
     ]);
   });
 });

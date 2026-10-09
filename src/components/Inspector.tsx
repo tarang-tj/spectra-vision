@@ -20,6 +20,11 @@ export default function Inspector() {
               onClick={() => studio.openPanel(panel.id)}
             >
               {panel.label}
+              {panel.tag && (
+                <span className="panel-tab-tag" aria-hidden="true">
+                  {panel.tag}
+                </span>
+              )}
             </button>
           ))}
         </nav>

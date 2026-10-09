@@ -171,7 +171,8 @@ function Presence() {
 const presence: PanelDef = {
   id: "presence",
   label: "Presence",
-  order: 40,
+  order: 50,
+  tag: "Beta",
   Component: Presence,
 };
 export default presence;
