@@ -21,8 +21,23 @@ export const BASIS =
 /** The same, when a one-parameter lens correction was applied to every point. */
 export const BASIS_LENS =
   "Tap placement only, after a one-parameter lens correction applied to every point. Not included: remaining lens distortion, points off the surface, a bent or misprinted reference.";
-export const basisFor = (lens: Lens | null): string =>
-  lens ? BASIS_LENS : BASIS;
+/** The same, when further references or known spans were fused into the
+ * surface: the bar then comes from repeating that whole solve. */
+export const basisFused = (
+  lens: boolean,
+  spans: number,
+  tapeSigmaMm: number,
+): string =>
+  `Tap placement on every tapped point, the corners of every reference ${spans ? "and the ends of every known span " : ""}included${spans ? `, and a tape uncertainty of ${tapeSigmaMm} mm on each typed length` : ""}${lens ? ", after a one-parameter lens correction applied to every point" : ""}. Not included: ${lens ? "remaining " : ""}lens distortion, points off the surface, a bent or misprinted reference${spans ? ", a typed length that is wrong by more than the tape uncertainty" : ""}.`;
+export const basisFor = (
+  lens: Lens | null,
+  fused?: { spans: number; tapeSigmaMm: number } | null,
+): string =>
+  fused
+    ? basisFused(!!lens, fused.spans, fused.tapeSigmaMm)
+    : lens
+      ? BASIS_LENS
+      : BASIS;
 
 export const MIN_SAMPLES = 300;
 export const DEFAULT_SAMPLES = 400;

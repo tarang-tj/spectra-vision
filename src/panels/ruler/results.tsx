@@ -4,6 +4,7 @@ import { resultsText, type Derived } from "./derive";
 import { DEFAULT_SAMPLES, TAP_SIGMA_SCREEN_PX } from "./monte-carlo";
 import ShapeResults from "./shape-results";
 import type { RulerState } from "./store";
+import TapeEntry from "./tape-entry";
 
 /** Value ± error for each measurement, what the error covers, and a copy
  * button. Copying writes text to the clipboard; nothing is uploaded. */
@@ -47,6 +48,7 @@ export default function Results({
                 {w}
               </p>
             ))}
+            <TapeEntry s={s} d={d} index={r.index} />
           </li>
         ))}
         <ShapeResults rows={d.shapes} />
@@ -56,6 +58,8 @@ export default function Results({
         standard deviations over {DEFAULT_SAMPLES} simulated tap errors of{" "}
         {TAP_SIGMA_SCREEN_PX} screen pixels, applied to every tapped point, the
         four reference corners included.
+        {d.sheet?.fused &&
+          " With more than one known size, every one of those simulations also moves the corners of each further reference, the ends of each known span and each typed length, and solves the whole surface again."}
       </p>
       <p className="ruler-basis" data-testid="ruler-basis">
         {d.basis}

@@ -7,6 +7,7 @@ import { derive } from "./derive";
 import { drawExtensions } from "./extensions";
 import { orderCorners, type Pt } from "./homography";
 import { dot, INK, LINE, REF, tag } from "./overlay-parts";
+import { drawRefs } from "./overlay-refs";
 import { drawShapes } from "./overlay-shapes";
 import { takeSnapshot, type Snapshot } from "./snapshot";
 import { bindSource, bindStillness, getState } from "./store";
@@ -149,6 +150,7 @@ export function drawRuler(ctx: CanvasRenderingContext2D, frame: Frame) {
       dot(ctx, c.x, c.y, REF, String(i + 1));
     });
   }
+  drawRefs(ctx, s, at);
 
   s.measures.forEach((m, i) => {
     const a = at(m.a);

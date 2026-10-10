@@ -1,6 +1,12 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Everything the panel and the overlay show, computed from the store's state.
 import { formatMeasured } from "../../measure/format";
+import {
+  knownSizes,
+  tapeTest,
+  type KnownSizes,
+  type TapeTest,
+} from "./derive-known";
 import { shapeRows, type ShapeRow } from "./derive-shapes";
 import { applyLens, fitRadial, lensFor, type Lens, type LensFit } from "./lens";
 import {
@@ -45,6 +51,11 @@ export type Derived = {
   basis: string;
   /** Warnings about the reference itself. */
   referenceWarnings: string[];
+  /** Further references and known spans, and what the fused solve made of
+   * them; null until the first reference is solved. */
+  known: KnownSizes | null;
+  /** Typed tape readings set against the measured spans. */
+  tape: TapeTest;
 };
 
 const FAR = 10;
@@ -109,8 +120,7 @@ export function derive(s: RulerState): Derived {
     lens =
       s.lensOn && lensFit?.improved && s.source
         ? lensFor(lensFit.k, s.source.w, s.source.h)
-        : null,
-    basis = basisFor(lens);
+        : null;
   if (!reference) problem = "Enter both sides of the custom reference in mm.";
   else if (s.corners.length === 4) {
     // Tap order is raw; the solve uses the corners after any lens correction.
@@ -140,6 +150,14 @@ export function derive(s: RulerState): Derived {
   }
   // Only for points placed before their own uncertainty was stored.
   const sigma = TAP_SIGMA_SCREEN_PX / (s.scale > 0 ? s.scale : 1),
+    // Further references and known spans go into the one plane map here;
+    // with none, the sheet is the first reference's own solve, untouched.
+    known = sheet ? knownSizes(s, sheet, lens, sigma) : null;
+  if (known) sheet = known.sheet;
+  const basis = basisFor(lens, sheet?.fused),
+    // With other known sizes in view, distance from the first reference is
+    // no longer what limits a span.
+    far = sheet?.fused ? Infinity : FAR,
     rows: Row[] = [];
   s.measures.forEach((m, index) => {
     if (!m.b || !sheet || !reference) return;
@@ -154,7 +172,7 @@ export function derive(s: RulerState): Derived {
         lens,
       ),
       warnings: string[] = [];
-    if (span && span.mm > FAR * reference.long)
+    if (span && span.mm > far * reference.long)
       warnings.push(
         "This span is more than 10 times the reference's long side. Small errors in the reference grow with distance, so trust it less than the bar suggests.",
       );
@@ -179,7 +197,7 @@ export function derive(s: RulerState): Derived {
         s.unit,
         lens,
         basis,
-        FAR,
+        far,
       )
     : [];
   const value = {
@@ -193,27 +211,11 @@ export function derive(s: RulerState): Derived {
     lens,
     basis,
     referenceWarnings,
+    known,
+    tape: tapeTest(s, rows, known?.knownUsed ?? new Set()),
   };
   memo = { state: s, value };
   return value;
 }
 
-/** Plain-text results for the clipboard. Nothing is uploaded. */
-export function resultsText(s: RulerState, d: Derived): string {
-  if (!d.reference || (!d.rows.length && !d.shapes.length)) return "";
-  const ref = d.reference,
-    lines: string[] = [];
-  lines.push(`Reference: ${ref.label}, ${ref.long} x ${ref.short} mm`);
-  d.rows.forEach((r) => lines.push(`Measurement ${r.index + 1}: ${r.text}`));
-  d.shapes.forEach((r) => {
-    if (r.areaText) lines.push(`${r.label} area: ${r.areaText}`);
-    if (r.areaAltText) lines.push(`${r.label} area: ${r.areaAltText}`);
-    lines.push(
-      `${r.label} ${r.kind === "area" ? "perimeter" : "length"}: ${r.lengthText}`,
-    );
-    r.legTexts.forEach((t, i) => lines.push(`${r.label} leg ${i + 1}: ${t}`));
-  });
-  lines.push(`Error bar: 2 standard deviations. ${d.basis}`);
-  if (s.swap) lines.push("Reference sides were swapped by hand.");
-  return lines.join("\n");
-}
+export { resultsText } from "./results-text";
