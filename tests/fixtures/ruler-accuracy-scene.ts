@@ -76,7 +76,7 @@ export function uniform(seed: number): () => number {
   let s = seed >>> 0;
   const next = () => (s = (Math.imul(s, 1664525) + 1013904223) >>> 0);
   // Two draws per number: the high bits of each are the good ones.
-  return () => ((next() >>> 6) * 67108864 + (next() >>> 5)) / 2 ** 53;
+  return () => ((next() >>> 6) * 134217728 + (next() >>> 5)) / 2 ** 53;
 }
 /** Standard normal numbers from a uniform source (polar method). */
 export function normal(u: () => number): () => number {

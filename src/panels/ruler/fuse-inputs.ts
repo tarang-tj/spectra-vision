@@ -1,7 +1,8 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Which further references and known spans can go into the fused solve, and
 // a plain reason for each one that cannot. Pure: points in, a sheet out.
-import { makeFused } from "./fused-trials";
+import type { FuseInput } from "./fused";
+import { fuseOnce, makeFused } from "./fused-trials";
 import {
   applyHomography,
   degenerateReason,
@@ -25,9 +26,14 @@ export type Fusion = {
   note: string | null;
 };
 
-/** Residual per spare constraint above which the known sizes disagree by more
- * than tap error explains. */
-export const CHI_LIMIT = 3;
+/** The residual (root mean square per spare constraint) that tap and tape
+ * error alone would exceed about once in a thousand solves: the 99.9% point
+ * of chi-squared over its degrees of freedom (Wilson-Hilferty). Above it the
+ * known sizes disagree with each other. */
+export function chiLimit(spare: number): number {
+  const k = 2 / (9 * spare);
+  return Math.sqrt((1 - k + 3.09 * Math.sqrt(k)) ** 3);
+}
 
 const cross = (o: Pt, a: Pt, b: Pt) =>
   (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
@@ -125,16 +131,30 @@ export function fuseSheet(
   });
   if (!goodRects.length && !goodSpans.length)
     return { sheet, rects: rectUse, spans: spanUse, note: null };
-  const fused = makeFused(
-    {
-      first: { taps: sheet.raw ?? sheet.ordered, plane: sheet.plane },
-      rects: goodRects,
-      spans: goodSpans,
-      sigmaPx,
-      tapeSigmaMm,
-    },
-    lens,
-  );
+  const raw: FuseInput = {
+    first: { taps: sheet.raw ?? sheet.ordered, plane: sheet.plane },
+    rects: goodRects,
+    spans: goodSpans,
+    sigmaPx,
+    tapeSigmaMm,
+  };
+  // Which side of a further rectangle is the long one was judged through the
+  // first reference alone, which can be wrong far from it. Solve with each
+  // rectangle turned the other way too, and keep the way that fits better.
+  raw.rects.forEach((r, i) => {
+    const [, b, c] = r.plane;
+    if (b.x === c.y) return;
+    const turned = r.plane.map((p) => ({
+        x: p.x ? c.y : 0,
+        y: p.y ? b.x : 0,
+      })),
+      other = { ...raw, rects: raw.rects.slice() };
+    other.rects[i] = { ...r, plane: turned };
+    const as = fuseOnce(raw, lens),
+      alt = fuseOnce(other, lens);
+    if (alt && (!as || alt.chi < as.chi)) raw.rects[i] = other.rects[i];
+  });
+  const fused = makeFused(raw, lens);
   if (!fused) {
     const why = "the known sizes could not be fused into one surface.",
       drop = (u: Used): Used => (u.used ? { used: false, why } : u);
@@ -150,7 +170,7 @@ export function fuseSheet(
     rects: rectUse,
     spans: spanUse,
     note:
-      fused.chi > CHI_LIMIT
+      fused.spare > 0 && fused.chi > chiLimit(fused.spare)
         ? `The known sizes disagree by ${fused.chi.toFixed(1)} times what tap error explains. Check each size and typed length, and that everything lies on the same surface. The bars do not cover this disagreement.`
         : null,
   };

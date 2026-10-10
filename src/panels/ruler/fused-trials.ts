@@ -29,6 +29,7 @@ export type Fused = {
   /** The first reference's corners as the fused map sees them (flat pixels). */
   corners: Pt[];
   chi: number;
+  spare: number;
   /** Counts of what went in beyond the first reference. */
   rects: number;
   spans: number;
@@ -52,12 +53,22 @@ const TRIAL_TOLERANCE = 1e-6;
  * measured point dragged, a unit changed) keeps its runs. */
 let last: Fused | null = null;
 
+/** One solve of points as tapped (the lens correction is applied here). */
+export function fuseOnce(raw: FuseInput, lens: Lens | null) {
+  const flat = (p: Pt) => applyLens(lens, p),
+    rect = (r: FuseRect): FuseRect => ({ ...r, taps: r.taps.map(flat) });
+  return solveFused({
+    ...raw,
+    first: rect(raw.first),
+    rects: raw.rects.map(rect),
+    spans: raw.spans.map((s) => ({ ...s, a: flat(s.a), b: flat(s.b) })),
+  });
+}
+
 /** Solve the real taps. `raw` holds points as tapped; the lens correction is
  * applied here, as it is to every other point. Null when they do not fuse. */
 export function makeFused(raw: FuseInput, lens: Lens | null): Fused | null {
-  const flat = (p: Pt) => applyLens(lens, p),
-    rect = (r: FuseRect): FuseRect => ({ ...r, taps: r.taps.map(flat) }),
-    pt = (p: Pt) => `${p.x},${p.y},${p.s ?? ""}`,
+  const pt = (p: Pt) => `${p.x},${p.y},${p.s ?? ""}`,
     rk = (r: FuseRect) =>
       [...r.taps.map(pt), ...r.plane.map((c) => `${c.x},${c.y}`)].join(";"),
     key = [
@@ -69,18 +80,14 @@ export function makeFused(raw: FuseInput, lens: Lens | null): Fused | null {
       lens ? `${lens.k}|${lens.cx}|${lens.cy}` : "",
     ].join("/");
   if (last && last.key === key) return last;
-  const solved = solveFused({
-    ...raw,
-    first: rect(raw.first),
-    rects: raw.rects.map(rect),
-    spans: raw.spans.map((s) => ({ ...s, a: flat(s.a), b: flat(s.b) })),
-  });
+  const solved = fuseOnce(raw, lens);
   if (!solved) return null;
   return (last = {
     key,
     h: solved.h,
     corners: solved.corners,
     chi: solved.chi,
+    spare: solved.spare,
     rects: raw.rects.length,
     spans: raw.spans.length,
     tapeSigmaMm: raw.tapeSigmaMm,

@@ -47,6 +47,8 @@ export type FuseSolution = {
   /** Root mean square residual per spare constraint, in standard deviations:
    * about 1 when the known sizes agree as well as tap error allows. */
   chi: number;
+  /** Constraints beyond the unknowns (0 with the first reference alone). */
+  spare: number;
   iterations: number;
   /** The unknowns and the scaling they are in, to start a nearby solve. */
   start: FuseStart;
@@ -300,6 +302,7 @@ export function solveFused(
     h,
     corners,
     chi: spare > 0 ? Math.sqrt(Math.max(0, c) / spare) : 0,
+    spare,
     iterations,
     start: { params: p, image, plane },
   };

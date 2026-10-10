@@ -3,6 +3,7 @@
 // the panel does: tap the first sheet, optionally a second sheet and a known
 // span, then read spans. The scene and its truth come from the fixture; only
 // the measuring is the code under test.
+import { appendFileSync } from "node:fs";
 import { fuseSheet, type Fusion } from "../../src/panels/ruler/fuse-inputs";
 import {
   orderCorners,
@@ -94,3 +95,10 @@ export const exact = (shot: Shot): Setup => ({
   tap: (p) => p,
   tapeMm: KNOWN_MM,
 });
+
+/** Measured numbers for the report: appended to the file named by
+ * RULER_ACCURACY_OUT when it is set, and dropped otherwise. */
+export function record(line: string) {
+  const to = process.env.RULER_ACCURACY_OUT;
+  if (to) appendFileSync(to, `${line}\n`);
+}
