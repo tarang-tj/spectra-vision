@@ -196,7 +196,7 @@ export function measureSpan(
       fromMm(hit.mm, unit),
       fromMm(hit.errorMm, unit),
       unit,
-      basisFor(lens),
+      basisFor(lens, sheet.fused),
     ),
   };
 }

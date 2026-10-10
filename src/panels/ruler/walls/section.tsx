@@ -12,7 +12,7 @@ import { dropGrab } from "./pointer";
 import PreviewPanel from "./preview-panel";
 import WallsResults from "./results";
 import { closeRoom, copyOutline, pickCorner, useWalls } from "./store";
-import { BASIS, heightReason, liveStep } from "./text";
+import { heightReason, liveStep } from "./text";
 
 const LIST = "walls-list";
 
@@ -43,7 +43,7 @@ export default function WallsSection({ show }: { show: boolean }) {
     canSave = !!n && !!mesh && !!n.floorArea;
 
   function save(kind: "obj" | "csv") {
-    if (!n || !mesh) return;
+    if (!n || !mesh || !cur) return;
     try {
       const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
       if (kind === "obj")
@@ -51,14 +51,14 @@ export default function WallsSection({ show }: { show: boolean }) {
           `spectra-room-${stamp}.obj`,
           meshObj(
             mesh,
-            `${mesh.faces.length === 1 ? "Floor only: no height was measured.\n" : ""}${BASIS}`,
+            `${mesh.faces.length === 1 ? "Floor only: no height was measured.\n" : ""}${cur.basis}`,
           ),
           "text/plain",
         );
       else
         download(
           `spectra-room-${stamp}.csv`,
-          wallsCsv(n, s.unit, why),
+          wallsCsv(n, s.unit, why, cur.basis),
           "text/csv",
         );
       notice("Saved to your downloads.");
@@ -123,7 +123,7 @@ export default function WallsSection({ show }: { show: boolean }) {
         <WallsResults n={n} cur={cur} unit={s.unit} why={why} listId={LIST} />
       )}
       {n && mesh && <PreviewPanel mesh={mesh} describedBy={LIST} />}
-      {n && (
+      {n && cur && (
         <>
           <div className="ruler-group" role="group" aria-label="Save the room">
             <button
@@ -143,7 +143,7 @@ export default function WallsSection({ show }: { show: boolean }) {
             bar. Both stay on this device.
           </p>
           <p className="ruler-basis" data-testid="walls-basis">
-            {BASIS}
+            {cur.basis}
           </p>
         </>
       )}

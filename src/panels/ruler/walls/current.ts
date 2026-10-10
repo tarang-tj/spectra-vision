@@ -10,6 +10,7 @@ import { shellMesh, type Mesh } from "./mesh";
 import { measureWalls, type Numbers } from "./numbers";
 import { offPlumb } from "./off-plumb";
 import { getWalls, type WallsState } from "./store";
+import { basisOf } from "./text";
 
 export type Current = {
   camera: Camera | null;
@@ -21,6 +22,8 @@ export type Current = {
   /** The closed shell for the preview and the export. Floor only unless the
    * mean height has a bar; null until the room is closed. */
   mesh: Mesh | null;
+  /** What the bars of `numbers` cover, for this reference and lens. */
+  basis: string;
 };
 
 let memo: {
@@ -39,10 +42,12 @@ export function currentWalls(
 ): Current {
   const camera = cameraOf(s, d),
     // No retakes are simulated until there is something to measure.
-    trials = d.sheet && walls.corners.length ? cameraTrials(s, d) : null;
+    trials = d.sheet && walls.corners.length ? cameraTrials(s, d) : null,
+    basis = basisOf(d);
   if (
     memo &&
     memo.walls === walls &&
+    memo.value.basis === basis &&
     // The camera and its retakes are keyed by content (camera-of.ts), so
     // their identity stands for the sheet and the lens too.
     memo.camera === camera &&
@@ -72,6 +77,7 @@ export function currentWalls(
     numbers,
     mesh: shown && camera ? shellMesh(shown, camera.handed) : null,
     offCorners: d.sheet ? offPlumb(s, d, camera, walls.corners) : [],
+    basis,
   };
   memo = { walls, sheet: d.sheet, lens: d.lens, camera, trials, value };
   return value;
