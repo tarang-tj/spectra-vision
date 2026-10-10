@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Plane geometry for the Ruler, in source pixels (never normalized units, so
 // the aspect ratio is right). Pure: no DOM, no clock, no randomness.
+import type { Fused } from "./fused-trials";
 
 /** `s` is the tap uncertainty (one sd, source pixels) the point was placed
  * with; it rides along so the error bar does not depend on later resizing. */
@@ -20,7 +21,7 @@ export type Mat3 = readonly [
 
 /** Solve A x = b by Gaussian elimination with partial pivoting. A is n x n
  * (row arrays), b has n entries. Null when the system is singular. */
-function solveLinear(a: number[][], b: number[]): number[] | null {
+export function solveLinear(a: number[][], b: number[]): number[] | null {
   const n = b.length,
     m = a.map((row, i) => [...row, b[i]]);
   for (let col = 0; col < n; col++) {
@@ -208,6 +209,9 @@ export type Sheet = {
   /** The corners as tapped (before any lens correction), in `ordered` order.
    * The error bar perturbs these; `ordered` holds what the solve used. */
   raw?: Pt[];
+  /** Set when further references or known spans were fused into `h`. The
+   * error bar then repeats that whole solve instead of the four-point one. */
+  fused?: Fused;
 };
 
 /** Assign the reference's long side by the longer-looking pair of opposite

@@ -141,6 +141,23 @@ export function planCsv(s: RulerState, d: Derived): string {
           r.warnings[0] ?? "not measured",
         );
     });
+    // The tape test: what the tape read, and the reading minus the tape.
+    d.tape.checks.forEach((c) =>
+      rows.push([
+        `span ${c.index + 1}`,
+        "tape",
+        c.tape.split(" ")[0] ?? "",
+        "",
+        u,
+        "",
+        d.basis,
+        [c.difference && `reading minus tape ${c.difference}`, c.verdict]
+          .filter(Boolean)
+          .join("; "),
+      ]),
+    );
+    if (d.tape.tally)
+      rows.push(["tape test", "tally", "", "", "", "", d.basis, d.tape.tally]);
     d.shapes.forEach((r) => {
       const res = r.result;
       if (!res) {

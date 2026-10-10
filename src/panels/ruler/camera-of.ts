@@ -3,6 +3,7 @@
 // jittered taps so that anything built on it can carry an honest error bar.
 import { fitCamera, type Camera } from "../../measure/camera";
 import type { Derived } from "./derive";
+import { fusedRuns } from "./fused-trials";
 import { solveHomography, type Mat3, type Pt } from "./homography";
 import { applyLens } from "./lens";
 import {
@@ -51,7 +52,12 @@ export function cameraOf(s: RulerState, d: Derived): Camera | null {
       h: sheet.h,
       width: s.source.w,
       height: s.source.h,
-      seen: sheet.ordered.map((image, i) => ({ plane: sheet.plane[i], image })),
+      // With further known sizes fused in, the corners are where the fused
+      // map puts them, so the camera agrees with `sheet.h`.
+      seen: (sheet.fused?.corners ?? sheet.ordered).map((image, i) => ({
+        plane: sheet.plane[i],
+        image,
+      })),
       plumbs: allPlumbs().map((l) => ({
         a: applyLens(d.lens, l.a),
         b: applyLens(d.lens, l.b),
@@ -97,15 +103,19 @@ export function cameraTrials(
         gaussian(seededRandom(DEFAULT_SEED)),
         tapSigma(s),
         d.lens,
-      );
+      ),
+      // Retakes of the whole fused solve when there are further known sizes.
+      runs = sheet.fused ? fusedRuns(sheet.fused, n) : null;
     for (let i = 0; i < n; i++) {
-      const corners = base.map(jitter),
+      const corners = runs ? runs[i]?.corners : base.map(jitter),
         lines = plumbs.map((l: PlumbLine) => ({
           a: jitter(l.a),
           b: jitter(l.b),
         })),
-        h = solveHomography(corners, sheet.plane);
-      if (!h) continue;
+        h = runs
+          ? (runs[i]?.h ?? null)
+          : corners && solveHomography(corners, sheet.plane);
+      if (!h || !corners) continue;
       value.trials.push({
         h,
         camera: fitCamera({
