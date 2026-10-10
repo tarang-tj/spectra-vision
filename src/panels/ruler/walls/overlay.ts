@@ -4,13 +4,19 @@
 // heights. An edge whose height is assumed is dashed and says so.
 import { projectPoint } from "../../../measure/camera";
 import type { DrawEnv } from "../extension-types";
+import { isCompact } from "../overlay-labels";
 import { dot, tag } from "../overlay-parts";
+import { isUncertainShort } from "../reading";
 import { currentWalls } from "./current";
 import { heightAt } from "./shell";
 import { getWalls } from "./store";
 import { lengthText } from "./text";
 
 const WALL = "#d9b3ff";
+/** On a narrow stage a length too uncertain to state loses its bar: the
+ * panel has it, and eight bars across a phone are noise. */
+const brief = (text: string) =>
+  isCompact() && isUncertainShort(text) ? "too uncertain" : text;
 type C = { x: number; y: number };
 
 function line(ctx: CanvasRenderingContext2D, a: C, b: C, dashed: boolean) {
@@ -37,8 +43,7 @@ export function drawWalls(ctx: CanvasRenderingContext2D, env: DrawEnv) {
     line(ctx, a, b, false);
     if (numbers)
       tag(
-        ctx,
-        `${i + 1}: ${lengthText(numbers.walls[i], unit, basis)}`,
+        `${i + 1}: ${brief(lengthText(numbers.walls[i], unit, basis))}`,
         (a.x + b.x) / 2 + 6,
         (a.y + b.y) / 2 + 16,
         WALL,
@@ -66,15 +71,20 @@ export function drawWalls(ctx: CanvasRenderingContext2D, env: DrawEnv) {
   top.forEach((t, i) => {
     if (!t) return;
     if (t.own) dot(ctx, t.at.x, t.at.y, WALL, "");
-    const q = numbers?.heights[i] ?? null;
+    const word = isCompact() ? "h" : "height",
+      text = lengthText(
+        t.own ? (numbers?.heights[i] ?? null) : (numbers?.meanHeight ?? null),
+        unit,
+        basis,
+      );
+    // On a narrow stage a height that cannot be stated is left to the panel.
+    if (isCompact() && isUncertainShort(text)) return;
     tag(
-      ctx,
-      t.own
-        ? `height ${lengthText(q, unit, basis)}`
-        : `height assumed ${lengthText(numbers?.meanHeight ?? null, unit, basis)}`,
+      t.own ? `${word} ${text}` : `${word} assumed ${text}`,
       t.at.x + 10,
       t.at.y - 10,
       WALL,
+      "optional",
     );
   });
   base.forEach((p, i) =>
@@ -84,6 +94,8 @@ export function drawWalls(ctx: CanvasRenderingContext2D, env: DrawEnv) {
       p.y,
       WALL,
       walls.pick === i ? `${i + 1} (ceiling next)` : String(i + 1),
+      // The buttons and the wall list name corners by these numbers.
+      "key",
     ),
   );
 }

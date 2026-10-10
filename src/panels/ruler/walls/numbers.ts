@@ -29,6 +29,9 @@ export type Numbers = {
    * could use. */
   trials: number;
   kept: number;
+  /** The shown numbers that some retakes could not produce, by name, in the
+   * order the panel lists them. Empty when `kept` is 1. */
+  partial: string[];
 };
 
 export type NumbersInput = {
@@ -44,6 +47,16 @@ export type NumbersInput = {
 
 /** A number is shown only if this share of the retakes could produce it. */
 const MIN_KEPT = 0.8;
+
+/** What each number of `flatten` is called in the panel, in the same order. */
+const names = (s: Shell): string[] => [
+  ...s.walls.map((_, i) => `the length of wall ${i + 1}`),
+  ...s.heights.map((_, i) => `the height at corner ${i + 1}`),
+  "the ceiling height",
+  "the floor area",
+  "the wall area",
+  "the volume",
+];
 
 /** Every number of a shell in one fixed order, so trials line up. */
 const flatten = (s: Shell): (number | null)[] => [
@@ -85,12 +98,15 @@ export function measureWalls(input: NumbersInput): Numbers | null {
     });
   }
   let kept = 1;
-  const need = Math.max(2, MIN_KEPT * trials.length),
+  const partial: string[] = [],
+    called = names(shell),
+    need = Math.max(2, MIN_KEPT * trials.length),
     q = direct.map((value, i): Q | null => {
       if (value === null || n[i] < need) return null;
       const mean = sum[i] / n[i],
         variance = Math.max(0, (sumSq[i] - n[i] * mean * mean) / (n[i] - 1));
       kept = Math.min(kept, n[i] / trials.length);
+      if (n[i] < trials.length) partial.push(called[i]);
       return { value, error: 2 * Math.sqrt(variance) };
     }),
     w = shell.walls.length,
@@ -105,5 +121,6 @@ export function measureWalls(input: NumbersInput): Numbers | null {
     volume: q[w + c + 3],
     trials: trials.length,
     kept,
+    partial,
   };
 }

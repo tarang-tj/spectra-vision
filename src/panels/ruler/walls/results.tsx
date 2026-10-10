@@ -1,5 +1,5 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import { formatMeasured } from "../../../measure/format";
+import { isUncertainText, readingText } from "../reading";
 import type { Unit } from "../units";
 import type { Current } from "./current";
 import type { Numbers, Q } from "./numbers";
@@ -23,7 +23,12 @@ function Row({
   return (
     <li>
       <span className="ruler-label">{label}</span>
-      <output className="ruler-value" data-testid={id} {...data}>
+      <output
+        className="ruler-value"
+        data-testid={id}
+        data-uncertain={isUncertainText(text) || undefined}
+        {...data}
+      >
         {text}
       </output>
     </li>
@@ -56,7 +61,7 @@ export default function WallsResults({
           id="walls-area"
           text={
             n.floorArea
-              ? formatMeasured(areaOf(n.floorArea, unit, basis))
+              ? readingText(areaOf(n.floorArea, unit, basis))
               : closed
                 ? "not measured: the outline crosses itself, so it has no single area"
                 : "not measured: close the room first"
@@ -68,7 +73,7 @@ export default function WallsResults({
           id="walls-height"
           text={
             n.meanHeight
-              ? formatMeasured(lengthOf(n.meanHeight, unit, basis))
+              ? readingText(lengthOf(n.meanHeight, unit, basis))
               : none
           }
           data={attrs(n.meanHeight, "mm")}
@@ -77,16 +82,14 @@ export default function WallsResults({
           label="Wall area (openings not taken out)"
           id="walls-wall-area"
           text={
-            n.wallArea ? formatMeasured(areaOf(n.wallArea, unit, basis)) : none
+            n.wallArea ? readingText(areaOf(n.wallArea, unit, basis)) : none
           }
           data={attrs(n.wallArea, "mm2")}
         />
         <Row
           label="Volume (floor area times mean height)"
           id="walls-volume"
-          text={
-            n.volume ? formatMeasured(volumeOf(n.volume, unit, basis)) : none
-          }
+          text={n.volume ? readingText(volumeOf(n.volume, unit, basis)) : none}
           data={attrs(n.volume, "mm3")}
         />
       </ol>
@@ -117,10 +120,13 @@ export default function WallsResults({
         </p>
       ))}
       {n.kept < 1 && (
-        <p className="ruler-warn">
-          Only {Math.floor(n.kept * 100)}% of the simulated retakes could be
-          used for at least one number here. Its bar is a lower bound, so do not
-          read it as precise.
+        <p className="ruler-warn" data-testid="walls-kept">
+          Some simulated retakes gave no answer for{" "}
+          {n.partial.length === n.walls.length + n.heights.length + 4
+            ? "every number here"
+            : n.partial.join(", ")}
+          : the worst of them could use only {Math.floor(n.kept * 100)}% of the
+          retakes. Those bars are lower bounds, so do not read them as precise.
         </p>
       )}
     </>

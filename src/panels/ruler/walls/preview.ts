@@ -24,6 +24,8 @@ export function drawPreview(
   view: View,
   w: number,
   h: number,
+  /** Written along the bottom, e.g. why only the floor is drawn. */
+  note: string | null = null,
 ) {
   ctx.fillStyle = "#0b1214";
   ctx.fillRect(0, 0, w, h);
@@ -86,5 +88,10 @@ export function drawPreview(
         b = at((i + 1) % mesh.corners);
       ctx.fillText(String(i + 1), (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
     }
+  }
+  if (note) {
+    ctx.font = "600 16px system-ui, sans-serif";
+    ctx.fillStyle = "#ffd18d";
+    ctx.fillText(note, w / 2, h - 18);
   }
 }

@@ -10,7 +10,7 @@ import { shellMesh, type Mesh } from "./mesh";
 import { measureWalls, type Numbers } from "./numbers";
 import { offPlumb } from "./off-plumb";
 import { getWalls, type WallsState } from "./store";
-import { basisOf } from "./text";
+import { basisOf, heightUncertain } from "./text";
 
 export type Current = {
   camera: Camera | null;
@@ -22,6 +22,9 @@ export type Current = {
   /** The closed shell for the preview and the export. Floor only unless the
    * mean height has a bar; null until the room is closed. */
   mesh: Mesh | null;
+  /** The same for the 3D preview, but floor only when the mean height is too
+   * uncertain to state: walls drawn at that height would look measured. */
+  preview: Mesh | null;
   /** What the bars of `numbers` cover, for this reference and lens. */
   basis: string;
 };
@@ -71,11 +74,23 @@ export function currentWalls(
       ...(numbers.meanHeight
         ? {}
         : { meanHeight: null, heights: numbers.shell.heights.map(() => null) }),
-    };
+    },
+    mesh = shown && camera ? shellMesh(shown, camera.handed) : null;
   const value: Current = {
     camera,
     numbers,
-    mesh: shown && camera ? shellMesh(shown, camera.handed) : null,
+    mesh,
+    preview:
+      mesh && shown && camera && numbers && heightUncertain(numbers)
+        ? shellMesh(
+            {
+              ...shown,
+              meanHeight: null,
+              heights: shown.heights.map(() => null),
+            },
+            camera.handed,
+          )
+        : mesh,
     offCorners: d.sheet ? offPlumb(s, d, camera, walls.corners) : [],
     basis,
   };
