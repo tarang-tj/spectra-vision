@@ -7,6 +7,7 @@ import { derive } from "../src/panels/ruler/derive";
 import { EXTENSIONS, extensionEnv } from "../src/panels/ruler/extensions";
 import { allPlumbs, setPlumbs } from "../src/panels/ruler/plumbs";
 import { endDrag, onRulerPointer } from "../src/panels/ruler/pointer";
+import { getWalls } from "../src/panels/ruler/walls/store";
 import {
   bindSource,
   clear,
@@ -72,6 +73,20 @@ describe("the Ruler's camera", () => {
     expect(cameraOf(getState(), derive(getState()))).toBeNull();
   });
 
+  it("keeps the camera and its retakes when something else on the picture changes", () => {
+    tapSheet();
+    const s1 = getState(),
+      cam = cameraOf(s1, derive(s1)),
+      trials = cameraTrials(s1, derive(s1), 60).trials;
+    // A span end is a new Ruler state and a new sheet object, same reference.
+    place(shoot(400, 600));
+    const s2 = getState();
+    expect(s2).not.toBe(s1);
+    expect(derive(s2).sheet).not.toBe(derive(s1).sheet);
+    expect(cameraOf(s2, derive(s2))).toBe(cam);
+    expect(cameraTrials(s2, derive(s2), 60).trials).toBe(trials);
+  });
+
   it("gives seeded trials that scatter around the solved camera", () => {
     tapSheet();
     const s = getState(),
@@ -121,6 +136,41 @@ describe("a tool from its own folder", () => {
     expect(press(400, 500)).toBe(true);
     endDrag();
     expect(getState().corners).toHaveLength(1);
+  });
+
+  it("Undo takes back a reference corner while the reference is still being tapped", () => {
+    tapSheet();
+    setTool("box");
+    clear();
+    place(shoot(-139.7, -107.95));
+    place(shoot(139.7, -107.95));
+    undo();
+    expect(getState().corners).toHaveLength(1);
+  });
+
+  it("ignores a second finger while a reference corner is dragged", () => {
+    tapSheet();
+    setTool("wall");
+    const corner = getState().corners[0],
+      press = (x: number, y: number, pointerId: number) =>
+        onRulerPointer({
+          type: "down",
+          point: { x: x / W, y: y / H },
+          inside: true,
+          source: { width: W, height: H },
+          canvas: { x, y },
+          scale: 1,
+          pointerId,
+          pointerType: "touch",
+          cancelled: false,
+        });
+    // The first finger lands on a reference corner: the Ruler's own drag.
+    expect(press(corner.x, corner.y, 1)).toBe(true);
+    // A second finger on open floor must not reach the Walls tool.
+    const far = shoot(900, 1500);
+    expect(press(far.x, far.y, 2)).toBe(true);
+    expect(getWalls().corners).toHaveLength(0);
+    endDrag();
   });
 
   it("is not offered while it is only a placeholder", () => {

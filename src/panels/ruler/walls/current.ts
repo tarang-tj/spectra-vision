@@ -43,8 +43,8 @@ export function currentWalls(
   if (
     memo &&
     memo.walls === walls &&
-    memo.sheet === d.sheet &&
-    memo.lens === d.lens &&
+    // The camera and its retakes are keyed by content (camera-of.ts), so
+    // their identity stands for the sheet and the lens too.
     memo.camera === camera &&
     memo.trials === trials
   )
