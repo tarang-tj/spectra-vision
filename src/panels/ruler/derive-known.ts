@@ -7,6 +7,7 @@ import { fuseSheet } from "./fuse-inputs";
 import type { Sheet } from "./homography";
 import type { Lens } from "./lens";
 import type { Span } from "./monte-carlo";
+import { shortReading } from "./reading";
 import type { Measure, RulerState } from "./state";
 import { fromMm, toMm } from "./units";
 
@@ -129,14 +130,30 @@ export function tapeTest(
   rows: { index: number; span: Span | null; text: string }[],
   knownUsed: Set<number>,
 ): TapeTest {
-  const checks: TapeCheck[] = [];
+  const checks: TapeCheck[] = [],
+    typed = rows.filter((r) => (s.measures[r.index]?.tape ?? "").trim()),
+    // One more place than the finest bar among the listed spans is written
+    // to, so a small difference does not read as nothing, and the same in
+    // every row, so the column lines up.
+    places = Math.max(
+      0,
+      ...typed.map((r) => {
+        if (!r.span) return 0;
+        const bar = fromMm(r.span.errorMm, s.unit);
+        return bar > 0 ? roundError(bar).decimals + 1 : 2;
+      }),
+    );
   let inside = 0,
     total = 0;
-  for (const r of rows) {
-    const m = s.measures[r.index];
-    if (!m || !(m.tape ?? "").trim()) continue;
-    const mm = tapeMm(m, s),
-      base = { index: r.index, reading: r.text, tape: "", difference: "" };
+  for (const r of typed) {
+    const m = s.measures[r.index],
+      mm = tapeMm(m, s),
+      base = {
+        index: r.index,
+        reading: shortReading(r.text),
+        tape: "",
+        difference: "",
+      };
     if (mm === null) {
       checks.push({
         ...base,
@@ -151,10 +168,6 @@ export function tapeTest(
       continue;
     }
     const diff = fromMm(r.span.mm - mm, s.unit),
-      bar = fromMm(r.span.errorMm, s.unit),
-      // One more place than the bar is written to, so a small difference
-      // does not read as nothing.
-      places = bar > 0 ? Math.max(0, roundError(bar).decimals + 1) : 2,
       size = Math.abs(diff).toFixed(Math.min(places, 6)),
       difference = `${Number(size) === 0 ? "" : diff > 0 ? "+" : "-"}${size} ${s.unit}`;
     if (knownUsed.has(r.index)) {

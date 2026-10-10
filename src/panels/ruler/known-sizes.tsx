@@ -22,7 +22,9 @@ export default function KnownSizes({ s, d }: { s: RulerState; d: Derived }) {
       size === "custom"
         ? customReference(Number(a), Number(b))
         : (REFERENCES.find((r) => r.id === size) ?? null),
-    tapping = pendingRef(s) >= 0;
+    pending = pendingRef(s),
+    tapping = pending >= 0,
+    left = tapping ? 4 - s.extraRefs[pending].corners.length : 0;
   if (!d.known) return null;
   return (
     <section className="ruler-block" aria-label="More known sizes">
@@ -78,10 +80,18 @@ export default function KnownSizes({ s, d }: { s: RulerState; d: Derived }) {
       <button
         className="button"
         disabled={!next || tapping}
+        aria-describedby={tapping ? "ruler-add-why" : undefined}
         onClick={() => next && addReference(next)}
       >
         Add reference
       </button>
+      {tapping && (
+        <p className="ruler-basis" id="ruler-add-why">
+          Add reference is off until reference {pending + 2} is finished: tap
+          its {left === 1 ? "last corner" : `${left} remaining corners`} on the
+          picture, or remove it below.
+        </p>
+      )}
       {d.known.refs.length > 0 && (
         <ul className="ruler-known" aria-label="Further references">
           {d.known.refs.map((r, i) => (

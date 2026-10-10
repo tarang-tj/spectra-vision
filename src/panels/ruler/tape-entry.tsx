@@ -18,9 +18,30 @@ export default function TapeEntry({
   const m = s.measures[index];
   if (!m) return null;
   const unit = m.tapeUnit ?? s.unit,
-    check = d.tape.checks.find((c) => c.index === index);
+    check = d.tape.checks.find((c) => c.index === index),
+    // Nothing to compare with: what was typed is not a usable length.
+    invalid = !!check && !check.tape,
+    noteId = `ruler-tape-check-${index}`;
   return (
     <div className="ruler-tape">
+      {/* Above the field, so it is on screen wherever the field is. */}
+      {check && (
+        <p
+          id={noteId}
+          className={
+            invalid || check.inside === false ? "ruler-warn" : "ruler-basis"
+          }
+          data-testid="ruler-tape-check"
+        >
+          {[
+            check.difference && `Reading minus tape: ${check.difference}`,
+            check.verdict.replace(/\.$/, ""),
+          ]
+            .filter(Boolean)
+            .join(", ")}
+          .
+        </p>
+      )}
       <label>
         Tape reading ({unit})
         <input
@@ -28,6 +49,8 @@ export default function TapeEntry({
           inputMode="decimal"
           aria-label={`Tape reading for measurement ${index + 1}, in ${unit}`}
           value={m.tape ?? ""}
+          aria-invalid={invalid || undefined}
+          aria-describedby={check ? noteId : undefined}
           onChange={(e) => setTape(index, e.target.value)}
         />
       </label>
@@ -40,20 +63,6 @@ export default function TapeEntry({
       >
         Use as known span
       </button>
-      {check && (
-        <p
-          className={check.inside === false ? "ruler-warn" : "ruler-basis"}
-          data-testid="ruler-tape-check"
-        >
-          {[
-            check.difference && `Reading minus tape: ${check.difference}`,
-            check.verdict.replace(/\.$/, ""),
-          ]
-            .filter(Boolean)
-            .join(", ")}
-          .
-        </p>
-      )}
     </div>
   );
 }

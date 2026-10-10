@@ -1,7 +1,9 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useStudio } from "../../studio-context";
+import BasisDetails from "./basis-details";
 import { resultsText, type Derived } from "./derive";
 import { DEFAULT_SAMPLES, TAP_SIGMA_SCREEN_PX } from "./monte-carlo";
+import { isUncertainText } from "./reading";
 import ShapeResults from "./shape-results";
 import type { RulerState } from "./store";
 import TapeEntry from "./tape-entry";
@@ -51,6 +53,7 @@ export default function Results({
             <span className="ruler-label">Measurement {r.index + 1}</span>
             <output
               className="ruler-value"
+              data-uncertain={isUncertainText(r.text) || undefined}
               data-mm={r.span?.mm}
               data-error-mm={r.span?.errorMm}
             >
@@ -66,16 +69,20 @@ export default function Results({
         ))}
         <ShapeResults rows={d.shapes} />
       </ol>
-      <p className="ruler-basis">
-        Each value is the direct geometric value from your taps. Its bar is 2
-        standard deviations over {DEFAULT_SAMPLES} simulated tap errors of{" "}
-        {TAP_SIGMA_SCREEN_PX} screen pixels, applied to every tapped point, the
-        four reference corners included.
-        {fusedNote(d.sheet?.fused)}
-      </p>
-      <p className="ruler-basis" data-testid="ruler-basis">
-        {d.basis}
-      </p>
+      <BasisDetails
+        lead={`Each bar is 2 standard deviations over ${DEFAULT_SAMPLES} simulated tap errors. It covers where you tapped and leaves things out.`}
+      >
+        <p className="ruler-basis">
+          Each value is the direct geometric value from your taps. Its bar is 2
+          standard deviations over {DEFAULT_SAMPLES} simulated tap errors of{" "}
+          {TAP_SIGMA_SCREEN_PX} screen pixels, applied to every tapped point,
+          the four reference corners included.
+          {fusedNote(d.sheet?.fused)}
+        </p>
+        <p className="ruler-basis" data-testid="ruler-basis">
+          {d.basis}
+        </p>
+      </BasisDetails>
       <button className="button" onClick={() => void copy()}>
         Copy results
       </button>

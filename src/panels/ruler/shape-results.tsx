@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import type { ShapeRow } from "./derive-shapes";
+import { isUncertainText } from "./reading";
 
 /** Numbers behind an output, so tests and exports can read them. */
 const attrs = (
@@ -25,6 +26,7 @@ export default function ShapeResults({ rows }: { rows: ShapeRow[] }) {
               <output
                 className="ruler-value"
                 data-testid="ruler-area"
+                data-uncertain={isUncertainText(r.areaText) || undefined}
                 {...attrs(r.result?.area, true)}
               >
                 {r.areaText}
@@ -42,6 +44,7 @@ export default function ShapeResults({ rows }: { rows: ShapeRow[] }) {
           <output
             className={r.areaText ? "ruler-sub" : "ruler-value"}
             data-testid="ruler-length"
+            data-uncertain={isUncertainText(r.lengthText) || undefined}
             {...attrs(r.result?.length)}
           >
             {r.lengthText}

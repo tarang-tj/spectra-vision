@@ -2,6 +2,7 @@
 // What the top-down drawing contains, in plane millimetres with ready-made
 // label text. The canvas and the SVG export both draw from this one scene.
 import type { Derived } from "./derive";
+import { shortReading } from "./reading";
 import { toPlane } from "./shapes";
 import type { Pt } from "./homography";
 import type { RulerState } from "./state";
@@ -43,7 +44,7 @@ export function buildScene(s: RulerState, d: Derived): PlanScene | null {
     const m = s.measures[r.index];
     if (!r.span || !m || !m.b) return;
     const pts = toPlane(sheet.h, [m.a, m.b], d.lens);
-    if (pts) items.push({ kind: "span", pts, label: r.text });
+    if (pts) items.push({ kind: "span", pts, label: shortReading(r.text) });
   });
   d.shapes.forEach((r) => {
     if (!r.result) return;
@@ -52,8 +53,8 @@ export function buildScene(s: RulerState, d: Derived): PlanScene | null {
       name: r.label,
       pts: r.result.plane,
       legs: r.legTexts,
-      length: r.lengthText,
-      area: r.areaText,
+      length: shortReading(r.lengthText),
+      area: r.areaText && shortReading(r.areaText),
       note: r.result.selfIntersecting ? "crosses itself, no area" : null,
     });
   });
