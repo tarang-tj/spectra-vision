@@ -7,7 +7,7 @@ import type { StagePointerEvent } from "../../../stage/stage-hooks";
 import type { ExtensionEnv } from "../extension-types";
 import type { Pt } from "../homography";
 import { TAP_SIGMA_SCREEN_PX } from "../monte-carlo";
-import { hit } from "../store";
+import { hit, onPointsCleared } from "../store";
 import {
   addCorner,
   closeRoom,
@@ -30,6 +30,9 @@ let grab: Grab | null = null;
 export const dropGrab = () => {
   grab = null;
 };
+// Clear, a new picture or a video that moved on: the point held is gone, and
+// a grab left behind would swallow every press from another pointer.
+onPointsCleared(dropGrab);
 
 const HIT_MOUSE = 12,
   HIT_TOUCH = 24,

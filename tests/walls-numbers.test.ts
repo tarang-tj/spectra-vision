@@ -24,6 +24,8 @@ import {
   undoWalls,
 } from "../src/panels/ruler/walls/store";
 import {
+  BIG_BOARD,
+  BOARD,
   boardCorners,
   HIGH,
   RECT,
@@ -45,12 +47,13 @@ function tapRoom(
   tops: boolean[] = [true, true, true, true],
   nudge: (p: P) => P = exact,
   scene = near,
+  board = BOARD,
 ) {
   resetRuler();
   setRef("custom");
-  setCustom("1000", "700");
+  setCustom(String(board.w), String(board.h));
   bindSource(1, W, H, 1);
-  for (const c of boardCorners()) place(nudge(scene.shoot(c.x, c.y)));
+  for (const c of boardCorners(board)) place(nudge(scene.shoot(c.x, c.y)));
   for (const c of RECT) addCorner(nudge(scene.shoot(c.x, c.y)));
   closeRoom();
   RECT.forEach((c, i) => {
@@ -206,5 +209,53 @@ describe("coverage of the bars", () => {
     // about 3 points either way.
     expect(height / RETAKES).toBeGreaterThanOrEqual(0.9);
     expect(area / RETAKES).toBeGreaterThanOrEqual(0.9);
+  }, 300_000);
+
+  // The test above cannot tell a bar that is right from one that is far too
+  // wide: with the small board every retake is inside. With a 2000 x 1400 mm
+  // reference the bars are tight enough to be judged from both sides.
+  it("is neither much too narrow nor much too wide with a 2000 x 1400 mm reference", () => {
+    const RETAKES = 200,
+      normal = gaussian(seededRandom(4242)),
+      nudge = (p: P) => ({ x: p.x + 1.5 * normal(), y: p.y + 1.5 * normal() }),
+      got = { height: [] as Q[], area: [] as Q[] };
+    for (let i = 0; i < RETAKES; i++) {
+      const n = tapRoom(
+        [true, true, true, true],
+        nudge,
+        near,
+        BIG_BOARD,
+      ).numbers!;
+      got.height.push(n.meanHeight!);
+      got.area.push(n.floorArea!);
+    }
+    for (const [name, truth] of [
+      ["height", ROOM.h],
+      ["area", AREA],
+    ] as const) {
+      const qs = got[name],
+        hits = qs.filter((q) => inside(q, truth)).length,
+        mean = qs.reduce((t, q) => t + q.value, 0) / RETAKES,
+        // What the bar claims to be: 2 sd of the value over real retakes.
+        spread =
+          2 *
+          Math.sqrt(
+            qs.reduce((t, q) => t + (q.value - mean) ** 2, 0) / (RETAKES - 1),
+          ),
+        bar = qs.map((q) => q.error).sort((a, b) => a - b)[RETAKES / 2];
+      report(
+        `2000 x 1400 mm reference, ${name}: ${hits} of ${RETAKES} retakes hold the truth; 2 sd of the retakes ${spread.toPrecision(4)}, median bar ${bar.toPrecision(4)}, ratio ${(spread / bar).toFixed(3)}`,
+      );
+      // Observed 2026-10-10: 194 of 200 inside for both, ratio 0.970 for the
+      // height and 0.973 for the area. 2 sd of a normal spread holds 95.4%,
+      // and 200 retakes scatter that count by 1.5 points (one sd), so under
+      // 92% is a bar too narrow and over 99% (199 or 200 of 200) one too wide.
+      expect(hits / RETAKES, name).toBeGreaterThanOrEqual(0.92);
+      expect(hits / RETAKES, name).toBeLessThanOrEqual(0.99);
+      // A spread taken from 200 values scatters by 5% (one sd), so a ratio
+      // outside 0.8 to 1.25 is not chance: the bar is wrong by a quarter.
+      expect(spread / bar, name).toBeGreaterThan(0.8);
+      expect(spread / bar, name).toBeLessThan(1.25);
+    }
   }, 300_000);
 });
