@@ -195,6 +195,24 @@ describe("the Depth task's worker and delegate", () => {
     runner.dispose();
   });
 
+  it("keeps the page's load timeout alive while a large download reports progress", () => {
+    probe = { webgl2: true, renderer: M3 };
+    const { workers, events, runner } = harness();
+    // The page's handler for "still loading" restarts its timeout.
+    workers[0].reply({ type: "progress", loaded: 5e6, total: 99e6 });
+    workers[0].reply({ type: "progress", loaded: 9e6, total: 99e6 });
+    expect(events.onRestart).toHaveBeenCalledTimes(2);
+    expect(events.onReady).not.toHaveBeenCalled();
+    expect(workers).toHaveLength(1);
+    workers[0].reply({ type: "downloaded" });
+    workers[0].reply({ type: "ready", delegate: "GPU" });
+    expect(events.onReady).toHaveBeenCalledTimes(1);
+    // A stray report after the task is ready changes nothing.
+    workers[0].reply({ type: "progress", loaded: 99e6, total: 99e6 });
+    expect(events.onRestart).toHaveBeenCalledTimes(2);
+    runner.dispose();
+  });
+
   it("starts on CPU on a software renderer and says why", () => {
     probe = {
       webgl2: true,
