@@ -9,6 +9,7 @@ import {
   type Pt,
   type Sheet,
 } from "./homography";
+import { fusedRuns } from "./fused-trials";
 import { applyLens, type Lens } from "./lens";
 import {
   DEFAULT_SAMPLES,
@@ -114,6 +115,7 @@ export function measureShape(
     ...(sheet.raw ?? sheet.ordered).map(key),
     sheet.plane[1].x,
     sheet.plane[2].y,
+    sheet.fused?.key ?? "",
     lens ? `${lens.k}|${lens.cx}|${lens.cy}` : "",
     closed,
     sigmaPx,
@@ -148,11 +150,15 @@ function compute(
     // Noise first, then the lens correction, as a real tap would go.
     jitter = makeJitter(normal, sigmaPx, lens),
     base = sheet.raw ?? sheet.ordered,
+    // Retakes of the whole fused solve, when there is more than one known size.
+    runs = sheet.fused ? fusedRuns(sheet.fused, n) : null,
     // Sums for each leg, the total and the area: [sum, sum of squares].
     sums = Array.from({ length: nLegs + 2 }, () => [0, 0]);
   let used = 0;
   for (let t = 0; t < n; t++) {
-    const h = solveHomography(base.map(jitter), sheet.plane);
+    const h = runs
+      ? (runs[t]?.h ?? null)
+      : solveHomography(base.map(jitter), sheet.plane);
     if (!h) continue;
     const moved = toPlane(h, pts.map(jitter), null);
     if (!moved) continue;

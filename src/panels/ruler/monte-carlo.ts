@@ -5,6 +5,7 @@
 // random numbers are seeded, so the same taps always give the same bar.
 import { measured, type Measured } from "../../measure/noise";
 import { fromMm, type Unit } from "./units";
+import { fusedRuns } from "./fused-trials";
 import { applyLens, type Lens } from "./lens";
 import {
   planeDistance,
@@ -20,8 +21,28 @@ export const BASIS =
 /** The same, when a one-parameter lens correction was applied to every point. */
 export const BASIS_LENS =
   "Tap placement only, after a one-parameter lens correction applied to every point. Not included: remaining lens distortion, points off the surface, a bent or misprinted reference.";
-export const basisFor = (lens: Lens | null): string =>
-  lens ? BASIS_LENS : BASIS;
+/** The same, when further references or known spans were fused into the
+ * surface: the bar then comes from repeating that whole solve. */
+/** Measured, not assumed (tests/ruler-coverage.test.ts, 300 simulated rooms):
+ * with one reference and typed lengths only, the bar is too narrow. */
+export const COVERAGE_NOTE =
+  " With one reference and known spans only, this bar held the true length in 91 to 94 of 100 simulated rooms, fewer than the 95 that 2 standard deviations suggest. A second reference brings it to 95 or more.";
+export const basisFused = (
+  lens: boolean,
+  spans: number,
+  tapeSigmaMm: number,
+  rects = 1,
+): string =>
+  `Tap placement on every tapped point, the corners of every reference ${spans ? "and the ends of every known span " : ""}included${spans ? `, and a tape uncertainty of ${tapeSigmaMm} mm on each typed length` : ""}${lens ? ", after a one-parameter lens correction applied to every point" : ""}. Not included: ${lens ? "remaining " : ""}lens distortion, points off the surface, a bent or misprinted reference${spans ? ", a typed length that is wrong by more than the tape uncertainty" : ""}.${rects ? "" : COVERAGE_NOTE}`;
+export const basisFor = (
+  lens: Lens | null,
+  fused?: { spans: number; tapeSigmaMm: number; rects: number } | null,
+): string =>
+  fused
+    ? basisFused(!!lens, fused.spans, fused.tapeSigmaMm, fused.rects)
+    : lens
+      ? BASIS_LENS
+      : BASIS;
 
 export const MIN_SAMPLES = 300;
 export const DEFAULT_SAMPLES = 400;
@@ -89,12 +110,17 @@ export function distanceSpread(
     normal = gaussian(seededRandom(seed)),
     // Each point carries the tap uncertainty it was placed with.
     jitter = makeJitter(normal, sigmaPx, lens),
-    base = sheet.raw ?? sheet.ordered;
+    base = sheet.raw ?? sheet.ordered,
+    // With more than one known size, each trial is a retake of the whole
+    // fused solve (made once and shared), not of the first reference alone.
+    runs = sheet.fused ? fusedRuns(sheet.fused, n) : null;
   let sum = 0,
     sumSq = 0,
     used = 0;
   for (let i = 0; i < n; i++) {
-    const h = solveHomography(base.map(jitter), sheet.plane),
+    const h = runs
+        ? (runs[i]?.h ?? null)
+        : solveHomography(base.map(jitter), sheet.plane),
       d = h ? planeDistance(h, jitter(a), jitter(b)) : null;
     if (d === null || !Number.isFinite(d)) continue;
     used++;
@@ -145,6 +171,7 @@ export function measureSpan(
     lens ? `${lens.k}|${lens.cx}|${lens.cy}` : "",
     sheet.plane[1].x,
     sheet.plane[2].y,
+    sheet.fused?.key ?? "",
     key(a),
     key(b),
     sigmaPx,

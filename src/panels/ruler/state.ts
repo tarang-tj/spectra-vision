@@ -6,7 +6,24 @@ import { useSyncExternalStore } from "react";
 import type { Pt } from "./homography";
 import { isUnit, type Unit } from "./units";
 
-export type Measure = { a: Pt; b: Pt | null };
+export type Measure = {
+  a: Pt;
+  b: Pt | null;
+  /** What a tape measure read for this span, as typed, and the unit it was
+   * typed in. A check only, unless `known` is set. */
+  tape?: string;
+  tapeUnit?: Unit;
+  /** The typed length is used as a known size in the plane solve. */
+  known?: boolean;
+};
+/** A further rectangle of known size (mm) lying on the same surface. Its
+ * corners are in tap order (at most four); where it lies is solved for. */
+export type ExtraRef = {
+  label: string;
+  long: number;
+  short: number;
+  corners: Pt[];
+};
 /** What a tap adds: a two-point span, a path, a closed outline, or a point on
  * an edge that is straight in reality (for the lens correction). */
 export type Tool = "span" | "path" | "area" | "edge" | ExtensionTool;
@@ -25,6 +42,7 @@ export const MIN_POINTS: Record<ShapeKind, number> = {
 };
 export type Handle =
   | { kind: "corner"; i: number }
+  | { kind: "ref"; r: number; i: number }
   | { kind: "end"; m: number; end: "a" | "b" }
   | { kind: "vertex"; s: number; i: number };
 export type RulerState = {
@@ -34,6 +52,10 @@ export type RulerState = {
   /** Reference corners in tap order (at most four). */
   corners: Pt[];
   swap: boolean;
+  /** Further references, fused with the first into one plane solve. */
+  extraRefs: ExtraRef[];
+  /** One standard deviation of a typed tape length, in mm, as typed. */
+  tapeSd: string;
   measures: Measure[];
   tool: Tool;
   shapes: Shape[];
@@ -67,6 +89,8 @@ const initial = (): RulerState => ({
   customB: "",
   corners: [],
   swap: false,
+  extraRefs: [],
+  tapeSd: "2",
   measures: [],
   tool: "span",
   shapes: [],
@@ -124,7 +148,10 @@ export const setLock = (lock: [number, number] | null) => set({ lock });
 
 /** True when nothing has been placed. */
 export const isEmpty = (s: RulerState) =>
-  !s.corners.length && !s.measures.length && !s.shapes.length;
+  !s.corners.length &&
+  !s.extraRefs.length &&
+  !s.measures.length &&
+  !s.shapes.length;
 
 /** Called with each frame the overlay draws. Points belong to one source: a
  * new source (another photo, a camera restart) clears them, because they
@@ -141,6 +168,7 @@ export function bindSource(
       source: { w, h },
       scale,
       corners: [],
+      extraRefs: [],
       measures: [],
       shapes: [],
       swap: false,
@@ -161,6 +189,7 @@ export function bindStillness(isVideo: boolean, still: boolean) {
   if (isVideo && !still && !isEmpty(state)) {
     set({
       corners: [],
+      extraRefs: [],
       measures: [],
       shapes: [],
       swap: false,
