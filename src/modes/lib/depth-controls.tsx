@@ -6,7 +6,7 @@ import { useStudio } from "../../studio-context";
 import { measuredDepth } from "./depth-measured";
 import { depthScale } from "./depth-metric";
 import { depthExtra, depthText, metricSummary } from "./depth-readout";
-import { FAR_CUTOFF } from "./depth-session";
+import { FAR_CUTOFF } from "./depth-points";
 import {
   getDepthView,
   onDepthView,

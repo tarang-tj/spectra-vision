@@ -48,8 +48,9 @@ test("shortcuts switch modes and drive the stage, but never while typing", async
     .getByRole("button")
     .allInnerTexts();
   expect(modes.slice(0, 3)).toEqual(["Objects", "Body", "Hands"]);
-  // Every registered mode is reachable by its number key.
-  for (let i = modes.length - 1; i >= 0; i--) {
+  // The first seven modes are reachable by their number keys (MAX_MODE_KEYS
+  // in src/shell/shortcuts.ts); an eighth mode has no key.
+  for (let i = Math.min(modes.length, 7) - 1; i >= 0; i--) {
     await page.keyboard.press(String(i + 1));
     await expect(pressed(page, modes[i])).toHaveAttribute(
       "aria-pressed",
