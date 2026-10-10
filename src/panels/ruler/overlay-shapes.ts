@@ -3,6 +3,7 @@
 import type { Derived } from "./derive";
 import type { Pt } from "./homography";
 import { dot, EDGE, LINE, PATH, tag } from "./overlay-parts";
+import { shortReading } from "./reading";
 import type { RulerState } from "./state";
 
 const COLOR = { path: PATH, area: LINE, edge: EDGE } as const;
@@ -34,7 +35,9 @@ export function drawShapes(
           row.kind === "area"
             ? (row.areaText ?? "crosses itself")
             : row.lengthText;
-      tag(ctx, text, cx - 30, cy, color);
+      // Named, so a label inside an outline is not read as belonging to
+      // whatever else stands there (a box, a wall).
+      tag(`${row.label}: ${shortReading(text)}`, cx - 30, cy, color);
     }
   });
 }
