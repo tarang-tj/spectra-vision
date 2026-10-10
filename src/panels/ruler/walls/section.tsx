@@ -1,6 +1,8 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useEffect, useSyncExternalStore } from "react";
 import { useStudio } from "../../../studio-context";
+import BasisDetails from "../basis-details";
+import { DEFAULT_TRIALS } from "../camera-of";
 import { derive } from "../derive";
 import { download } from "../export-plan";
 import { plumbVersion, subscribePlumbs } from "../plumbs";
@@ -12,7 +14,7 @@ import { dropGrab } from "./pointer";
 import PreviewPanel from "./preview-panel";
 import WallsResults from "./results";
 import { closeRoom, copyOutline, pickCorner, useWalls } from "./store";
-import { heightReason, liveStep } from "./text";
+import { heightReason, heightUncertain, liveStep } from "./text";
 
 const LIST = "walls-list";
 
@@ -40,6 +42,9 @@ export default function WallsSection({ show }: { show: boolean }) {
         )
       : null,
     mesh = cur?.mesh ?? null,
+    preview = cur?.preview ?? null,
+    // The bar on the height is as large as the height: no walls are drawn.
+    vague = !!n && heightUncertain(n),
     canSave = !!n && !!mesh && !!n.floorArea;
 
   function save(kind: "obj" | "csv") {
@@ -122,7 +127,28 @@ export default function WallsSection({ show }: { show: boolean }) {
       {n && cur && (
         <WallsResults n={n} cur={cur} unit={s.unit} why={why} listId={LIST} />
       )}
-      {n && mesh && <PreviewPanel mesh={mesh} describedBy={LIST} />}
+      {vague && (
+        <p className="ruler-warn" data-testid="walls-no-height">
+          The walls are not drawn in the 3D view, only the floor. The bar on the
+          ceiling height is as large as the height itself, so walls of that
+          height would be a guess. Take the picture with the camera tilted down
+          at the floor so the walls run up the picture, or add a larger or
+          second reference. The floor area is not affected.
+        </p>
+      )}
+      {n && preview && (
+        <PreviewPanel
+          mesh={preview}
+          describedBy={LIST}
+          note={
+            vague
+              ? "Floor only: the heights are too uncertain to draw."
+              : preview.faces.length === 1
+                ? "Floor only: no height is measured yet."
+                : null
+          }
+        />
+      )}
       {n && cur && (
         <>
           <div className="ruler-group" role="group" aria-label="Save the room">
@@ -142,9 +168,13 @@ export default function WallsSection({ show }: { show: boolean }) {
             per wall and the ceiling. Save CSV downloads every number with its
             bar. Both stay on this device.
           </p>
-          <p className="ruler-basis" data-testid="walls-basis">
-            {cur.basis}
-          </p>
+          <BasisDetails
+            lead={`Each bar is 2 standard deviations over ${DEFAULT_TRIALS} simulated retakes of your taps. It leaves things out.`}
+          >
+            <p className="ruler-basis" data-testid="walls-basis">
+              {cur.basis}
+            </p>
+          </BasisDetails>
         </>
       )}
     </section>

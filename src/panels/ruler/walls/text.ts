@@ -1,11 +1,11 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Wording and units for the Walls numbers, shared by the panel, the stage
 // labels and the CSV.
-import { formatMeasured } from "../../../measure/format";
 import { measured, type Measured } from "../../../measure/noise";
 import { DEFAULT_TRIALS } from "../camera-of";
 import type { Derived } from "../derive";
 import { basisFor, TAP_SIGMA_SCREEN_PX } from "../monte-carlo";
+import { readingText, shortReading, tooUncertain } from "../reading";
 import { areaFromMm2, bigAreaUnit, fromMm, type Unit } from "../units";
 import type { Numbers, Q } from "./numbers";
 import type { WallsState } from "./store";
@@ -44,8 +44,15 @@ export function volumeOf(q: Q, unit: Unit, basis: string): Measured {
     k = fromMm(1, big) ** 3;
   return measured(q.value * k, q.error * k, `${big}³`, basis);
 }
+/** A length for a stage label or the middle of a sentence: the short form
+ * when it is too uncertain to state. */
 export const lengthText = (q: Q | null, unit: Unit, basis: string) =>
-  q ? formatMeasured(lengthOf(q, unit, basis)) : "not measured";
+  q ? shortReading(readingText(lengthOf(q, unit, basis))) : "not measured";
+
+/** True when the mean height's bar is as large as the height: walls drawn at
+ * that height would look measured and are not. */
+export const heightUncertain = (n: Numbers): boolean =>
+  !!n.meanHeight && tooUncertain(lengthOf(n.meanHeight, "mm", ""));
 
 /** Why there is no height to show, or null when there is one. */
 export function heightReason(n: Numbers, hasTop: boolean, focal: boolean) {

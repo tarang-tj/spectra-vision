@@ -18,9 +18,13 @@ const KEYS: Record<string, [number, number]> = {
 export default function PreviewPanel({
   mesh,
   describedBy,
+  note,
 }: {
   mesh: Mesh;
   describedBy: string;
+  /** Why only the floor is drawn, when that is so. Written on the drawing
+   * and under it. */
+  note: string | null;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null),
     last = useRef<{ id: number; x: number; y: number } | null>(null),
@@ -28,8 +32,8 @@ export default function PreviewPanel({
 
   useEffect(() => {
     const ctx = canvas.current?.getContext("2d");
-    if (ctx) drawPreview(ctx, mesh, view, W, H);
-  }, [mesh, view]);
+    if (ctx) drawPreview(ctx, mesh, view, W, H, note);
+  }, [mesh, view, note]);
 
   function key(e: KeyboardEvent) {
     const d = KEYS[e.key];
@@ -49,7 +53,7 @@ export default function PreviewPanel({
         role="img"
         data-testid="walls-preview"
         data-yaw={view.yaw.toFixed(3)}
-        aria-label="3D view of the room shell. Drag it, or press the arrow keys, to turn it."
+        aria-label={`3D view of the room ${note ? "floor" : "shell"}. Drag it, or press the arrow keys, to turn it.`}
         aria-describedby={describedBy}
         onKeyDown={key}
         onPointerDown={(e) => {
@@ -68,7 +72,8 @@ export default function PreviewPanel({
         onPointerCancel={() => (last.current = null)}
       />
       <p className="ruler-basis">
-        The shell from your taps, seen from outside. Walls carry their numbers.
+        {note ??
+          "The shell from your taps, seen from outside. Walls carry their numbers."}{" "}
         Drag to turn it, or focus it and press the arrow keys.
       </p>
     </>

@@ -119,9 +119,17 @@ test("a known room through the UI: height and area against truth, OBJ exported, 
   const height = page.getByTestId("walls-height"),
     area = page.getByTestId("walls-area");
   await expect(height).toHaveText(/^[\d.]+ ± [\d.]+ m$/);
-  await expect(page.getByTestId("walls-volume")).toHaveText(
-    /^[\d.]+ ± [\d.]+ m³$/,
+  // From this one small board the volume's bar is larger than the volume
+  // (about 32 ± 48 m³), so it is said in words. The number is still there.
+  const volume = page.getByTestId("walls-volume");
+  await expect(volume).toHaveText(
+    /^too uncertain to state \(bar ± [\d.]+ m³\)\. Add a larger or second reference, or a known span\.$/,
   );
+  expect(Number(await volume.getAttribute("data-error-mm3"))).toBeGreaterThan(
+    Number(await volume.getAttribute("data-mm3")),
+  );
+  // The mean height is stated, so the walls are drawn and nothing refuses.
+  await expect(page.getByTestId("walls-no-height")).toHaveCount(0);
   await expect(page.getByTestId("walls-off")).toHaveCount(0);
   const h = Number(await height.getAttribute("data-mm")),
     he = Number(await height.getAttribute("data-error-mm")),
