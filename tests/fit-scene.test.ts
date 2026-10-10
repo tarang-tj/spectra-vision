@@ -87,8 +87,8 @@ describe("the Box tool on a picture with known truth", () => {
     expect(v.kind).toBe(v.errorMm < 50 ? "fits" : "close");
     expect(v.text).toMatch(
       v.errorMm < 50
-        ? /^Fits, with \d+ ± \d+ cm of clearance$/
-        : /^Too close to call: clearance \d+ ± \d+ cm$/,
+        ? /^Fits, with [\d.]+ ± [\d.]+ cm of clearance$/
+        : /^Too close to call: clearance too uncertain to state \(bar ± [\d.]+ cm\)\. Add /,
     );
     expect(v.measured.basis).toContain("simulated retakes");
     expect(v.measured.basis).toContain("Not included");
