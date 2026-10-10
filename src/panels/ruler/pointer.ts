@@ -26,7 +26,10 @@ export function onRulerPointer(e: StagePointerEvent): boolean {
   const sigma = TAP_SIGMA_SCREEN_PX / e.scale;
   // A tool from its own folder sees the event first, unless one of the
   // Ruler's own handles is already being dragged by this pointer.
-  const ext = extensionFor(getState().tool);
+  // It needs the reference, so until all four corners are placed (at the
+  // start, or after Clear) taps go on placing corners as usual.
+  const ext =
+    getState().corners.length === 4 ? extensionFor(getState().tool) : null;
   if (ext && view.still && !(drag && drag.id === e.pointerId)) {
     if (extensionPointer(ext, e)) {
       view.loupe = e.type === "up" ? null : { at, canvas: e.canvas };
