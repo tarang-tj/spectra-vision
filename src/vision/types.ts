@@ -23,7 +23,8 @@ export type TaskKind =
   | "hand"
   | "face"
   | "segment"
-  | "gesture";
+  | "gesture"
+  | "depth";
 /** The delegate a worker really runs on. */
 export type Delegate = "CPU" | "GPU";
 /** What a task may ask for. "AUTO" means GPU where this page has a real
@@ -117,6 +118,19 @@ export type SegmentExtra = {
   mask: Uint8Array;
   alpha: Uint8Array;
   classes: SegmentClass[];
+};
+/** `extra` of a "depth" result (public/depth-worker.js). `values` is the
+ * model's output, `width * height` numbers row by row from the top left, in
+ * image space (not mirrored). It is affine-invariant inverse depth: a larger
+ * value is nearer, and neither the scale nor the zero is known, so a value is
+ * not a length. `min` and `max` are the smallest and largest value. The map's
+ * size is also the size the picture was resized to for the model. */
+export type DepthExtra = {
+  width: number;
+  height: number;
+  values: Float32Array;
+  min: number;
+  max: number;
 };
 /** Latest results of every task of the current mode. The flat fields mirror the
  * mode's first (primary) task so v1 drawing, exports and tests keep working. */
