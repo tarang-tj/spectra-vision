@@ -383,6 +383,75 @@ describe("the depth worker's messages", () => {
     expect(second.closed).toBe(1);
   });
 
+  it("reads a streamed download in full and reports progress while it is slow", async () => {
+    // A fetch whose body arrives in three chunks, with the clock moved on six
+    // seconds before the third: one progress report is due.
+    const clock = { now: 0 },
+      posted: Message[] = [],
+      self = {
+        onmessage: null as ((event: { data: unknown }) => Promise<void>) | null,
+        postMessage: (message: Message) => posted.push(message),
+        navigator: {},
+        location: { href: "https://site.test/depth-worker.js" },
+        ort: undefined as unknown,
+      },
+      seen: number[] = [];
+    const body = (sizes: number[]) => {
+      let i = 0;
+      return {
+        getReader: () => ({
+          read: async () => {
+            if (i === 2) clock.now += 6000;
+            return i < sizes.length
+              ? { done: false, value: new Uint8Array(sizes[i++]).fill(i) }
+              : { done: true, value: undefined };
+          },
+        }),
+      };
+    };
+    new Function(
+      "self",
+      "importScripts",
+      "OffscreenCanvas",
+      "fetch",
+      "performance",
+      source,
+    )(
+      self,
+      () => {
+        self.ort = {
+          env: { wasm: {} },
+          InferenceSession: {
+            create: async (bytes: Uint8Array) => {
+              seen.push(bytes.length, bytes[0], bytes[bytes.length - 1]);
+              return { inputNames: ["in"], outputNames: ["out"] };
+            },
+          },
+        };
+      },
+      class {
+        getContext() {
+          return {};
+        }
+      },
+      async (url: string) => ({
+        ok: true,
+        headers: { get: () => "600" },
+        body: /\.onnx$/.test(url) ? body([100, 200, 300]) : body([8]),
+      }),
+      { now: () => clock.now },
+    );
+    await self.onmessage!({ data: init("CPU") });
+    expect(posted.map((m) => m.type)).toEqual([
+      "progress",
+      "downloaded",
+      "ready",
+    ]);
+    expect(posted[0]).toEqual({ type: "progress", loaded: 600, total: 600 });
+    // All 600 bytes, in order: the first chunk is filled with 1, the last 3.
+    expect(seen).toEqual([600, 1, 3]);
+  });
+
   it("drops a frame that arrives before the model is loaded, closing its bitmap", async () => {
     const worker = startWorker(),
       bitmap = bitmapOf(640, 480);

@@ -3,8 +3,9 @@
  * V2 Small model (Apache-2.0) retain their own rights. */
 // The Depth mode's worker: one monocular depth model on ONNX Runtime Web. It
 // speaks the protocol of vision-worker.js (documented in docs/architecture.md):
-//   in  { type: "init", base, task: TaskSpec }   out { type: "downloaded" } when the model and wasm
-//                                                    bytes are in, then { type: "ready", delegate, files }
+//   in  { type: "init", base, task: TaskSpec }   out { type: "progress", loaded, total } every few seconds
+//                                                    of a long download, { type: "downloaded" } when the model
+//                                                    and wasm bytes are in, then { type: "ready", delegate, files }
 //   in  { type: "frame", bitmap, time, generation } out { type: "result", result: TaskResult }
 //   any failure                                   out { type: "error", error }
 // "GPU" is the WebGPU execution provider and "CPU" the WebAssembly one. A GPU
@@ -88,12 +89,41 @@ function rangeOf(values) {
 // Read by the unit tests (tests/depth-worker.test.ts); nothing else uses it.
 self.depthInternals = { inputSize, toTensorData, rangeOf, DEFAULT_SIZE };
 
-// The whole file, or an error that names it.
+// How often a download in progress is reported to the page.
+const PROGRESS_EVERY_MS = 5000;
+// The whole file, or an error that names it. The model is about 99 MB, so
+// while it arrives the page is told every few seconds that the load is alive
+// ({ type: "progress", loaded, total }); it would otherwise give up on a slow
+// connection after its fixed load timeout.
 async function download(url) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
   files.push(url);
-  return new Uint8Array(await response.arrayBuffer());
+  const reader = response.body?.getReader?.();
+  if (!reader) return new Uint8Array(await response.arrayBuffer());
+  // 0 when the server does not say; with a compressed transfer it is the
+  // compressed size, so it is reported but never used to size anything.
+  const total = Number(response.headers?.get("content-length")) || 0,
+    chunks = [];
+  let loaded = 0,
+    told = performance.now();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.length;
+    if (performance.now() - told >= PROGRESS_EVERY_MS) {
+      told = performance.now();
+      self.postMessage({ type: "progress", loaded, total });
+    }
+  }
+  const bytes = new Uint8Array(loaded);
+  let at = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, at);
+    at += chunk.length;
+  }
+  return bytes;
 }
 
 const targetOf = () => {
@@ -137,6 +167,9 @@ async function start(base) {
   session = await runtime.InferenceSession.create(model, {
     executionProviders: [gpu ? "webgpu" : "wasm"],
     graphOptimizationLevel: "all",
+    // Errors only: the runtime's start-up warnings would otherwise land in
+    // the page's console as errors.
+    logSeverityLevel: 3,
   });
   inputName = session.inputNames[0];
   outputName = session.outputNames[0];
