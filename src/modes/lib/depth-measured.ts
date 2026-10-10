@@ -7,7 +7,8 @@
 import { combineErrors, measured, type Measured } from "../../measure/noise";
 import { cameraTrials } from "../../panels/ruler/camera-of";
 import { depthAt, fitDepth } from "../../vision/depth/affine-fit";
-import { samplesFor, type MetricScale } from "./depth-metric";
+import { samplesFor } from "./depth-floor";
+import type { MetricScale } from "./depth-metric";
 
 /** Most floor cells refitted in each retake. */
 const MAX_RETAKE_CELLS = 500;

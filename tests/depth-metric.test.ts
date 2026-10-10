@@ -3,11 +3,8 @@ import { beforeEach, describe, it, expect } from "vitest";
 import { formatMeasured } from "../src/measure/format";
 import { isMeasured } from "../src/measure/noise";
 import { floorSpan, measuredDepth } from "../src/modes/lib/depth-measured";
-import {
-  depthScale,
-  floorPolygons,
-  type MetricScale,
-} from "../src/modes/lib/depth-metric";
+import { floorPolygons } from "../src/modes/lib/depth-floor";
+import { depthScale, type MetricScale } from "../src/modes/lib/depth-metric";
 import { depthRows, legendOf } from "../src/modes/lib/depth-readout";
 import { derive } from "../src/panels/ruler/derive";
 import {

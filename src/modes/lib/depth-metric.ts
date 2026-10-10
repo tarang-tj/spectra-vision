@@ -5,29 +5,22 @@
 // its real depth follows from the Ruler's plane and camera. A fit of the
 // model's output against those depths (vision/depth/affine-fit.ts) then puts
 // the whole map in millimetres. Reads the Ruler's state; never changes it.
-import { toCamera, type Camera } from "../../measure/camera";
+import type { Camera } from "../../measure/camera";
 import { cameraOf } from "../../panels/ruler/camera-of";
 import { derive, type Derived } from "../../panels/ruler/derive";
-import {
-  applyHomography,
-  orderCorners,
-  type Mat3,
-  type Pt,
-} from "../../panels/ruler/homography";
+import type { Pt } from "../../panels/ruler/homography";
 import { applyLens } from "../../panels/ruler/lens";
 import { plumbVersion } from "../../panels/ruler/plumbs";
 import { getState, type RulerState } from "../../panels/ruler/state";
-import {
-  fitDepth,
-  type DepthFit,
-  type FitSample,
-} from "../../vision/depth/affine-fit";
+import { fitDepth, type DepthFit } from "../../vision/depth/affine-fit";
 import { cellCentre } from "../../vision/depth/unproject";
 import type { DepthExtra, Source } from "../../vision/types";
-
-/** A marked floor cell: the model's output there and where it is in the flat
- * (lens-corrected) picture, in source pixels. */
-export type FloorCell = { output: number; flat: Pt };
+import {
+  floorPolygons,
+  insidePolygon,
+  samplesFor,
+  type FloorCell,
+} from "./depth-floor";
 
 export type MetricScale = {
   metric: true;
@@ -63,55 +56,6 @@ const REASONS = {
   scatter:
     "The depth map does not follow the marked floor closely enough to be scaled (over 25% scatter). Check that the reference and the outline lie on the floor with nothing standing on them.",
 };
-
-function inside(p: Pt, polygon: readonly Pt[]): boolean {
-  let hit = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const a = polygon[i],
-      b = polygon[j];
-    if (
-      a.y > p.y !== b.y > p.y &&
-      p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x
-    )
-      hit = !hit;
-  }
-  return hit;
-}
-
-/** Everything the user marked as floor, as polygons in source pixels: the
- * reference, further references, and finished Area outlines. */
-export function floorPolygons(s: RulerState, d: Derived): Pt[][] {
-  const out: Pt[][] = [];
-  if (d.sheet) out.push(d.sheet.raw ?? d.sheet.ordered);
-  for (const ref of s.extraRefs)
-    if (ref.corners.length === 4) out.push(orderCorners(ref.corners));
-  for (const shape of s.shapes)
-    if (shape.kind === "area" && shape.done) out.push(shape.pts);
-  return out;
-}
-
-/** The real depth (mm along the camera axis) of the floor under a flat
- * picture point, or null beyond the horizon or behind the camera. */
-export function floorDepth(h: Mat3, camera: Camera, flat: Pt): number | null {
-  const plane = applyHomography(h, flat);
-  if (!plane) return null;
-  const z = toCamera(camera, plane.x, plane.y, 0)[2];
-  return Number.isFinite(z) && z > 0 ? z : null;
-}
-
-/** Fit samples for one plane map and camera (the Ruler's own, or a retake). */
-export function samplesFor(
-  cells: readonly FloorCell[],
-  h: Mat3,
-  camera: Camera,
-): FitSample[] {
-  const out: FitSample[] = [];
-  for (const cell of cells) {
-    const depth = floorDepth(h, camera, cell.flat);
-    if (depth !== null) out.push({ output: cell.output, depth });
-  }
-  return out;
-}
 
 function compute(
   extra: DepthExtra,
@@ -150,7 +94,7 @@ function compute(
   for (let row = 0; row < height; row++)
     for (let col = 0; col < width; col++) {
       const p = cellCentre(col, row, width, height, s.source.w, s.source.h);
-      if (polygons.some((polygon) => inside(p, polygon)))
+      if (polygons.some((polygon) => insidePolygon(p, polygon)))
         found.push({ output: values[row * width + col], flat: flatten(p) });
     }
   const step = Math.max(1, Math.ceil(found.length / MAX_FIT_CELLS)),
