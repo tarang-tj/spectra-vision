@@ -25,7 +25,7 @@ export function drawWalls(ctx: CanvasRenderingContext2D, env: DrawEnv) {
   const walls = getWalls(),
     n = walls.corners.length;
   if (!n) return;
-  const { numbers, camera } = currentWalls(env.s, env.d),
+  const { numbers, camera, basis } = currentWalls(env.s, env.d),
     unit = env.s.unit,
     base = walls.corners.map((c) => env.tapToCanvas(c.base)),
     sides = walls.closed ? n : n - 1;
@@ -38,7 +38,7 @@ export function drawWalls(ctx: CanvasRenderingContext2D, env: DrawEnv) {
     if (numbers)
       tag(
         ctx,
-        `${i + 1}: ${lengthText(numbers.walls[i], unit)}`,
+        `${i + 1}: ${lengthText(numbers.walls[i], unit, basis)}`,
         (a.x + b.x) / 2 + 6,
         (a.y + b.y) / 2 + 16,
         WALL,
@@ -70,8 +70,8 @@ export function drawWalls(ctx: CanvasRenderingContext2D, env: DrawEnv) {
     tag(
       ctx,
       t.own
-        ? `height ${lengthText(q, unit)}`
-        : `height assumed ${lengthText(numbers?.meanHeight ?? null, unit)}`,
+        ? `height ${lengthText(q, unit, basis)}`
+        : `height assumed ${lengthText(numbers?.meanHeight ?? null, unit, basis)}`,
       t.at.x + 10,
       t.at.y - 10,
       WALL,

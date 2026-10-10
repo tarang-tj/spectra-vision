@@ -153,10 +153,19 @@ test("stand a box in an outlined alcove: verdict with its bar, drawn in true per
   expect(await verdict.getAttribute("data-kind")).toBe("fits");
   expect(bar).toBeGreaterThan(0);
   expect(Math.abs(mm - 150)).toBeLessThanOrEqual(bar);
+  // The bar is wide here, so being inside it says little: the value itself
+  // is within 1% of the true 150 mm.
+  expect(Math.abs(mm - 150) / 150).toBeLessThan(0.01);
   await expect(page.getByTestId("fit-basis")).toContainText(
     "2 standard deviations",
   );
   await expect(page.getByTestId("fit-basis")).toContainText("Not included");
+  // One reference: the Ruler's own sentence is quoted, and the measured
+  // share for that case is given.
+  await expect(page.getByTestId("fit-basis")).toContainText(
+    "whose own basis is: Tap placement only.",
+  );
+  await expect(page.getByTestId("fit-basis")).toContainText("91 times in 100");
   // The canvas changed where the box is: its top face is drawn at the true
   // camera's places for its four top corners, and not out where a wider
   // box's corners would be.
@@ -174,6 +183,7 @@ test("stand a box in an outlined alcove: verdict with its bar, drawn in true per
     overBar = Number(await verdict.getAttribute("data-error-mm"));
   expect(await verdict.getAttribute("data-kind")).toBe("over");
   expect(Math.abs(over + 150)).toBeLessThanOrEqual(overBar);
+  expect(Math.abs(over + 150) / 150).toBeLessThan(0.01);
   await expect
     .poll(async () => (await boxInk(page, big)).near)
     .toEqual([true, true, true, true]);

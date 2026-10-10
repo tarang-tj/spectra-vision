@@ -6,7 +6,7 @@
 import { formatMeasured } from "../../../measure/format";
 import { measured, type Measured } from "../../../measure/noise";
 import type { Derived } from "../derive";
-import { droppedNote } from "../monte-carlo";
+import { basisFor, droppedNote } from "../monte-carlo";
 import { plumbVersion } from "../plumbs";
 import type { RulerState } from "../state";
 import { fromMm, type Unit } from "../units";
@@ -81,9 +81,28 @@ export function verdictOf(
   };
 }
 
-/** What the outline verdict's bar covers, word for word. */
+/** Measured, not assumed: how many times in 100 the bar held the true
+ * clearance over 200 noisy retakes of one scene, with one reference
+ * (tests/fit-scene.test.ts) and with a second one (tests/fit-fused.test.ts).
+ * Those tests fail if a figure drifts from what they observe. */
+export const FIT_COVERAGE = { nearWall: 98, centred: 91, centredSecond: 86 };
+const HELD =
+    "over 200 simulated retakes of one test scene: this bar held the true clearance",
+  UNDER =
+    "fewer than the 95 that 2 standard deviations suggest. So a verdict can be wrong.";
+const coverageNote = (fused: { rects: number } | null | undefined): string =>
+  !fused
+    ? ` Measured with one reference, ${HELD} ${FIT_COVERAGE.nearWall} times in 100 with the box 40 mm from one wall, and ${FIT_COVERAGE.centred} times in 100 with it 50 mm from all four sides, ${UNDER}`
+    : fused.rects
+      ? ` Measured with a second reference in view, ${HELD} ${FIT_COVERAGE.centredSecond} times in 100 with the box 50 mm from all four sides, ${UNDER}`
+      : " How often this bar holds the true clearance was not measured with one reference and known spans only.";
+
+/** What the outline verdict's bar covers, word for word. The retakes are the
+ * Ruler's own (camera-of.ts), so the middle of the sentence is the Ruler's:
+ * with further references or known spans fused in, it names their corners,
+ * their ends and the tape uncertainty too. */
 export const basisOf = (d: Derived, trials: number): string =>
-  `The bar is 2 standard deviations of the clearance over ${trials} simulated retakes of the taps on the reference and on the outline${d.lens ? ", after a one-parameter lens correction" : ""}. Not included: where the box stands and the sizes typed for it, which are taken as exact; lens distortion; a floor that is not flat; a bent or misprinted reference. Only the footprint is checked, not the height.`;
+  `The bar is 2 standard deviations of the clearance over ${trials} simulated retakes. Each retake moves the taps on the outline and redoes the Ruler's solve of the floor, whose own basis is: ${basisFor(d.lens, d.sheet?.fused)} Also not included: where the box stands and the sizes typed for it, which are taken as exact; a floor that is not flat. Only the footprint is checked, not the height.${coverageNote(d.sheet?.fused)}`;
 
 let memo: {
   s: RulerState;

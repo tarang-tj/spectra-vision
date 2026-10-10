@@ -46,7 +46,8 @@ export default function WallsResults({
   listId: string;
 }) {
   const none = why ?? "not measured",
-    closed = n.shell.closed;
+    closed = n.shell.closed,
+    { basis } = cur;
   return (
     <>
       <ol className="ruler-results">
@@ -55,7 +56,7 @@ export default function WallsResults({
           id="walls-area"
           text={
             n.floorArea
-              ? formatMeasured(areaOf(n.floorArea, unit))
+              ? formatMeasured(areaOf(n.floorArea, unit, basis))
               : closed
                 ? "not measured: the outline crosses itself, so it has no single area"
                 : "not measured: close the room first"
@@ -66,20 +67,26 @@ export default function WallsResults({
           label="Ceiling height (mean of the measured corners)"
           id="walls-height"
           text={
-            n.meanHeight ? formatMeasured(lengthOf(n.meanHeight, unit)) : none
+            n.meanHeight
+              ? formatMeasured(lengthOf(n.meanHeight, unit, basis))
+              : none
           }
           data={attrs(n.meanHeight, "mm")}
         />
         <Row
           label="Wall area (openings not taken out)"
           id="walls-wall-area"
-          text={n.wallArea ? formatMeasured(areaOf(n.wallArea, unit)) : none}
+          text={
+            n.wallArea ? formatMeasured(areaOf(n.wallArea, unit, basis)) : none
+          }
           data={attrs(n.wallArea, "mm2")}
         />
         <Row
           label="Volume (floor area times mean height)"
           id="walls-volume"
-          text={n.volume ? formatMeasured(volumeOf(n.volume, unit)) : none}
+          text={
+            n.volume ? formatMeasured(volumeOf(n.volume, unit, basis)) : none
+          }
           data={attrs(n.volume, "mm3")}
         />
       </ol>
@@ -89,13 +96,13 @@ export default function WallsResults({
           return (
             <li key={i} data-testid="walls-wall">
               Wall {i + 1}, corner {i + 1} to {((i + 1) % n.walls.length) + 1}:{" "}
-              <output {...attrs(q, "mm")}>{lengthText(q, unit)}</output>. Height
-              at corner {i + 1}:{" "}
+              <output {...attrs(q, "mm")}>{lengthText(q, unit, basis)}</output>.
+              Height at corner {i + 1}:{" "}
               <output {...attrs(own || null, "mm")}>
                 {own
-                  ? `${lengthText(own, unit)} (measured)`
+                  ? `${lengthText(own, unit, basis)} (measured)`
                   : n.meanHeight
-                    ? `${lengthText(n.meanHeight, unit)} (assumed: the mean of the measured corners)`
+                    ? `${lengthText(n.meanHeight, unit, basis)} (assumed: the mean of the measured corners)`
                     : "not measured"}
               </output>
             </li>

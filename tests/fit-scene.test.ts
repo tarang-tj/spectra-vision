@@ -11,7 +11,7 @@ import {
 } from "../src/panels/ruler/fit/box-state";
 import { drawBox } from "../src/panels/ruler/fit/draw";
 import { onBoxPointer } from "../src/panels/ruler/fit/pointer";
-import { verdicts } from "../src/panels/ruler/fit/verdict";
+import { FIT_COVERAGE, verdicts } from "../src/panels/ruler/fit/verdict";
 import { applyHomography } from "../src/panels/ruler/homography";
 import { gaussian, seededRandom } from "../src/panels/ruler/monte-carlo";
 import {
@@ -250,6 +250,11 @@ describe("placing the box with the pointer", () => {
 describe("the bar against noisy retakes", () => {
   // Each retake: every tap (four board corners, four alcove corners) lands
   // 1.5 px (one sd) off, as the bar assumes. The box stays put in plane mm.
+  // Observed 2026-10-10 (seed 4242): near one wall 197 of 200 (98.5%) hold
+  // the truth, centred 182 of 200 (91.0%), with 1 wrong "does not fit" among
+  // the centred. The panel prints these shares (FIT_COVERAGE). Each floor is
+  // the printed share less 2 sd of a count over 200 retakes: 2 points at
+  // 98%, 4 points at 91%.
   const RETAKES = 200,
     cases = [
       // 40 mm from the left wall, 60 from the right, 150 front and back.
@@ -258,16 +263,18 @@ describe("the bar against noisy retakes", () => {
         at: { x: 1040, y: 2000 },
         d: 700,
         truth: 40,
-        floor: 0.9,
+        printed: FIT_COVERAGE.nearWall,
+        margin: 0.02,
       },
-      // 50 mm from all four sides: the smallest of four noisy gaps.
-      // Its bar holds the truth less often, so its floor is lower.
+      // 50 mm from all four sides: the smallest of four noisy gaps. Its bar
+      // holds the truth less often than 2 sd suggests, and the panel says so.
       {
         name: "centred",
         at: { x: 1050, y: 2000 },
         d: 900,
         truth: 50,
-        floor: 0.85,
+        printed: FIT_COVERAGE.centred,
+        margin: 0.04,
       },
     ];
 
@@ -293,7 +300,13 @@ describe("the bar against noisy retakes", () => {
       console.info(
         `fit coverage, ${c.name}: ${inside[k]}/${RETAKES} retakes hold the truth (${c.truth} mm); mean bar ${bars[k].toFixed(1)} mm; verdicts ${JSON.stringify(kinds[k])}`,
       );
-      expect(inside[k] / RETAKES).toBeGreaterThanOrEqual(c.floor);
+      const share = inside[k] / RETAKES;
+      expect(share, c.name).toBeGreaterThanOrEqual(c.printed / 100 - c.margin);
+      // If the bar starts to hold more often than printed, the sentence in
+      // the panel is out of date.
+      expect(share, `update FIT_COVERAGE, ${c.name}`).toBeLessThanOrEqual(
+        c.printed / 100 + c.margin,
+      );
       // The truth is 40 or 50 mm of room, so "does not fit" is a wrong call.
       // A 2 sd bar allows a few; more than 2% of retakes would be a fault.
       expect(kinds[k].over / RETAKES).toBeLessThanOrEqual(0.02);

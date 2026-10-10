@@ -152,6 +152,9 @@ test("a known room through the UI: height and area against truth, OBJ exported, 
     )
     .toBeGreaterThan(500);
   await expect(page.getByTestId("walls-basis")).toContainText("plumb walls");
+  await expect(page.getByTestId("walls-basis")).toContainText(
+    "whose own basis is: Tap placement only.",
+  );
   await expect(page.getByRole("list", { name: "Walls" })).toContainText(
     "(measured)",
   );
