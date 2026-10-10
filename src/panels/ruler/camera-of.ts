@@ -20,23 +20,28 @@ import type { RulerState } from "./state";
 export const tapSigma = (s: RulerState): number =>
   TAP_SIGMA_SCREEN_PX / (s.scale > 0 ? s.scale : 1);
 
-type Key = {
-  sheet: Derived["sheet"];
-  lens: Derived["lens"];
-  source: RulerState["source"];
-  plumbs: number;
-};
-const same = (a: Key, b: Key) =>
-  a.sheet === b.sheet &&
-  a.lens === b.lens &&
-  a.source === b.source &&
-  a.plumbs === b.plumbs;
-const keyOf = (s: RulerState, d: Derived): Key => ({
-  sheet: d.sheet,
-  lens: d.lens,
-  source: s.source,
-  plumbs: plumbVersion(),
-});
+/** Everything the camera and its retakes depend on, by value. The Ruler
+ * builds a new sheet object on every state change, so its identity cannot be
+ * the key: a span end dragged or a unit changed must not refit the camera. */
+type Key = string;
+const same = (a: Key, b: Key) => a === b;
+const points = (ps: readonly Pt[]) =>
+  ps.map((p) => `${p.x},${p.y},${p.s ?? ""}`).join(";");
+function keyOf(s: RulerState, d: Derived): Key {
+  const { sheet, lens } = d;
+  if (!sheet || !s.source) return "";
+  return [
+    points(sheet.raw ?? sheet.ordered),
+    points(sheet.plane),
+    sheet.h.join(","),
+    sheet.fused?.key ?? "",
+    lens ? `${lens.k}|${lens.cx}|${lens.cy}|${lens.norm}` : "",
+    s.source.w,
+    s.source.h,
+    tapSigma(s),
+    plumbVersion(),
+  ].join("#");
+}
 
 let camMemo: { key: Key; value: Camera | null } | null = null;
 

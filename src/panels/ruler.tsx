@@ -40,6 +40,9 @@ function Ruler() {
     show = still && s.generation === frame.source?.generation,
     pending = s.measures.some((m) => m.b === null),
     ext = extensionFor(s.tool),
+    // A tool takes taps only once the reference is placed; until then taps
+    // and Undo belong to the reference corners.
+    toolActive = ext !== null && s.corners.length === 4,
     open = openShape(s),
     adding = pendingRef(s);
 
@@ -107,7 +110,7 @@ function Ruler() {
         )}
         <button
           className="button"
-          onClick={ext ? ext.undo : undo}
+          onClick={toolActive ? ext.undo : undo}
           disabled={isEmpty(s)}
         >
           Undo

@@ -142,7 +142,7 @@ export function hit(p: Pt, radiusSrc: number): Handle | null {
 export function undo() {
   const state = getState();
   // An extension tool undoes its own points (see extensions.ts).
-  if (isExtensionTool(state.tool)) return;
+  if (isExtensionTool(state.tool) && state.corners.length === 4) return;
   // A further reference still being tapped loses its last corner first.
   if (state.tool !== "edge" && undoRefCorner()) return;
   if (isShapeTool(state.tool)) {

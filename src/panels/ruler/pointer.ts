@@ -25,12 +25,13 @@ export function onRulerPointer(e: StagePointerEvent): boolean {
   // One tap uncertainty, in source pixels, stored with every point it places.
   const sigma = TAP_SIGMA_SCREEN_PX / e.scale;
   // A tool from its own folder sees the event first, unless one of the
-  // Ruler's own handles is already being dragged by this pointer.
+  // Ruler's own handles is being dragged: a second finger is ignored then,
+  // as it is without a tool.
   // It needs the reference, so until all four corners are placed (at the
   // start, or after Clear) taps go on placing corners as usual.
   const ext =
     getState().corners.length === 4 ? extensionFor(getState().tool) : null;
-  if (ext && view.still && !(drag && drag.id === e.pointerId)) {
+  if (ext && view.still && !drag) {
     if (extensionPointer(ext, e)) {
       view.loupe = e.type === "up" ? null : { at, canvas: e.canvas };
       return true;
