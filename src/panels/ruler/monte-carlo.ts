@@ -5,6 +5,7 @@
 // random numbers are seeded, so the same taps always give the same bar.
 import { measured, type Measured } from "../../measure/noise";
 import { fromMm, type Unit } from "./units";
+import { fusedRuns } from "./fused-trials";
 import { applyLens, type Lens } from "./lens";
 import {
   planeDistance,
@@ -89,12 +90,17 @@ export function distanceSpread(
     normal = gaussian(seededRandom(seed)),
     // Each point carries the tap uncertainty it was placed with.
     jitter = makeJitter(normal, sigmaPx, lens),
-    base = sheet.raw ?? sheet.ordered;
+    base = sheet.raw ?? sheet.ordered,
+    // With more than one known size, each trial is a retake of the whole
+    // fused solve (made once and shared), not of the first reference alone.
+    runs = sheet.fused ? fusedRuns(sheet.fused, n) : null;
   let sum = 0,
     sumSq = 0,
     used = 0;
   for (let i = 0; i < n; i++) {
-    const h = solveHomography(base.map(jitter), sheet.plane),
+    const h = runs
+        ? (runs[i]?.h ?? null)
+        : solveHomography(base.map(jitter), sheet.plane),
       d = h ? planeDistance(h, jitter(a), jitter(b)) : null;
     if (d === null || !Number.isFinite(d)) continue;
     used++;
@@ -145,6 +151,7 @@ export function measureSpan(
     lens ? `${lens.k}|${lens.cx}|${lens.cy}` : "",
     sheet.plane[1].x,
     sheet.plane[2].y,
+    sheet.fused?.key ?? "",
     key(a),
     key(b),
     sigmaPx,
