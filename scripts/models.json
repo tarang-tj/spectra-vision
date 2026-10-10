@@ -73,5 +73,14 @@
     "license": "Apache-2.0",
     "card": "https://storage.googleapis.com/mediapipe-assets/gesture_recognizer/model_card_hand_gesture_classification_with_faireness_2022.pdf",
     "licenseNote": "The gesture classification model card states no licence. Apache-2.0 is stated in the Hand Tracking model card for the bundled hand landmarker and is the licence of the MediaPipe project that publishes this file."
+  },
+  {
+    "file": "depth_anything_v2_small.onnx",
+    "url": "https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/4472b7362082ad9968fee890ca0f1e5aca36b93d/onnx/model.onnx",
+    "sha256": "afb6a5c28f3b6bf1618c6e43f02073ef9dfdc70e937502d51603e57b0a1df10c",
+    "bytes": 99060839,
+    "license": "Apache-2.0",
+    "card": "https://huggingface.co/onnx-community/depth-anything-v2-small",
+    "licenseNote": "Depth Anything V2 Small, fp32 ONNX export, pinned to commit 4472b7362082ad9968fee890ca0f1e5aca36b93d. Apache-2.0 is stated by the authors for the Small model (the Base, Large and Giant models are CC-BY-NC-4.0 and are not used) and in the front matter of this ONNX export's card, read on 2026-10-10."
   }
 ]

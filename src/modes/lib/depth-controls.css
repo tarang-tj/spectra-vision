@@ -1,0 +1,8 @@
+.depth-controls [data-testid="depth-scale"] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.depth-controls .range-label {
+  margin-bottom: 0;
+}

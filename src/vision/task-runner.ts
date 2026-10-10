@@ -189,7 +189,10 @@ export function createTaskRunner(
     firstSent = 0;
     status = beginStatus(spec.kind, model, requested, active, note);
     try {
-      worker = spawn(`${base}vision-worker.js`);
+      // Depth runs on another runtime, in a worker script of its own.
+      worker = spawn(
+        `${base}${spec.kind === "depth" ? "depth-worker.js" : "vision-worker.js"}`,
+      );
     } catch {
       status.state = "failed";
       events.onError(
