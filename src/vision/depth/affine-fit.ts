@@ -87,7 +87,7 @@ function line(
 }
 
 /** Fit scale and shift. Points that sit far from the line (a chair standing
- * on the outlined floor) are weighted down, Huber style, over a few rounds. */
+ * on the outlined floor) are weighted down, then left out. */
 export function fitDepth(samples: readonly FitSample[]): DepthFit | FitFailure {
   const good = samples.filter(
       (s) =>
@@ -112,7 +112,10 @@ export function fitDepth(samples: readonly FitSample[]): DepthFit | FitFailure {
     w = new Float64Array(count).fill(1);
   let fit = line(x, y, w);
   if (!fit) return refuse("flat");
-  for (let round = 0; round < 5; round++) {
+  // Three Huber rounds pull the line toward the bulk of the points; the
+  // rounds after them drop what is still far off, so a one-sided group of
+  // wrong points cannot drag the line.
+  for (let round = 0; round < 8; round++) {
     const errors = Array.from(x, (v, i) =>
         Math.abs(fit!.a * v + fit!.b - y[i]),
       ),
@@ -123,9 +126,10 @@ export function fitDepth(samples: readonly FitSample[]): DepthFit | FitFailure {
           [...errors].sort((p, q) => p - q),
           0.5,
         ),
-      bound = 1.5 * Math.max(scale, 1e-12);
+      soft = round < 3,
+      bound = (soft ? 1.5 : 3) * Math.max(scale, 1e-12 * Math.abs(fit.b));
     for (let i = 0; i < count; i++)
-      w[i] = errors[i] <= bound ? 1 : bound / errors[i];
+      w[i] = errors[i] <= bound ? 1 : soft ? bound / errors[i] : 0;
     const next = line(x, y, w);
     if (!next) break;
     fit = next;

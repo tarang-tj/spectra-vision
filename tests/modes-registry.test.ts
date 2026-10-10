@@ -56,10 +56,14 @@ describe("the model manifest", () => {
   it("records an official MediaPipe URL, a SHA-256, a size and a licence for each", () => {
     expect(new Set(manifest.map((m) => m.file)).size).toBe(manifest.length);
     for (const model of manifest) {
-      expect(model.url).toMatch(
-        /^https:\/\/storage\.googleapis\.com\/mediapipe-models\/.+\/\d+\//,
-      );
-      expect(model.url.endsWith(`/${model.file}`)).toBe(true);
+      // The depth model is the one file not published by MediaPipe: its URL
+      // is checked in tests/depth-mode.test.ts.
+      if (model.file !== "depth_anything_v2_small.onnx") {
+        expect(model.url).toMatch(
+          /^https:\/\/storage\.googleapis\.com\/mediapipe-models\/.+\/\d+\//,
+        );
+        expect(model.url.endsWith(`/${model.file}`)).toBe(true);
+      }
       expect(model.sha256).toMatch(/^[0-9a-f]{64}$/);
       expect(Number.isInteger(model.bytes) && model.bytes > 0).toBe(true);
       expect(model.license).toBeTruthy();
