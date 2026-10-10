@@ -7,6 +7,7 @@ import { cameraOf, cameraTrials, tapSigma, type Trials } from "../camera-of";
 import type { Derived } from "../derive";
 import type { RulerState } from "../state";
 import { measureWalls, type Numbers } from "./numbers";
+import { offPlumb } from "./off-plumb";
 import { getWalls, type WallsState } from "./store";
 
 export type Current = {
@@ -14,6 +15,8 @@ export type Current = {
   /** Null with no floor corner, no solved reference, or a corner at or
    * beyond the horizon of the surface. */
   numbers: Numbers | null;
+  /** Corners whose ceiling point is not above them (see off-plumb.ts). */
+  offCorners: number[];
 };
 
 let memo: {
@@ -56,6 +59,7 @@ export function currentWalls(
             sigma: tapSigma(s),
           })
         : null,
+    offCorners: d.sheet ? offPlumb(s, d, camera, walls.corners) : [],
   };
   memo = { walls, sheet: d.sheet, lens: d.lens, camera, trials, value };
   return value;

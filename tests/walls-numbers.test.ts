@@ -1,6 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { beforeEach, describe, it, expect } from "vitest";
-import { cameraOf } from "../src/panels/ruler/camera-of";
+import { cameraOf, cameraTrials } from "../src/panels/ruler/camera-of";
 import { derive } from "../src/panels/ruler/derive";
 import { gaussian, seededRandom } from "../src/panels/ruler/monte-carlo";
 import { allPlumbs } from "../src/panels/ruler/plumbs";
@@ -25,6 +25,7 @@ import {
 } from "../src/panels/ruler/walls/store";
 import {
   boardCorners,
+  HIGH,
   RECT,
   ROOM,
   sceneFor,
@@ -33,7 +34,7 @@ import {
 
 const W = 1920,
   H = 1440,
-  scene = sceneFor(W, H),
+  near = sceneFor(W, H),
   exact = (p: P) => p,
   AREA = ROOM.w * ROOM.d;
 
@@ -43,6 +44,7 @@ const W = 1920,
 function tapRoom(
   tops: boolean[] = [true, true, true, true],
   nudge: (p: P) => P = exact,
+  scene = near,
 ) {
   resetRuler();
   setRef("custom");
@@ -81,7 +83,7 @@ describe("the Walls numbers through the Ruler's stores", () => {
     expect(n.volume!.error).toBeGreaterThan(0);
     expect(n.kept).toBe(1);
     expect(n.trials).toBe(200);
-    expect(n.offCorners).toEqual([]);
+    expect(currentWalls(getState(), derive(getState())).offCorners).toEqual([]);
   });
 
   it("is seeded and memoized: the same taps give the same object", () => {
@@ -115,12 +117,11 @@ describe("the Walls numbers through the Ruler's stores", () => {
 
   it("flags a ceiling point far off the plumb line through its corner", () => {
     tapRoom();
-    const top = scene.shoot(RECT[2].x, RECT[2].y, ROOM.h);
-    movePoint("top", 2, { x: top.x + 120, y: top.y });
-    const s = getState(),
-      n = currentWalls(s, derive(s)).numbers!;
-    expect(n.offCorners).toEqual([2]);
-    expect(n.shell.offs[2]!).toBeGreaterThan(9);
+    const top = near.shoot(RECT[2].x, RECT[2].y, ROOM.h);
+    movePoint("top", 2, { x: top.x + 40, y: top.y });
+    const s = getState();
+    // Only that corner, although its pair bends the camera every height uses.
+    expect(currentWalls(s, derive(s)).offCorners).toEqual([2]);
   });
 
   it("undoes one tap at a time, back through the close", () => {
@@ -135,14 +136,45 @@ describe("the Walls numbers through the Ruler's stores", () => {
   });
 });
 
+/** Printed only when asked for (WALLS_REPORT=1), to keep the suite quiet. */
+const report = (line: string) => {
+  if (process.env.WALLS_REPORT) process.stderr.write(`\n[walls] ${line}\n`);
+};
+const focalSd = () => {
+  const s = getState(),
+    f = cameraTrials(s, derive(s)).trials.map((t) => t.camera!.f),
+    mean = f.reduce((t, v) => t + v, 0) / f.length;
+  return Math.sqrt(f.reduce((t, v) => t + (v - mean) ** 2, 0) / (f.length - 1));
+};
+
 describe("what the ceiling points buy", () => {
-  it("narrows the height bar at corner 1 as more plumb edges are marked", () => {
-    const one = tapRoom([true, false, false, false]).numbers!.heights[0]!,
-      all = tapRoom().numbers!.heights[0]!;
-    console.log(
-      `height bar at corner 1: ${one.error.toFixed(1)} mm with its own ceiling point alone, ${all.error.toFixed(1)} mm with all four`,
+  it("steadies the focal length from the first plumb edge on, seen from high up", () => {
+    const high = sceneFor(W, H, HIGH.eye, HIGH.target),
+      sd = [
+        [false, false, false, false],
+        [true, false, false, false],
+        [true, true, true, true],
+      ].map((tops) => {
+        tapRoom(tops, exact, high);
+        return focalSd();
+      });
+    report(
+      `high view, focal length sd over the retakes: ${sd.map((v) => v.toFixed(1)).join(" -> ")} px with 0, 1 and 4 ceiling points (true f ${high.f})`,
     );
-    expect(all.error).toBeLessThan(one.error);
+    expect(sd[1]).toBeLessThan(0.6 * sd[0]);
+    expect(sd[2]).toBeLessThan(sd[1]);
+  });
+
+  it("narrows the mean height bar as more corners are measured", () => {
+    const one = tapRoom([true, false, false, false]).numbers!,
+      all = tapRoom().numbers!;
+    report(
+      `near view, corner 1 height bar: ${one.heights[0]!.error.toFixed(0)} mm with its own ceiling point alone, ${all.heights[0]!.error.toFixed(0)} mm with all four; mean height bar ${one.meanHeight!.error.toFixed(0)} -> ${all.meanHeight!.error.toFixed(0)} mm`,
+    );
+    expect(all.meanHeight!.error).toBeLessThan(0.6 * one.meanHeight!.error);
+    // One corner's own bar does not narrow: it is set by how well the small
+    // reference fixes that corner on the floor, which no plumb edge changes.
+    expect(all.heights[0]!.error / one.heights[0]!.error).toBeGreaterThan(0.8);
   });
 });
 
@@ -152,19 +184,23 @@ describe("coverage of the bars", () => {
       normal = gaussian(seededRandom(4242)),
       // One tap uncertainty: 1.5 screen pixels at a display scale of 1.
       nudge = (p: P) => ({ x: p.x + 1.5 * normal(), y: p.y + 1.5 * normal() });
+    const ratio: number[] = [];
     let height = 0,
       area = 0,
       volume = 0,
       flagged = 0;
     for (let i = 0; i < RETAKES; i++) {
-      const n = tapRoom([true, true, true, true], nudge).numbers!;
+      const cur = tapRoom([true, true, true, true], nudge),
+        n = cur.numbers!;
       if (inside(n.meanHeight, ROOM.h)) height++;
       if (inside(n.floorArea, AREA)) area++;
       if (inside(n.volume, AREA * ROOM.h)) volume++;
-      if (n.offCorners.length) flagged++;
+      if (cur.offCorners.length) flagged++;
+      ratio.push(Math.abs(n.floorArea!.value - AREA) / n.floorArea!.error);
     }
-    console.log(
-      `coverage over ${RETAKES} retakes: mean height ${height}, floor area ${area}, volume ${volume}; retakes with an off-plumb warning ${flagged}`,
+    ratio.sort((a, b) => a - b);
+    report(
+      `coverage over ${RETAKES} retakes: mean height ${height}, floor area ${area}, volume ${volume}; retakes with a false off-plumb warning ${flagged}; floor area miss over bar, median ${ratio[100].toFixed(2)}, 95th percentile ${ratio[190].toFixed(2)}`,
     );
     // 2 sd of a normal spread covers 95.4%; 200 retakes resolve that to
     // about 3 points either way.

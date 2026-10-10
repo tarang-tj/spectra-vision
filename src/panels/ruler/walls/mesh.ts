@@ -6,7 +6,11 @@
 import type { V3 } from "../../../measure/vec";
 import { heightAt, type Shell } from "./shell";
 
-export type Face = { name: string; kind: "floor" | "wall" | "ceiling"; at: number[] };
+export type Face = {
+  name: string;
+  kind: "floor" | "wall" | "ceiling";
+  at: number[];
+};
 export type Mesh = {
   /** Metres. The first `corners` are the floor in tap order; the ceiling
    * points follow in the same order when heights exist. */

@@ -6,7 +6,7 @@
 // the code under test: the projection is written out by hand.
 
 export type P = { x: number; y: number };
-type V = [number, number, number];
+export type V = [number, number, number];
 
 /** A 4.2 m by 3.1 m room, 2.44 m high. */
 export const ROOM = { w: 4200, d: 3100, h: 2440 };
@@ -38,7 +38,12 @@ export const boardCorners = (): P[] => [
 
 /** Where the camera stands and what it looks at. */
 export const EYE: V = [2100, -4200, 1900];
-const TARGET: V = [2100, 1200, 900];
+export const TARGET: V = [2100, 1200, 900];
+/** A second view of the same room, from high up and looking steeply down. */
+export const HIGH = {
+  eye: [2100, -3000, 4500] as V,
+  target: [2100, 1400, 600] as V,
+};
 /** Focal length as a share of the picture's width (a phone's main camera). */
 export const FOCAL = 0.75;
 
@@ -53,21 +58,21 @@ const sub = (a: V, b: V): V => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
     const n = Math.hypot(a[0], a[1], a[2]);
     return [a[0] / n, a[1] / n, a[2] / n];
   };
-// Camera axes in the world: x right, y down, z forward, as in a picture.
-const FORWARD = unit(sub(TARGET, EYE)),
-  RIGHT = unit(cross(FORWARD, [0, 0, 1])),
-  DOWN = cross(FORWARD, RIGHT);
 
 /** The true camera for a picture `w` by `h` pixels: `shoot` gives the pixel
  * a world point lands on. */
-export function sceneFor(w: number, h: number) {
-  const f = FOCAL * w;
+export function sceneFor(w: number, h: number, eye = EYE, target = TARGET) {
+  // Camera axes in the world: x right, y down, z forward, as in a picture.
+  const FORWARD = unit(sub(target, eye)),
+    RIGHT = unit(cross(FORWARD, [0, 0, 1])),
+    DOWN = cross(FORWARD, RIGHT),
+    f = FOCAL * w;
   return {
     w,
     h,
     f,
     shoot(x: number, y: number, z = 0): P {
-      const rel = sub([x, y, z], EYE),
+      const rel = sub([x, y, z], eye),
         depth = dot(rel, FORWARD);
       return {
         x: w / 2 + (f * dot(rel, RIGHT)) / depth,

@@ -25,9 +25,6 @@ export type Numbers = {
   floorArea: Q | null;
   wallArea: Q | null;
   volume: Q | null;
-  /** Corners whose ceiling point sits further than `offLimit` picture pixels
-   * from the plumb line through the corner. */
-  offCorners: number[];
   /** Simulated retakes asked for, and the smallest share any shown number
    * could use. */
   trials: number;
@@ -45,8 +42,6 @@ export type NumbersInput = {
   sigma: number;
 };
 
-/** A ceiling point this many tap uncertainties off its plumb line is flagged. */
-export const OFF_SIGMAS = 6;
 /** A number is shown only if this share of the retakes could produce it. */
 const MIN_KEPT = 0.8;
 
@@ -99,8 +94,7 @@ export function measureWalls(input: NumbersInput): Numbers | null {
       return { value, error: 2 * Math.sqrt(variance) };
     }),
     w = shell.walls.length,
-    c = corners.length,
-    limit = OFF_SIGMAS * sigma;
+    c = corners.length;
   return {
     shell,
     walls: q.slice(0, w),
@@ -109,9 +103,6 @@ export function measureWalls(input: NumbersInput): Numbers | null {
     floorArea: q[w + c + 1],
     wallArea: q[w + c + 2],
     volume: q[w + c + 3],
-    offCorners: shell.offs.flatMap((off, i) =>
-      off !== null && off > limit ? [i] : [],
-    ),
     trials: trials.length,
     kept,
   };

@@ -73,9 +73,10 @@ describe("the room's shell from exact taps", () => {
     shell.offs.forEach((off) => expect(off!).toBeLessThan(1e-3));
     expect(shell.meanHeight).toBeCloseTo(ROOM.h, 2);
     expect(shell.floorArea! / (ROOM.w * ROOM.d)).toBeCloseTo(1, 8);
-    expect(
-      shell.wallArea! / (2 * (ROOM.w + ROOM.d) * ROOM.h),
-    ).toBeCloseTo(1, 5);
+    expect(shell.wallArea! / (2 * (ROOM.w + ROOM.d) * ROOM.h)).toBeCloseTo(
+      1,
+      5,
+    );
     expect(shell.volume! / (ROOM.w * ROOM.d * ROOM.h)).toBeCloseTo(1, 5);
   });
 
