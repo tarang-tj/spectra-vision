@@ -103,7 +103,7 @@ test("a known span narrows a far span and moves it to the truth; the tape test a
   // Text or zero is refused in words, and nothing reads NaN.
   await typed.fill("three metres");
   await expect(page.getByTestId("ruler-tape-check")).toHaveText(
-    "Type the tape reading as a number greater than zero..",
+    "Type the tape reading as a number greater than zero.",
   );
   await expect(use).toBeDisabled();
   await typed.fill(String(KNOWN_MM / 10));

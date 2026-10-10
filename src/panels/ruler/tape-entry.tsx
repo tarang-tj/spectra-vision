@@ -45,8 +45,10 @@ export default function TapeEntry({
           className={check.inside === false ? "ruler-warn" : "ruler-basis"}
           data-testid="ruler-tape-check"
         >
-          {[check.difference && `Reading minus tape: ${check.difference}`]
-            .concat(check.verdict)
+          {[
+            check.difference && `Reading minus tape: ${check.difference}`,
+            check.verdict.replace(/\.$/, ""),
+          ]
             .filter(Boolean)
             .join(", ")}
           .
