@@ -9,7 +9,12 @@ import { isUnit, type Unit } from "./units";
 export type Measure = { a: Pt; b: Pt | null };
 /** What a tap adds: a two-point span, a path, a closed outline, or a point on
  * an edge that is straight in reality (for the lens correction). */
-export type Tool = "span" | "path" | "area" | "edge";
+export type Tool = "span" | "path" | "area" | "edge" | ExtensionTool;
+/** Tools that live in their own folder and plug in through extensions.ts: a
+ * box of real size stood on the surface, and the walls of a room. */
+export type ExtensionTool = "box" | "wall";
+export const isExtensionTool = (t: Tool): t is ExtensionTool =>
+  t === "box" || t === "wall";
 export type ShapeKind = "path" | "area" | "edge";
 export type Shape = { kind: ShapeKind; pts: Pt[]; done: boolean };
 /** Fewest points that make a finished shape of each kind. */
@@ -81,13 +86,26 @@ export const set = (patch: Partial<RulerState>) => {
 };
 
 export const getState = () => state;
+
+/** Everything tapped on the picture was dropped (Clear, a new picture, a
+ * video that moved on). Whoever keeps points of their own on the same picture
+ * listens here and drops them too. */
+const cleared = new Set<() => void>();
+export const onPointsCleared = (l: () => void) => {
+  cleared.add(l);
+  return () => void cleared.delete(l);
+};
+export const pointsCleared = () => cleared.forEach((l) => l());
 export const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => void listeners.delete(l);
 };
 export const useRuler = () => useSyncExternalStore(subscribe, getState);
 /** Back to a clean slate (tests). */
-export const resetRuler = () => set({ ...initial(), unit: state.unit });
+export const resetRuler = () => {
+  set({ ...initial(), unit: state.unit });
+  pointsCleared();
+};
 
 export const setRef = (refId: string) => set({ refId, swap: false });
 export const setCustom = (customA: string, customB: string) =>
@@ -127,6 +145,7 @@ export function bindSource(
       shapes: [],
       swap: false,
     });
+    pointsCleared();
   } else if (
     Math.abs(scale - state.scale) / state.scale > 0.005 ||
     !state.source
@@ -147,5 +166,6 @@ export function bindStillness(isVideo: boolean, still: boolean) {
       swap: false,
       lock: null,
     });
+    pointsCleared();
   }
 }

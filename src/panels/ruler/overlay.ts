@@ -4,6 +4,7 @@
 // the one stage canvas, so Screenshot and Record capture it.
 import type { Frame } from "../../vision/frame";
 import { derive } from "./derive";
+import { drawExtensions } from "./extensions";
 import { orderCorners, type Pt } from "./homography";
 import { dot, INK, LINE, REF, tag } from "./overlay-parts";
 import { drawShapes } from "./overlay-shapes";
@@ -172,5 +173,6 @@ export function drawRuler(ctx: CanvasRenderingContext2D, frame: Frame) {
     dot(ctx, a.x, a.y, LINE, "");
   });
   drawShapes(ctx, s, d, at);
+  drawExtensions(ctx, frame, s, d, w, h);
   loupe(ctx, frame);
 }

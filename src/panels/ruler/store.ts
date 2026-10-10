@@ -4,7 +4,9 @@
 import type { Pt } from "./homography";
 import {
   getState,
+  isExtensionTool,
   MIN_POINTS,
+  pointsCleared,
   set,
   type Handle,
   type Shape,
@@ -29,7 +31,8 @@ const clamp = (p: Pt, sigma?: number): Pt => {
   return sd === undefined ? at : { ...at, s: sd };
 };
 
-const isShapeTool = (t: Tool): t is ShapeKind => t !== "span";
+const isShapeTool = (t: Tool): t is ShapeKind =>
+  t === "path" || t === "area" || t === "edge";
 
 /** Add a vertex to the open shape of this kind, or start one. */
 function addVertex(kind: ShapeKind, at: Pt): Handle {
@@ -126,6 +129,8 @@ export function hit(p: Pt, radiusSrc: number): Handle | null {
  * reference corner (only while nothing else was measured). */
 export function undo() {
   const state = getState();
+  // An extension tool undoes its own points (see extensions.ts).
+  if (isExtensionTool(state.tool)) return;
   if (isShapeTool(state.tool)) {
     const at = state.shapes.map((s) => s.kind).lastIndexOf(state.tool);
     if (at >= 0) {
@@ -155,8 +160,10 @@ export function undo() {
   }
 }
 
-export const clear = () =>
+export const clear = () => {
   set({ corners: [], measures: [], shapes: [], swap: false, lock: null });
+  pointsCleared();
+};
 
 /** Drop a half-built shape too short to keep; close one long enough. */
 const settle = (shapes: Shape[]): Shape[] =>

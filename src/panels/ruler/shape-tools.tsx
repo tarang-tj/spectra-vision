@@ -1,4 +1,5 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+import { EXTENSIONS } from "./extensions";
 import {
   finishShape,
   MIN_POINTS,
@@ -29,7 +30,14 @@ export function openShape(s: RulerState) {
 }
 
 /** Choose what a tap adds, and finish or close the path or outline. */
-export default function ShapeTools({ s }: { s: RulerState }) {
+export default function ShapeTools({
+  s,
+  ready,
+}: {
+  s: RulerState;
+  /** The reference is solved: tools that need it can be chosen. */
+  ready: boolean;
+}) {
   const open = openShape(s),
     canFinish = !!open && open.pts.length >= MIN_POINTS[open.kind];
   return (
@@ -43,6 +51,18 @@ export default function ShapeTools({ s }: { s: RulerState }) {
             aria-pressed={s.tool === t.id}
             title={t.hint}
             onClick={() => setTool(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+        {EXTENSIONS.map((t) => (
+          <button
+            key={t.tool}
+            className="button"
+            aria-pressed={s.tool === t.tool}
+            title={ready ? t.hint : "Tap the four reference corners first."}
+            disabled={!ready && s.tool !== t.tool}
+            onClick={() => setTool(s.tool === t.tool ? "span" : t.tool)}
           >
             {t.label}
           </button>

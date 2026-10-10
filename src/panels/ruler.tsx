@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useStudio } from "../studio-context";
 import { derive } from "./ruler/derive";
+import { EXTENSIONS, extensionEnv, extensionFor } from "./ruler/extensions";
 import LensSection from "./ruler/lens-section";
 import PlanPanel from "./ruler/plan-panel";
 import ReferencePicker from "./ruler/reference-picker";
@@ -35,6 +36,7 @@ function Ruler() {
     // another photo that has not been drawn over yet.
     show = still && s.generation === frame.source?.generation,
     pending = s.measures.some((m) => m.b === null),
+    ext = extensionFor(s.tool),
     open = openShape(s);
 
   let step: string;
@@ -51,6 +53,7 @@ function Ruler() {
   else if (s.corners.length < 4)
     step = `Tap corner ${s.corners.length + 1} of 4 of the ${d.reference.label}, in any order.`;
   else if (d.problem) step = d.problem;
+  else if (ext) step = ext.step(extensionEnv(s, d));
   else if (s.tool === "path" || s.tool === "area") {
     const n = open?.pts.length ?? 0,
       finish = s.tool === "area" ? "Close outline" : "Finish path";
@@ -96,7 +99,11 @@ function Ruler() {
             </button>
           )
         )}
-        <button className="button" onClick={undo} disabled={isEmpty(s)}>
+        <button
+          className="button"
+          onClick={ext ? ext.undo : undo}
+          disabled={isEmpty(s)}
+        >
           Undo
         </button>
         <button className="button" onClick={clear} disabled={isEmpty(s)}>
@@ -123,8 +130,11 @@ function Ruler() {
           ))}
         </div>
       </section>
-      <ShapeTools s={s} />
+      <ShapeTools s={s} ready={!!d.sheet} />
       <Results s={s} d={d} show={show} />
+      {EXTENSIONS.map((e) => (
+        <e.Section key={e.tool} show={show} />
+      ))}
       <PlanPanel s={s} d={d} show={show} />
       <LensSection s={s} d={d} />
       <ul className="ruler-guidance">
