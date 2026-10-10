@@ -24,9 +24,21 @@ export default function HelpPanel() {
         tracks up to two hands; Face follows one face and does not identify it;
         Segment labels each pixel as background, hair, skin, clothes or
         accessories; Gestures recognizes seven hand gestures; Fusion runs the
-        body, hand and face models together. Pinching is a geometric thumb–index
-        distance heuristic. Motion map shows image position, not physical
-        distance. Confidence is a model threshold, not a guarantee of accuracy.
+        body, hand and face models together; Depth maps relative depth from one
+        camera, with a 3D view, and its first load is over 100 MB. Depth gives
+        no lengths unless a floor marked in the Ruler on a still photo lets it
+        be scaled. Pinching is a geometric thumb–index distance heuristic.
+        Motion map shows image position, not physical distance. Confidence is a
+        model threshold, not a guarantee of accuracy. The Ruler tab measures one
+        flat surface in a frozen picture from a reference of known size, with an
+        error bar on every number. Its Box tool stands a box of real size on the
+        floor and says whether it fits, does not fit or is too close to call;
+        its Walls tool turns floor corners and ceiling points into wall lengths,
+        heights, areas and a volume, with a 3D preview and OBJ and CSV files;
+        More known sizes adds further references and tape-measured spans, and
+        the tape test checks a reading against a tape. The bars cover tap
+        placement, not lens distortion, and none of it has been checked against
+        a tape measure in a real room.
       </p>
       <p>
         Use HTTPS or localhost for camera access. Start with good light; keep
