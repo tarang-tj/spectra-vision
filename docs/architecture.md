@@ -4,9 +4,9 @@ SPECTRA is built from three registries. Each one is a folder that is scanned at 
 
 | Registry | Folder         | A plugin file exports | Shows up as                         | Shipped                                                                                                          |
 | -------- | -------------- | --------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Modes    | `src/modes/`   | `ModeDef`             | A button on the mode switch         | Objects, Body, Hands, Face, Segment, Gestures, Fusion                                                            |
+| Modes    | `src/modes/`   | `ModeDef`             | A button on the mode switch         | Objects, Body, Hands, Face, Segment, Gestures, Fusion, Depth                                                     |
 | Effects  | `src/effects/` | `EffectDef`           | A switch in the effects tray        | Trails, Constellation, Plasma hands, Ember trail, Neon ribbons, Aura, Hologram, Starfield pull, Echo, Face light |
-| Panels   | `src/panels/`  | `PanelDef`            | A tab in the inspector (right rail) | Inspect, Lab                                                                                                     |
+| Panels   | `src/panels/`  | `PanelDef`            | A tab in the inspector (right rail) | Inspect, Lab, Library, Ruler, Presence                                                                           |
 
 Visual and interaction design is specified in [design/implementation-spec.md](design/implementation-spec.md). This file covers structure only.
 
@@ -163,7 +163,14 @@ The model file must be listed in `scripts/models.json` with its SHA-256, and the
 `src/vision/types.ts`, `public/vision-worker.js`, `src/vision/task-runner.ts`, `src/vision/useVision.ts`.
 
 ```ts
-type TaskKind = "object" | "pose" | "hand" | "face" | "segment" | "gesture";
+type TaskKind =
+  | "object"
+  | "pose"
+  | "hand"
+  | "face"
+  | "segment"
+  | "gesture"
+  | "depth";
 type TaskSpec = {
   kind: TaskKind;
   model: string;
@@ -195,21 +202,23 @@ type VisionResult = {
 };
 ```
 
-`model` is a file name under `public/models/`. `options` are passed to the MediaPipe task unchanged.
+`model` is a file name under `public/models/`. `options` are passed to the MediaPipe task unchanged; the `depth` kind is not a MediaPipe task and reads its own (`size: { CPU, GPU }`, the side the picture is resized toward).
 
-One worker runs one task. Messages:
+One worker runs one task. The six MediaPipe kinds run in `public/vision-worker.js`; `depth` runs in `public/depth-worker.js`, which the task runner spawns instead and which speaks the same messages plus `progress`. Messages:
 
-| Direction | Message                                                   | Meaning                                     |
-| --------- | --------------------------------------------------------- | ------------------------------------------- |
-| to worker | `{ type: "init", base, task: TaskSpec }`                  | Load the runtime and the model              |
-| from      | `{ type: "downloaded" }`                                  | The model and wasm bytes have arrived       |
-| from      | `{ type: "ready", delegate }`                             | The task is loaded                          |
-| to worker | `{ type: "frame", bitmap, time, generation, confidence }` | Run on one transferred bitmap               |
-| from      | `{ type: "result", result: TaskResult }`                  | Output for that frame; the bitmap is closed |
-| from      | `{ type: "error", error }`                                | Load or inference failed                    |
+| Direction | Message                                                   | Meaning                                                              |
+| --------- | --------------------------------------------------------- | -------------------------------------------------------------------- |
+| to worker | `{ type: "init", base, task: TaskSpec }`                  | Load the runtime and the model                                       |
+| from      | `{ type: "progress", loaded, total }`                     | Depth only: a long download is still arriving (sent about every 5 s) |
+| from      | `{ type: "downloaded" }`                                  | The model and wasm bytes have arrived                                |
+| from      | `{ type: "ready", delegate }`                             | The task is loaded                                                   |
+| to worker | `{ type: "frame", bitmap, time, generation, confidence }` | Run on one transferred bitmap                                        |
+| from      | `{ type: "result", result: TaskResult }`                  | Output for that frame; the bitmap is closed                          |
+| from      | `{ type: "error", error }`                                | Load or inference failed                                             |
 
-- **All six kinds are implemented** in the single `handlerFor(kind)` switch in the worker. That switch is the one place to add a kind: return `create`, `run`, `confidence` and `read`. `face` puts blendshapes and matrices in `extra`, `gesture` the top gesture of each hand, `segment` two 256 x 256 byte masks and per-class measurements (typed as `FaceExtra`, `GestureExtra`, `SegmentExtra`; read them with the helpers in `src/modes/lib/task-extras.ts`).
+- **The six MediaPipe kinds are implemented** in the single `handlerFor(kind)` switch in `vision-worker.js`. That switch is the one place to add a kind: return `create`, `run`, `confidence` and `read`. `face` puts blendshapes and matrices in `extra`, `gesture` the top gesture of each hand, `segment` two 256 x 256 byte masks and per-class measurements (typed as `FaceExtra`, `GestureExtra`, `SegmentExtra`; read them with the helpers in `src/modes/lib/task-extras.ts`).
 - The `ready` message also lists the files the worker fetched from the site (runtime, wasm, model). The page passes them to the service worker; see "Offline".
+- **Depth.** `depth-worker.js` loads ONNX Runtime Web from `runtime/ort-<version>/` and one model, Depth Anything V2 Small. `"CPU"` is the WebAssembly execution provider and `"GPU"` the WebGPU one. It resizes the bitmap by the model's own preprocessing rule (each side a multiple of the 14 pixel patch, the longer side capped at twice the target) and puts the output in `extra` as `DepthExtra`: `width`, `height`, `values` (a `Float32Array`, row by row), `min`, `max`. The values are relative inverse depth, larger for nearer, with unknown scale and zero; nothing in the worker turns them into a length. A `progress` message from a task that is not ready yet calls `RunnerEvents.onRestart`, which restarts the page's 45 s load timeout, so a slow download of the 99 MB model is not treated as a failure. A GPU start that fails is not retried in the worker: the runner restarts it on CPU under the delegate rules below. A lost WebGPU device is posted as an error.
 - **Fusion.** A mode with several tasks gets one worker per task, each fed its own bitmap. `mergeResults` (`src/vision/merge.ts`) keeps the latest result of every task under `result.tasks`, drops results from an older source generation, takes the flat fields and `time` from the primary (first) task, and reports `latency` as the slowest task. The app counts a frame (FPS, tracker, session history) only when the primary task's time advances.
 - **Status.** `useVision` reads its status from the runners: it is "Ready" only while every task of the mode is loaded. A runner that starts again (a delegate switch, a GPU to CPU fallback) reports it through `RunnerEvents.onRestart`, and the stage shows "Loading model" until it is ready again.
 
@@ -217,7 +226,7 @@ One worker runs one task. Messages:
 
 `src/vision/delegate.ts`, `src/vision/task-runner.ts`, `src/vision/webgl-probe.ts`.
 
-A task asks for `"CPU"` or `"GPU"` in its `TaskSpec`. The three v1 modes, Face, Gestures and Fusion ask for CPU. Segment asks for GPU, where its model is several times faster.
+A task asks for `"CPU"` or `"GPU"` in its `TaskSpec`. The three v1 modes, Face, Gestures and Fusion ask for CPU. Segment asks for GPU, where its model is several times faster. Depth asks for `"AUTO"`; for that kind GPU means WebGPU, and a browser without it falls back to CPU with the reason shown.
 
 - **Choice store.** The Lab's CPU or GPU switch calls `chooseDelegate(kind, delegate)`. The choice is kept per task kind for the page's lifetime, `requestedDelegate(spec)` returns the choice or else the mode's own delegate, and every runner of that kind restarts on it (`onDelegateChoice`). `chooseDelegate(kind, null)` gives the decision back to the mode.
 - **Software-renderer refusal.** Before a GPU task starts, `gpuUnavailable()` asks the page's one WebGL probe for the renderer name. With no WebGL2, or with a software renderer (SwiftShader, llvmpipe, lavapipe, WARP, Mesa OffScreen, Generic Renderer, Basic Render Driver), GPU is refused up front and the task runs on CPU with the reason recorded. `"AUTO"` uses the same name check, so those renderers resolve to CPU there too. A software renderer can run the GPU path, but an abandoned start there was measured to keep the browser's GPU process busy for 16 seconds to minutes. The worker refuses a software renderer for `segment` on its own as well.
@@ -339,7 +348,7 @@ type Studio = {
 };
 ```
 
-Two panels ship (more are being added on the measurement layer below): Inspect (`src/panels/inspect.tsx`), which is the v1 rail content, and Lab (`src/panels/lab.tsx` with its parts in `src/panels/lab/`). With one visible panel there is no tab bar. With more, `src/components/Inspector.tsx` shows a tab bar (`.panel-tabs`) and the chosen panel. Beside the stage the rail takes the stage's height and the panel scrolls inside it.
+Five panels ship: Inspect (`src/panels/inspect.tsx`), which is the v1 rail content, Lab (`src/panels/lab.tsx` with its parts in `src/panels/lab/`), and Library, Ruler and Presence, each a `.tsx` file with its parts in a folder of the same name. The last two are measuring panels built on the measurement layer below. With one visible panel there is no tab bar. With more, `src/components/Inspector.tsx` shows a tab bar (`.panel-tabs`) and the chosen panel. Beside the stage the rail takes the stage's height and the panel scrolls inside it.
 
 The Lab subscribes to the telemetry bus only while it is open, keeps fixed-size rings of samples (`lab-store.ts`), computes percentiles with `src/telemetry/stats.ts`, and runs the benchmark protocol in `benchmark.ts` (20 s measured after a 2 s warm-up per mode and delegate, exported as JSON or Markdown by `benchmark-report.ts`). It owns no timer while merely open: it is driven by the stage's `frame` events.
 
@@ -389,14 +398,74 @@ type Measured = { value: number; error: number; unit: string; basis: string }   
 noiseFloor(stillValues): { count, sd, peakToPeak }                                  // from an interval held still
 measured(value, error, unit, basis): Measured; isMeasured(m): boolean; combineErrors(...errors): number
 // format.ts
-formatMeasured(m): string                                                           // "12.3 ± 0.4 cm"; "not measured" without a usable error
-roundError(error): { error, decimals }                                              // one significant figure
+formatMeasured(m): string                                                           // "12.3 ± 0.4 cm", "2.4 ± 1.2 m"; "not measured" without a usable error
+roundError(error): { error, decimals }                                              // one significant figure, two when the error starts with 1 or 2
 // angles.ts   degrees
 jointAngle2D(a, b, c, aspect = 1), jointAngle3D(a, b, c), angleDifference(a, b)    // (-180, 180]
 headPose(matrix): { yaw, pitch, roll } | null; headMatrix(yaw, pitch, roll): number[] // column-major 4x4; headMatrix is the inverse, for tests
+// camera.ts   a pinhole camera recovered from one picture of a flat reference (fit in camera-fit.ts, 3x3 helpers in vec.ts)
+fitCamera({ h, width, height, seen, plumbs?, near? }): Camera | null                // h: picture pixels to plane mm; seen: at least four { plane, image }
+projectPoint(cam, x, y, z = 0): P2 | null                                           // plane mm and height to picture pixels; null at or beyond the horizon
+heightAbove(cam, base, top): { z, off } | null                                      // height in mm of the plumb line through plane point `base` at picture point `top`
+pixelRay(cam, p): { origin, dir }; toCamera(cam, x, y, z = 0): V3                   // world mm; camera frame is x right, y down, z forward
+horizontalFov(cam): number; projectByPose(cam, x, y, z = 0)                         // degrees; projectByPose uses f, r, t only, for tests
 ```
 
+**Rounding.** `formatMeasured` rounds the error first and writes the value to the same decimal place. The error keeps one significant figure, or two when its leading digit is 1 or 2: a bar of 1.2 cut to "1" would be off by a fifth, while 7.2 cut to "7" loses little. The leading digit is read before rounding, so 0.96 becomes 1 and 2.96 becomes 3.0. An error of exactly 0 is written "± 0" with the value to three figures; a missing or negative error, or a missing value, is "not measured".
+
+**Camera.** A `Camera` holds the focal length `f` and principal point (`cx`, `cy`, the middle of the picture) in source pixels, the caller's own plane map inverted (`g`) with a `lift` vector added once per mm of height, the pose `r`, `t`, the camera's `centre` in world mm (`centre[2]` is its height), `handed` (+1 or -1: a 3D export must flip one axis when it is -1), the fit's `rms` in pixels and `focalResolved`. On the surface (`z = 0`) `projectPoint` is exactly the caller's plane map, so a camera never moves a measurement that lies on the plane. `focalResolved` is false when the fitted focal length sits at an end of its allowed range, or when the camera is within about 8 degrees of square-on to the surface and no plumb edge was given: positions on the surface are still good then, heights are not, and anything that shows a height must check it. The model assumes square pixels, the optical axis through the middle of the picture, and no lens distortion beyond what the caller removed first; whoever shows a number from it says so.
+
 Rules for a measured number: it is a `Measured`, it carries an error that something produced (a noise floor from a still interval, a Monte Carlo spread), and its `basis` states what that error covers and what it leaves out. Show it with `formatMeasured`. A metric whose inputs were not seen is shown as "not seen".
+
+### Ruler tools: `src/panels/ruler/`
+
+The Ruler solves one plane map from the tapped reference (`derive(state)` gives `Derived`, whose `sheet.h` maps picture pixels to plane mm). A tool that needs more than spans, paths and areas lives in its own folder and plugs in through `extension-types.ts`. Box (`fit/`) and Walls (`walls/`) are built this way.
+
+```ts
+type ExtensionEnv = {
+  s: RulerState;
+  d: Derived;
+  camera: Camera | null; // null until the reference is solved; check focalResolved before a height
+  flat(tap: Pt): Pt; // a tap (source pixels) to the lens-corrected picture the plane map and camera work in
+  unflat(flat: Pt): Pt;
+};
+type DrawEnv = ExtensionEnv & {
+  frame: Frame;
+  tapToCanvas(tap: Pt): { x: number; y: number }; // mirror and letterbox aware
+  toCanvas(flat: Pt): { x: number; y: number };
+};
+type RulerExtension = {
+  tool: ExtensionTool; // "box" | "wall", declared in state.ts
+  label: string; // tool button text
+  hint: string; // its tooltip
+  step(env: ExtensionEnv): string; // the one-line instruction while the tool is chosen
+  draw(ctx: CanvasRenderingContext2D, env: DrawEnv): void; // every still frame, whichever tool is chosen
+  pointer(e: StagePointerEvent, env: ExtensionEnv): boolean; // true consumes the event
+  undo(): void; // the Undo button while the tool is chosen
+  Section: ComponentType<{ show: boolean }>; // under the Ruler's results; no numbers while `show` is false
+  stub?: true; // a placeholder that is not offered
+};
+```
+
+- `draw` runs after the Ruler's own drawing with context state saved and restored, and never on a moving picture. A tool that throws is logged once and skipped.
+- `pointer` is called only while the tool is chosen and the picture is still. An unconsumed press may still grab one of the Ruler's own handles, so the reference stays adjustable.
+- The Ruler works `step` out only when its own state changes. A tool whose instruction follows its own state shows it in its `Section` (Walls does, in a `role="status"` line).
+- A tool keeps its own module-level store and clears what it placed through `onPointsCleared` (`state.ts`), which fires when the Ruler's points are cleared.
+
+**Adding a tool.**
+
+1. Add its id to `ExtensionTool` in `state.ts`.
+2. Create `src/panels/ruler/<name>/index.tsx` whose default export is a `RulerExtension`.
+3. Import it in `extensions.ts` and add it to the `EXTENSIONS` list. The tool button, the pointer routing, the drawing and the panel section follow from that one line.
+4. Give every number a bar from `cameraTrials` (below) and word it with `reading.ts`.
+
+**`cameraOf(s, d)` and `cameraTrials(s, d, n = 200)`** (`camera-of.ts`). `cameraOf` is the `Camera` for the current reference and plumb edges, or null until the reference is solved. `cameraTrials` is the same solve repeated `n` times with the reference corners and plumb edges moved by their tap uncertainty (1.5 screen pixels, one standard deviation, converted through the display scale): each `Trial` is `{ h, camera, seed }`, and `kept` is the share of retakes that gave a usable plane. A tool jitters its own taps inside each trial with that trial's `seed`, maps them through that trial's `h` and `camera`, and takes 2 standard deviations of its quantity over the trials as the bar, exactly as the Ruler's spans do. Both are seeded and memoized on the values they depend on, not on object identity, so they are cheap to call every frame and a span end dragged or a unit changed does not refit the camera. When further known sizes are fused in, the trials are retakes of the whole fused solve.
+
+**Plumb edges** (`plumbs.ts`). An edge that is plumb in reality (a wall corner, a door frame) steadies the focal length and so every height. Any tool contributes some under its own name with `setPlumbs(owner, lines)`, where a line is two taps in source pixels; `allPlumbs()` returns every tool's, `plumbVersion()` goes up by one on each change (a memo key), and `subscribePlumbs(listener)` is for a component that must redraw when another tool's edge changes the camera. Walls publishes each floor corner and its ceiling point as one. They are dropped when the Ruler's points are cleared.
+
+**A size too uncertain to state** (`reading.ts`). A length, height, area, volume or clearance whose bar is as large as the size itself says nothing as "value ± bar". `tooUncertain(m)` is true when `m.error >= |m.value|`, judged on the numbers as measured, not as rounded. `readingText(m)` then gives "too uncertain to state (bar ± ...)" followed by what narrows it, and `formatMeasured(m)` otherwise; `shortReading(text)` is the form for a stage label or a table cell. This is display text only: stored state, `data-` attributes, CSV and OBJ keep the numbers. It is the same line the Box verdict draws between "fits" and "too close to call". It is not part of the shared formatter, because elsewhere a true value of zero with a bar (an angle, a share) is a real reading.
+
+**Fused known sizes** (`fuse-inputs.ts`, `fused.ts`, `fused-trials.ts`). With further references or known spans, `fuseSheet` replaces `sheet.h` with one least-squares plane map over every usable known size and sets `sheet.fused`; with none, the sheet is the first reference's own solve, unchanged. Each residual is a miss divided by its own standard deviation (a corner's reprojection over the tap uncertainty; a span's length error over the tap uncertainty of both ends combined with the tape uncertainty), so nothing has a hand-set weight. `fusedRuns` holds the seeded retakes of that solve, made once per set of known sizes and shared by spans, paths, areas and `cameraTrials`. `basisFor(lens, sheet.fused)` (`monte-carlo.ts`) is the one sentence saying what a bar covers; Box and Walls quote it inside their own.
 
 ### Result feed: every merged result, whichever panel is open
 
@@ -478,6 +547,18 @@ function Sway() {
 - **Stability meter**: `src/panels/lab/stability*` measures landmark and box spread in source pixels over 3 s, raw beside smoothed, and identity switches over 60 s. It listens only while the Lab tab is mounted.
 - **Ruler shapes**: `src/panels/ruler/` adds paths and areas (`shapes.ts`, `derive-shapes.ts`), a rectified top-down view (`topdown.ts`), an optional one-term radial lens fit (`lens.ts`) and SVG and CSV export (`export-plan.ts`). Every value is the direct geometric value; every error is 2 standard deviations of the seeded Monte Carlo over all tapped points.
 
+## Added in 2.3
+
+- **Depth mode**: `src/modes/depth.ts`, an eighth mode on a new task kind, `depth`, with its own worker (`public/depth-worker.js`) on ONNX Runtime Web and a `progress` message for long downloads. The pure parts are in `src/vision/depth/` (`colormap.ts`, `affine-fit.ts`, `unproject.ts`, `orbit.ts`) and the drawing, the 3D point view and the readout in `src/modes/lib/depth-*`. The 3D view is WebGL2 on an off-page canvas copied onto the stage; it owns no loop or timer and releases its GL objects when the view or the mode goes away. The session export gains an optional `depth` key (a summary of the map, never the map).
+- **Metric depth from the Ruler**: `depth-metric.ts` reads the Ruler's state and never changes it. On a photo with a solved reference and a resolved focal length, the map cells inside the reference, further references and finished Area outlines are fitted as `1 / depth = a * output + b` (`fitDepth`), and the fit is refused with a reason when the marked floor's far edge is under 1.3 times as far as its near edge, when fewer than 30 points are usable, or when it leaves more than 25% scatter. A depth is a `Measured`: 2 standard deviations over the `cameraTrials` refits combined with twice the fit's scatter, and "not measured" when that bar exceeds half the depth (`depth-measured.ts`). The refits wait until the same scale has been asked for on 8 drawn frames, so dragging a Ruler handle does not trigger them per move.
+- **Camera model**: `src/measure/camera.ts` with `camera-fit.ts` and `vec.ts`, described under "Pure helpers".
+- **Ruler tool contract**: `extension-types.ts`, `extensions.ts`, `camera-of.ts`, `plumbs.ts`, described under "Ruler tools".
+- **Box**: `src/panels/ruler/fit/`. A box of typed size stood on the plane, drawn in perspective from the camera (`project.ts`, `draw.ts`), with the clearance to each finished Area outline worked out again in every trial (`outline-trials.ts`) and a three-way verdict that is given only when the whole bar is on one side of zero (`verdict.ts`). `FIT_COVERAGE` in `verdict.ts` holds the measured coverage printed in the panel, and the tests fail if it drifts from what they observe.
+- **Walls**: `src/panels/ruler/walls/`. Floor corners and ceiling points give a shell (`shell.ts`), every number is derived afresh per trial (`numbers.ts`, shown only when 80% of the trials could produce it), a mesh in metres with z up and handedness applied (`mesh.ts`) feeds the 3D preview and the OBJ, and `export-shell.ts` writes the CSV. Each corner and its ceiling point is published as a plumb edge.
+- **More known sizes and the tape test**: `fuse-inputs.ts`, `fused.ts`, `fused-maths.ts`, `fused-trials.ts`, `derive-known.ts`, `store-known.ts`, `known-sizes.tsx`, `tape-entry.tsx`, `tape-test.tsx`. Further references and tape-measured spans go into one solve of the surface; a tape reading typed beside a span is only compared with it unless it is used as a known span. `SECOND_SHEET_COVERAGE` (`results.tsx`) and `COVERAGE_NOTE` (`monte-carlo.ts`) hold the measured coverage the panel prints, enforced by `tests/ruler-coverage.test.ts`.
+- **Display of sizes**: `roundError` keeps two figures of an error that starts with 1 or 2, and `reading.ts` words a size whose bar is as large as itself. Stage labels are queued and placed together at the end of the frame (`overlay-labels.ts`).
+- **Shell**: number keys reach eight modes (`MAX_MODE_KEYS` in `src/shell/shortcuts.ts`).
+
 ## Telemetry bus
 
 `src/telemetry/bus.ts`. A typed emitter with no UI. Events carry measured values only.
@@ -522,6 +603,7 @@ The service worker is registered in production builds only, after `load`, as `<b
 - At install the worker stores the page and the hashed script and style its markup names, so it never takes over with a shell it cannot serve. Models and the runtime are never fetched ahead of use. On a first visit the page, its assets, the runtime and the first model are fetched before the worker controls the page, so the page tells the worker what it already fetched (an `adopt` message): its own resource entries, and on every model load the files the vision worker reports (its own script included) together with everything the page has loaded so far. A model is therefore kept after its first real use and never before, and a first-visit user can reload offline.
 - Cached files are matched by address, ignoring `Vary`. A host that lists a request header under `Vary` (the preview server sends `Vary: Origin`, GitHub Pages `Vary: Accept-Encoding`) otherwise made the page's own script and style requests miss the stored copies.
 - A new deploy changes the entry hash, so a new worker URL is registered. It activates at once, deletes the shell caches of other versions and claims the page. Navigations are network first, so a reload never shows the previous shell.
+- Depth's runtime is under `runtime/ort-<version>/` and its model under `models/`, so the existing `models/*`, `runtime/*` rule keeps them after Depth's first use with no change to the worker. The folder carries the ONNX Runtime version so that an upgrade never pairs a cached wasm file with a newer script.
 - The privacy copy in the app and the README says that the browser keeps the app and each used model on the device and how to remove them.
 
 ## Styles
@@ -532,14 +614,20 @@ The service worker is registered in production builds only, after `load`, as `<b
 
 ```
 public/vision-worker.js     one task per worker; the kind switch
+public/depth-worker.js      the Depth task on ONNX Runtime Web
 public/sw.js                offline cache rules
 src/registry.ts             collect(): shared discovery
 src/modes/                  types.ts, index.ts, objects.ts, body.ts, hands.ts, face.ts, segment.ts,
-                            gestures.ts, fusion.ts, lib/
+                            gestures.ts, fusion.ts, depth.ts, lib/ (depth-* for Depth)
 src/effects/                types.ts, index.ts, trails.ts, constellation.ts, plasma-hands.ts,
                             ember-trail.ts, neon-ribbons.ts, aura.ts, hologram.ts, starfield-pull.ts,
                             echo.ts, face-light.ts, lib/
-src/panels/                 types.ts, index.ts, inspect.tsx, lab.tsx, lab/
+src/panels/                 types.ts, index.ts, inspect.tsx, lab.tsx, lab/, library.tsx, library/,
+                            ruler.tsx, ruler/, presence.tsx, presence/
+src/panels/ruler/           the plane solve (homography.ts, derive.ts, monte-carlo.ts), shapes, plan and
+                            lens; fused known sizes (fuse-inputs.ts, fused*.ts, known-sizes.tsx,
+                            tape-test.tsx); the tool contract (extension-types.ts, extensions.ts,
+                            camera-of.ts, plumbs.ts, reading.ts); fit/ (Box) and walls/ (Walls)
 src/studio-context.ts       Studio type and useStudio()
 src/session-export.ts       the JSON download
 src/stage/                  renderer.ts, effect-host.ts, gl-layer.ts, use-stage-loop.ts, stage-hooks.ts
@@ -547,7 +635,9 @@ src/gl/                     WebGL2 kit for effects
 src/vision/                 types.ts, frame.ts, draw.ts, geometry.ts, tracker.ts, merge.ts,
                             delegate.ts, webgl-probe.ts, task-runner.ts, useVision.ts, useSource.ts,
                             useSession.ts, settings.ts, smooth-result.ts, result-feed.ts
-src/measure/                one-euro.ts, series.ts, noise.ts, format.ts, angles.ts (pure)
+src/vision/depth/           colormap.ts, affine-fit.ts, unproject.ts, orbit.ts (pure)
+src/measure/                one-euro.ts, series.ts, noise.ts, format.ts, angles.ts, camera.ts,
+                            camera-fit.ts, vec.ts (pure)
 src/telemetry/              bus.ts, stats.ts, task-status.ts
 src/shell/                  shortcuts, palette, layout, recorder, service worker registration
 src/components/             Header, ModeSwitch, CameraStage, StageMessage, CameraPicker, Inspector,
@@ -556,6 +646,8 @@ src/components/             Header, ModeSwitch, CameraStage, StageMessage, Camer
 src/styles/                 index.css, base.css, shell.css, stage.css, inspector.css, panel-tabs.css,
                             deck.css, palette.css, coach.css, share.css, immersive.css
 tests/                      unit: tracker, registry (with fixtures), vision, telemetry, modes, effects, lab,
-                            shell, measure-*, stage-hooks, vision-smoothing, vision-settings;
-                            e2e: studio, modes, effects, lab, shell, mode-switch, no-webgl, measure
+                            shell, measure-*, stage-hooks, vision-smoothing, vision-settings, ruler-*,
+                            fit-*, walls-*, depth-*;
+                            e2e: studio, modes, effects, lab, shell, mode-switch, no-webgl, measure,
+                            ruler*, fit, walls, depth
 ```
