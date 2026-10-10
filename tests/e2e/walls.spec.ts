@@ -131,13 +131,26 @@ test("a known room through the UI: height and area against truth, OBJ exported, 
     type: "measured",
     description: `mean height ${h.toFixed(0)} +- ${he.toFixed(0)} mm (truth ${ROOM.h}); floor area ${(a / 1e6).toFixed(3)} +- ${(ae / 1e6).toFixed(3)} m2 (truth ${AREA_MM2 / 1e6})`,
   });
-  console.log(test.info().annotations.at(-1)!.description);
   expect(he).toBeGreaterThan(0);
   expect(ae).toBeGreaterThan(0);
   expect(Math.abs(h - ROOM.h)).toBeLessThanOrEqual(he);
   expect(Math.abs(a - AREA_MM2)).toBeLessThanOrEqual(ae);
-  expect(Math.abs(h - ROOM.h) / ROOM.h).toBeLessThan(0.05);
-  expect(Math.abs(a - AREA_MM2) / AREA_MM2).toBeLessThan(0.05);
+  expect(Math.abs(h - ROOM.h) / ROOM.h).toBeLessThan(0.01);
+  expect(Math.abs(a - AREA_MM2) / AREA_MM2).toBeLessThan(0.01);
+  // The shell is drawn on the picture in the tool's own colour.
+  await expect
+    .poll(() =>
+      page.locator(".camera-stage canvas").evaluate((c: HTMLCanvasElement) => {
+        const d = c
+          .getContext("2d")!
+          .getImageData(0, 0, c.width, c.height).data;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4)
+          if (d[i] === 217 && d[i + 1] === 179 && d[i + 2] === 255) n++;
+        return n;
+      }),
+    )
+    .toBeGreaterThan(500);
   await expect(page.getByTestId("walls-basis")).toContainText("plumb walls");
   await expect(page.getByRole("list", { name: "Walls" })).toContainText(
     "(measured)",
@@ -157,12 +170,13 @@ test("a known room through the UI: height and area against truth, OBJ exported, 
   expect(obj.text.split("\n").filter((l) => l.startsWith("f "))).toHaveLength(
     6,
   );
-  console.log(
-    `OBJ bounding box ${size.map((s) => s.toFixed(3)).join(" x ")} m`,
-  );
-  expect(Math.abs(size[0] - 4.2) / 4.2).toBeLessThan(0.05);
-  expect(Math.abs(size[1] - 3.1) / 3.1).toBeLessThan(0.05);
-  expect(Math.abs(size[2] - 2.44) / 2.44).toBeLessThan(0.05);
+  test.info().annotations.push({
+    type: "measured",
+    description: `OBJ bounding box ${size.map((s) => s.toFixed(3)).join(" x ")} m`,
+  });
+  expect(Math.abs(size[0] - 4.2) / 4.2).toBeLessThan(0.01);
+  expect(Math.abs(size[1] - 3.1) / 3.1).toBeLessThan(0.01);
+  expect(Math.abs(size[2] - 2.44) / 2.44).toBeLessThan(0.01);
   const csv = await saved(page, "Save CSV");
   expect(csv.text).toContain("quantity,value,error (2 sd),unit,status");
   expect(csv.text).toMatch(/^Volume,[\d.]+,[\d.]+,m³,measured$/m);
