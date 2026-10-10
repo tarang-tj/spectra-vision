@@ -138,8 +138,9 @@ test("the ruler measures a known distance on a perspective photo within its own 
   await page.getByRole("button", { name: "Swap sides" }).click();
   await expect(result(page).locator("output")).toHaveText(cm);
 
-  // At 390 px wide: no sideways scroll, no control outside the viewport, and
-  // every control at least 40 px tall.
+  // At 390 px wide: no sideways scroll, no control outside the viewport,
+  // every control at least 40 px tall, and the panel across the whole card
+  // (it once sat in one 153 px column of the rail's two-column phone grid).
   await page.setViewportSize({ width: 390, height: 844 });
   const layout = await page.evaluate(() => {
     const bad: string[] = [];
@@ -158,8 +159,12 @@ test("the ruler measures a known distance on a perspective photo within its own 
         document.querySelector<HTMLElement>(".ruler-panel")!.scrollWidth -
         document.querySelector<HTMLElement>(".ruler-panel")!.clientWidth,
       bad,
+      width: document
+        .querySelector<HTMLElement>(".ruler-panel")!
+        .getBoundingClientRect().width,
     };
   });
+  expect(layout.width).toBeGreaterThan(300);
   expect(layout.scroll).toBeLessThanOrEqual(0);
   expect(layout.panel).toBeLessThanOrEqual(0);
   expect(layout.bad).toEqual([]);

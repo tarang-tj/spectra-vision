@@ -7,6 +7,13 @@
   gap: 14px;
   min-width: 0;
 }
+/* At phone width the rail's body is a two-column grid for Inspect
+   (styles/inspector.css). This panel is one column and takes both. */
+@media (max-width: 760px) {
+  .ruler-panel {
+    grid-column: 1/3;
+  }
+}
 .ruler-panel > h2 {
   display: flex;
   align-items: center;
@@ -176,19 +183,35 @@
   flex: 1 1 100%;
   margin: 0;
 }
-.ruler-table {
-  width: 100%;
-  border-collapse: collapse;
+/* A size too uncertain to state is a sentence, so it reads at text size. */
+.ruler-value[data-uncertain],
+.ruler-sub[data-uncertain] {
+  font-size: 14px;
+  line-height: 1.5;
+}
+/* The shell's focus ring stands 4 px off, which lands on the label above a
+   field here. Against the field it clears the label. */
+.ruler-panel input:focus-visible {
+  outline-offset: 0;
+}
+/* One sentence on what a bar is, and the whole basis behind a disclosure. */
+.ruler-basis-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ruler-details summary {
   font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 11px 0;
+  width: fit-content;
 }
-.ruler-table caption {
-  text-align: left;
-  padding-bottom: 6px;
+.ruler-details summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
-.ruler-table th,
-.ruler-table td {
-  text-align: left;
-  padding: 4px 6px 4px 0;
-  vertical-align: top;
-  overflow-wrap: anywhere;
+.ruler-details p {
+  margin: 0 0 8px;
 }

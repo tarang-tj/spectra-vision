@@ -1,6 +1,5 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Everything the panel and the overlay show, computed from the store's state.
-import { formatMeasured } from "../../measure/format";
 import {
   knownSizes,
   tapeTest,
@@ -24,6 +23,7 @@ import {
   TAP_SIGMA_SCREEN_PX,
   type Span,
 } from "./monte-carlo";
+import { readingText } from "./reading";
 import { customReference, REFERENCES, type Reference } from "./references";
 import type { RulerState } from "./store";
 
@@ -184,7 +184,7 @@ export function derive(s: RulerState): Derived {
     rows.push({
       index,
       span,
-      text: span ? formatMeasured(span.measured) : "not measured",
+      text: span ? readingText(span.measured) : "not measured",
       warnings,
     });
   });

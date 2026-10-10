@@ -267,6 +267,9 @@ describe("the tape test", () => {
     expect(checks[0].reading).toBe(d().rows[0].text);
     expect(checks[0].difference).toMatch(/^-0\.\d+ cm$/);
     expect(checks[1].difference).toMatch(/^-50(\.\d+)? cm$/);
+    // One precision down the column, whatever each row's own bar is.
+    const places = (t: string) => (t.split(" ")[0].split(".")[1] ?? "").length;
+    expect(places(checks[1].difference)).toBe(places(checks[0].difference));
     // A reading keeps its meaning when the unit shown changes afterwards.
     setUnit("mm");
     expect(d().tape.checks[0].tape).toBe("1002 mm");

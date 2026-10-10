@@ -85,7 +85,11 @@ test("a known span narrows a far span and moves it to the truth; the tape test a
   // The far span with one sheet.
   for (const p of SPANS.far) await tap(page, shoot(SHOT, p));
   const far = page.getByTestId("ruler-result").nth(0).locator("output");
-  await expect(far).toHaveText(/^[\d.]+ ± [\d.]+ cm$/);
+  // One Letter sheet cannot state a span this far away: the bar (about 18 m)
+  // dwarfs the 1 m span, so it is said in words, with what would fix it.
+  await expect(far).toHaveText(
+    /^too uncertain to state \(bar ± [\d.]+ cm\)\. Add a larger or second reference, or a known span\.$/,
+  );
   const one = {
     mm: Number(await far.getAttribute("data-mm")),
     bar: Number(await far.getAttribute("data-error-mm")),
