@@ -30,7 +30,12 @@ export function offPlumb(
     out: number[] = [];
   if (!sheet || !s.source || !camera) return out;
   const { w: width, h: height } = s.source,
-    seen = sheet.ordered.map((image, i) => ({ plane: sheet.plane[i], image })),
+    // The same corners the camera itself is fitted to (camera-of.ts): where
+    // the fused map puts them when further known sizes are in.
+    seen = (sheet.fused?.corners ?? sheet.ordered).map((image, i) => ({
+      plane: sheet.plane[i],
+      image,
+    })),
     mine = corners.flatMap((c, i) =>
       c.top ? [{ i, a: c.base, b: c.top }] : [],
     ),

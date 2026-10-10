@@ -29,11 +29,14 @@ export const ELL: P[] = [
 export const ELL_AREA_MM2 = 4200 * 3100 - 1800 * 1300;
 /** The reference: a 1000 x 700 mm board flat on the floor, long side along x. */
 export const BOARD = { x: 1600, y: 700, w: 1000, h: 700 };
-export const boardCorners = (): P[] => [
-  { x: BOARD.x, y: BOARD.y },
-  { x: BOARD.x + BOARD.w, y: BOARD.y },
-  { x: BOARD.x + BOARD.w, y: BOARD.y + BOARD.h },
-  { x: BOARD.x, y: BOARD.y + BOARD.h },
+/** A reference twice that size, for the test of how wide the bars are: with
+ * it the bars are narrow enough to be compared with the scatter of retakes. */
+export const BIG_BOARD = { x: 1100, y: 500, w: 2000, h: 1400 };
+export const boardCorners = (b = BOARD): P[] => [
+  { x: b.x, y: b.y },
+  { x: b.x + b.w, y: b.y },
+  { x: b.x + b.w, y: b.y + b.h },
+  { x: b.x, y: b.y + b.h },
 ];
 
 /** Where the camera stands and what it looks at. */
