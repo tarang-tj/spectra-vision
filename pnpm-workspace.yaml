@@ -1,2 +1,4 @@
+allowBuilds:
+  protobufjs: false
 minimumReleaseAgeExclude:
   - "@mediapipe/tasks-vision@1.1.0"

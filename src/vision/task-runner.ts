@@ -189,7 +189,10 @@ export function createTaskRunner(
     firstSent = 0;
     status = beginStatus(spec.kind, model, requested, active, note);
     try {
-      worker = spawn(`${base}vision-worker.js`);
+      // Depth runs on another runtime, in a worker script of its own.
+      worker = spawn(
+        `${base}${spec.kind === "depth" ? "depth-worker.js" : "vision-worker.js"}`,
+      );
     } catch {
       status.state = "failed";
       events.onError(
@@ -200,7 +203,12 @@ export function createTaskRunner(
     worker.onmessage = (event: MessageEvent) => {
       if (disposed) return;
       const message = event.data;
-      if (message.type === "downloaded") {
+      if (message.type === "progress") {
+        // A large model is still downloading (the Depth worker says so every
+        // few seconds). The page counts its load timeout from the last sign
+        // that the task is loading, so a slow connection is not a failure.
+        if (!ready) events.onRestart?.();
+      } else if (message.type === "downloaded") {
         // The download is not the GPU's doing: bound only what follows it.
         downloaded = true;
         clock = performance.now();

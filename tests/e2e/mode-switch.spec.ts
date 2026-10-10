@@ -31,7 +31,7 @@ test("every adjacent pair of modes switches both ways without an error", async (
   await page.goto("./", { waitUntil: "domcontentloaded" });
   await ready(page);
   const names = await switcher(page).getByRole("button").allInnerTexts();
-  expect(names).toHaveLength(7);
+  expect(names).toHaveLength(8);
   const go = async (name: string) => {
     await switcher(page).getByRole("button", { name, exact: true }).click();
     await expect(
