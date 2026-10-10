@@ -5,6 +5,7 @@
 // length by the tape uncertainty, as a real person's would be. Two standard
 // deviations of a Gaussian would hold the truth about 95% of the time.
 import { describe, it, expect } from "vitest";
+import { fusedNote, SECOND_SHEET_COVERAGE } from "../src/panels/ruler/results";
 import {
   readSpan,
   record,
@@ -106,6 +107,19 @@ describe("coverage of the 2 sd bar over 300 simulated rooms", () => {
           `coverage, ${name}, ${b}: ${band.inside} of ${band.n} inside (${(100 * share).toFixed(1)}%), median error ${median(band.off).toFixed(0)} mm, median bar ${median(band.bar).toFixed(0)} mm, error over one sd of the bar has sd ${Math.sqrt(band.z.reduce((t, z) => t + z * z, 0) / band.n).toFixed(2)}`,
         );
         expect(share, `${name}, ${b}`).toBeGreaterThanOrEqual(floor);
+        // The panel prints a range for a second sheet (results.tsx), and
+        // this holds it to that range. Observed 2026-10-10, near, middle,
+        // far: 96.0%, 96.7%, 97.0% with a second sheet; 97.0%, 95.0%, 95.0%
+        // with a second sheet and a known span.
+        if (use.second) {
+          const times = Math.round(100 * share);
+          expect(times, `${name}, ${b}`).toBeGreaterThanOrEqual(
+            SECOND_SHEET_COVERAGE[0],
+          );
+          expect(times, `${name}, ${b}`).toBeLessThanOrEqual(
+            SECOND_SHEET_COVERAGE[1],
+          );
+        }
         // Coverage must not be bought by refusing to measure.
         expect(band.n, `${name}, ${b}`).toBeGreaterThanOrEqual(0.9 * SCENES);
       }
@@ -119,4 +133,17 @@ describe("coverage of the 2 sd bar over 300 simulated rooms", () => {
     },
     300_000,
   );
+});
+
+describe("the measured share beside the results", () => {
+  it("is printed only when a further reference is fused in", () => {
+    expect(fusedNote(null)).toBe("");
+    // One reference and a known span: the basis sentence gives that case's
+    // own, lower, figures, so this one must not appear.
+    expect(fusedNote({ rects: 0 })).toContain("With more than one known size");
+    expect(fusedNote({ rects: 0 })).not.toContain("times in 100");
+    expect(fusedNote({ rects: 1 })).toContain(
+      "with a second sheet in view, these bars held the true length 95 to 97 times in 100.",
+    );
+  });
 });
