@@ -4,7 +4,7 @@
 
 [Open the live studio](https://tarang-tj.github.io/spectra-vision/) · [Watch the video demo](https://tarang-tj.github.io/spectra-vision/demo/) · [v1.1.1](https://github.com/tarang-tj/spectra-vision/releases/tag/v1.1.1) · [Ownership and license](LICENSE)
 
-Seven modes run six real vision models on your camera: tracked object boxes, a body skeleton, hand-controlled light painting, a 478-point face mesh, a person cutout, gesture recognition, and body, hands and face together. Ten effects draw on what the models find, and a Lab tab measures how fast they run on your device. Everything runs in your browser.
+Eight modes run seven real vision models on your camera: tracked object boxes, a body skeleton, hand-controlled light painting, a 478-point face mesh, a person cutout, gesture recognition, body, hands and face together, and a depth map from one camera. Ten effects draw on what the models find, a Ruler tab measures on a frozen picture with a stated error on every number, and a Lab tab measures how fast the models run on your device. Everything runs in your browser.
 
 The 93-second, 1080p video demo was recorded on version 2.2. It opens with a title card, then shows Objects with tracked ids, the Library and Finer names, a quick pass through the other modes, the room-scale Ruler on a synthetic floor with known sizes (the video says what the true area is and what SPECTRA measured, with its error bar), Presence, the Lab's stability meter and the phone layout, with synthetic neural narration, an original ambient music bed and English captions timed to the speech. The footage is the real app with real inference at real speed; the montage of modes is cut from separate takes that skip each model's load time, which the narration says. A mint pointer was added to the recording to show where the automated mouse clicks. How it was made is recorded in [asset provenance](docs/design/asset-provenance.md#version-22-video-demo). The version 2.0.0 and 1.1.1 videos stay at [their own addresses](https://tarang-tj.github.io/spectra-vision/demo/spectra-demo-v2.0.0.mp4).
 
@@ -16,27 +16,28 @@ _Interface design concept. The running app calculates its own detections, scores
 
 1. Open the [live studio](https://tarang-tj.github.io/spectra-vision/). The Objects demo starts automatically; allow the model a moment to load.
 2. Choose **Start camera**, or **Upload** a local image/video. Camera access requires HTTPS or localhost and browser permission.
-3. Switch between **Objects**, **Body**, **Hands**, **Face**, **Segment**, **Gestures** and **Fusion** with the switch at the top or the number keys 1 to 7. For body tracking, step back until your entire body is visible. For hand painting, pinch thumb and index together, move your hand, then release.
+3. Switch between **Objects**, **Body**, **Hands**, **Face**, **Segment**, **Gestures**, **Fusion** and **Depth** with the switch at the top or the number keys 1 to 8. For body tracking, step back until your entire body is visible. For hand painting, pinch thumb and index together, move your hand, then release.
 4. Turn effects on in the tray under the stage. Each effect that is on and has a strength gets a slider beside its switch. **Constellation** isolates luminous tracking geometry. **Try motion demo**, where a mode has one, loads a labeled, animated pan of a generated still photo; it demonstrates tracking, not a real person changing pose.
 5. Use **Record** to save up to 30 seconds of the rendered canvas, effects included. No microphone or screen capture permission is needed. Stop saves the clip and shows it in a result card; changing source or mode also finalizes it.
 6. Use **Mirror**, **Pause**, **Screenshot**, **Fullscreen**, **Immersive** or **Export session**. **Demo** restores the sample for the selected mode. **Stop camera** releases its media tracks.
 7. Open the **Lab** tab in the right rail to see measured latency and frame rate, or press Ctrl K (Cmd K on a Mac) for the command palette.
 
-Use a current Chrome or Edge browser for the tested path. No account or API key is needed. The six model files total about 49 MB (49,355,063 bytes, the sum of the sizes pinned in [scripts/models.json](scripts/models.json)), plus the WebAssembly runtime. Each mode downloads only its own model, the first time you open it; the first mode, Objects, needs about 7 MB.
+Use a current Chrome or Edge browser for the tested path. No account or API key is needed. The six MediaPipe model files behind every mode except Depth total about 49 MB (49,355,063 bytes, the sum of the sizes pinned in [scripts/models.json](scripts/models.json)), plus the WebAssembly runtime. Depth's model is a further 99 MB (99,060,839 bytes, pinned in the same file) and has a runtime of its own; see [Depth](#depth). Each mode downloads only its own model, the first time you open it; the first mode, Objects, needs about 7 MB.
 
 ## What it does
 
-| Mode     | Actual inference                                                                                 | Visual interaction                                                                                          |
-| -------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| Objects  | EfficientDet-Lite0, common COCO categories                                                       | Class/score boxes, short-lived object IDs, motion trails, selectable detections                             |
-| Body     | BlazePose Lite, one person with 33 landmarks                                                     | Glowing skeleton, torso mesh, wrist and ankle motion trails                                                 |
-| Hands    | MediaPipe Hand Landmarker, up to two hands with 21 landmarks each                                | Finger skeletons, fingertip rings and pinch-to-paint light trails                                           |
-| Face     | MediaPipe Face Landmarker, one face with 478 landmarks, blendshape scores and a head-pose matrix | Face mesh with contours and irises; meters for smile, jaw, brows and blinks; yaw, pitch and roll in degrees |
-| Segment  | MediaPipe multiclass selfie segmenter, six classes on a 256 x 256 mask                           | Person cut out from a darkened background; select Background to blur it instead, or a class to tint it      |
-| Gestures | MediaPipe Gesture Recognizer, up to two hands, seven named gestures or none                      | Hand skeleton with the gesture and its score; a count of the gestures seen on this source                   |
-| Fusion   | The body, hand and face models together, one worker each (one body, two hands, one face)         | One figure built from all three, with each model's own latency on the stage and in the inspector            |
+| Mode     | Actual inference                                                                                 | Visual interaction                                                                                                                          |
+| -------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Objects  | EfficientDet-Lite0, common COCO categories                                                       | Class/score boxes, short-lived object IDs, motion trails, selectable detections                                                             |
+| Body     | BlazePose Lite, one person with 33 landmarks                                                     | Glowing skeleton, torso mesh, wrist and ankle motion trails                                                                                 |
+| Hands    | MediaPipe Hand Landmarker, up to two hands with 21 landmarks each                                | Finger skeletons, fingertip rings and pinch-to-paint light trails                                                                           |
+| Face     | MediaPipe Face Landmarker, one face with 478 landmarks, blendshape scores and a head-pose matrix | Face mesh with contours and irises; meters for smile, jaw, brows and blinks; yaw, pitch and roll in degrees                                 |
+| Segment  | MediaPipe multiclass selfie segmenter, six classes on a 256 x 256 mask                           | Person cut out from a darkened background; select Background to blur it instead, or a class to tint it                                      |
+| Gestures | MediaPipe Gesture Recognizer, up to two hands, seven named gestures or none                      | Hand skeleton with the gesture and its score; a count of the gestures seen on this source                                                   |
+| Fusion   | The body, hand and face models together, one worker each (one body, two hands, one face)         | One figure built from all three, with each model's own latency on the stage and in the inspector                                            |
+| Depth    | Depth Anything V2 Small on ONNX Runtime Web, relative depth for every cell of one picture        | Depth map over the picture with a near and far legend; a 3D point view you can turn; metres only after a fit to a floor marked in the Ruler |
 
-The inspector shows what is in the frame and where. Confidence controls the detection threshold; the motion map shows normalized image coordinates. Inference time, processed frame rate and the Tracked count are measured, rather than illustrative counters. Tracked counts objects, bodies, hands, faces, the segmentation classes found (not counting the background), or the parts Fusion found.
+The inspector shows what is in the frame and where. Confidence controls the detection threshold; the motion map shows normalized image coordinates. Inference time, processed frame rate and the Tracked count are measured, rather than illustrative counters. Tracked counts objects, bodies, hands, faces, the segmentation classes found (not counting the background), or the parts Fusion found. Depth follows no separate things, so its Tracked figure is 0.
 
 ### Effects
 
@@ -67,9 +68,70 @@ The **Ruler** tab measures real distances on one flat surface, in any mode, with
 
 A **top-down view** redraws the surface to scale from the frozen frame, with the shapes, their labels and a scale bar; anything beyond the horizon or too far away to resolve is left blank. **Save plan** downloads that drawing as an SVG and every measurement as a CSV, with the photo included only if you tick the box. An optional **lens correction** fits one radial term from edges you mark as straight (at least two edges of four or more points each). It is applied only when those edges are bent clearly beyond tap noise, the fit at least halves that bend, and an edge left out of the fit agrees; otherwise the panel says it was not applied and why. Either way it shows the distance from straight before and after in pixels. When some of an error bar's simulated taps could not be used, the row says what share was kept and that the bar is a lower bound.
 
-For a room, one sheet of paper gives a wide error (roughly 10 to 25 percent on a room-sized area), because every measurement is extrapolated from four corners. Lay out a larger reference you have measured once, such as a taped rectangle or a rug, and enter it as a custom size.
+For a room, one sheet of paper gives a wide error (roughly 10 to 25 percent on a room-sized area), because every measurement is extrapolated from four corners. Lay out a larger reference you have measured once, such as a taped rectangle or a rug, and enter it as a custom size, or add a second reference or a tape-measured span under More known sizes, below.
 
 Each result is shown as a value plus or minus an error. The value is the distance between your taps. The error is two standard deviations of 400 repeats of the calculation with every tapped point moved by a small random amount (a standard deviation of 1.5 screen pixels), and it covers tap placement only. It does not cover lens distortion, points that are off the surface, or a bent or misprinted reference. The error grows as you measure further from the reference, and the panel warns when a span is more than 10 times the reference's long side. A tap beyond the surface's horizon reads "not measured". On a camera or video the points belong to the frozen frame and are cleared when the picture runs again. Ruler has been checked against synthetic images with known answers, not yet against a tape measure.
+
+A size whose bar is as large as the size itself is not printed as a number. The panel says it is "too uncertain to state", gives the bar, and says what narrows it: a larger or second reference, or a known span.
+
+**More known sizes.** One sheet measures well near itself and poorly across a room. Further known sizes on the same surface are solved together with the first reference as one surface.
+
+1. With the first reference solved, open **More known sizes**, choose a size and press **Add reference**, then tap that reference's four corners. It is drawn dashed and labelled "Reference 2".
+2. Or measure a span, type what a tape measure read for it in the **Tape reading** box beside it under Results, and press **Use as known span**.
+3. Set **Tape uncertainty** if your tape is worse or better than the default of 2 mm, taken as one standard deviation.
+4. Read the status line, which says what the surface was solved from. A reference or span that cannot be used says why (it overlaps another reference, a corner is beyond the horizon, the typed length is not a number).
+
+With more than one known size, each of the 400 simulations behind a bar also moves the corners of every further reference, the ends of every known span and every typed length, and solves the whole surface again. The bar then covers tap placement on all of them and the tape uncertainty; it still leaves out lens distortion, points off the surface, a bent or misprinted reference and a typed length that is wrong by more than the tape uncertainty. When the known sizes disagree by more than tap and tape error explain, the panel says so, and the bars do not cover that disagreement.
+
+How often these bars hold the truth was measured in 300 simulated rooms (a Letter sheet 1.5 m from the camera, spans of exactly 1 m near, in the middle and far, 5 m away):
+
+| Known sizes                     | True length inside the bar (near, middle, far) |
+| ------------------------------- | ---------------------------------------------- |
+| One sheet                       | 97.0%, 95.7%, 97.5%                            |
+| A second sheet                  | 96.0%, 96.7%, 97.0%                            |
+| One sheet and a known 3 m span  | 94.3%, 92.7%, 91.2%                            |
+| A second sheet and a known span | 97.0%, 95.0%, 95.0%                            |
+
+So one sheet plus known spans alone holds the truth 91 to 94 times in 100, fewer than the 95 that 2 standard deviations suggest; the panel says this in that case and recommends a second reference. What a second known size buys is a narrower bar, not better coverage. For the far span, over 60 noisy retakes of one room, the median error and bar were 318 mm and 7,267 mm with one sheet, 39 mm and 94 mm with the second sheet, and 63 mm and 229 mm with the known 3 m span instead.
+
+**Tape test.** Type a tape reading beside any span and leave **Use as known span** off. The Tape test table then lists each reading with its bar, the tape value, reading minus tape, and whether the tape value is inside or outside the bar, with a tally underneath. It is a check, never a correction: nothing changes unless you press Use as known span, and a span used that way is listed but not counted. The rows and the tally are included in the CSV and in Copy results.
+
+**Box** stands a box of real size on the floor of the frozen picture and says whether it fits.
+
+1. Solve the reference, then choose **Box** under What to measure (it is disabled until then).
+2. Type the box's width, depth and height, or press one of the three example sizes.
+3. Tap the floor to stand the box there. Drag it to move it, drag its corner handle to turn it, or use the turn and nudge buttons.
+4. Outline the space with **Area**, or measure a gap with **Span**. Each finished outline gets "Fits", "Does not fit" or "Too close to call" with the clearance and its bar; each span gets one line for the box's width and one for its depth.
+
+A verdict of fits or does not fit is given only when the whole bar is on one side of zero. For an outline, the bar is 2 standard deviations of the clearance over 200 simulated retakes, each of which moves the taps on the outline and redoes the Ruler's solve of the floor. It leaves out everything the Ruler's own bar leaves out, where the box stands and the sizes typed for it (taken as exact), and a floor that is not flat. Only the footprint is checked, not the height. For a span, the verdict uses the span's own bar. When the picture does not pin down the camera's focal length (the camera faces the floor squarely and no plumb edge is marked), only the footprint is drawn; the verdict is not affected.
+
+This bar holds the truth less often than 2 standard deviations suggest, so a verdict can be wrong. Over 200 simulated retakes of one test scene it held the true clearance 98 times in 100 with the box 40 mm from one wall, 91 times in 100 with it 50 mm from all four sides, and 86 times in 100 in that second position with a second reference in view. It was not measured with one reference and known spans only. The panel states these figures under the verdict.
+
+**Walls** builds a room's shell from one frozen picture with the reference on the floor.
+
+1. Solve the reference, then choose **Walls** under What to measure.
+2. Tap the floor corners in order round the room and press **Close room**, or press **Use last outline** to copy the last finished Area outline.
+3. Press **Ceiling above corner** for a corner, then tap where that wall edge meets the ceiling. Repeat for as many corners as you can see.
+4. Read each wall's length, the height at each marked corner, the mean ceiling height, floor area, wall area and volume. Turn the 3D preview by dragging it or with the arrow keys. **Save OBJ** downloads the shell in metres with z up; **Save CSV** downloads every number with its bar.
+
+A corner with no ceiling point takes the mean of the measured heights, is drawn dashed and is marked "assumed". Volume is the floor area times the mean corner height, and wall area is each wall's length times the mean of its two corner heights; doors and windows are not subtracted. Each bar is 2 standard deviations over 200 simulated retakes in which every Walls tap is moved by 1.5 screen pixels, the Ruler's solve of the floor is redone and every number is worked out again. A number that fewer than 80 percent of the retakes could produce is "not measured". The bars assume a flat floor, plumb walls, a flat ceiling, square pixels and the optical axis through the middle of the picture, and leave out corners hidden or guessed behind furniture, sloped ceilings and curved walls. Heights need a picture that pins down the focal length. When the bar on the ceiling height is as large as the height, the preview draws the floor only and says so.
+
+With a 2,000 x 1,400 mm reference in a simulated 4.2 x 3.1 x 2.44 m room, the bars held the true height and the true floor area in 194 of 200 noisy retakes each, and matched the spread of the retakes to within 3 percent. With a 1,000 x 700 mm reference seen at a low angle in the same room they held the truth in 200 of 200 and were wider than the spread: the browser test of that room read a ceiling height of 2,442 ± 677 mm (true 2,440) and a floor area of 13.0 ± 8.5 m² (true 13.02). Marking more ceiling points does not narrow one corner's height bar; it narrows the mean height by averaging.
+
+Box and Walls work on a frozen frame or a photo only, and what they placed is cleared with the Ruler's points. None of the Ruler's tools has been tried on a physical phone or checked against a tape measure in a real room.
+
+### Depth
+
+**Depth** runs Depth Anything V2 Small on one picture from one camera, in a worker of its own on ONNX Runtime Web served from this site: WebAssembly on the CPU, WebGPU on the GPU. It asks for the GPU only where the page has a hardware renderer, falls back to the CPU when WebGPU is missing or fails, and the inspector says which one is running.
+
+- **Depth map**: the model's output over the picture, bright yellow for near and dark purple for far, with an opacity slider and a legend on the stage. The inspector lists the nearest and farthest points, the model's input size, latency and whether the scale is relative or metric.
+- **3D view**: the map as points you can turn by dragging, with the turn buttons or with the arrow keys. Without a metric fit it is a relief of relative depth and says "Not to scale".
+
+The model's output is relative: it orders the scene and gives no lengths. Real units appear only when the Ruler can justify them. Upload a still photo, tap a reference lying on the floor in the Ruler, then outline a patch of floor from near to far with the Area tool. The map cells on that marked floor, whose real depths follow from the Ruler's plane and camera, are fitted against the model's output, and the whole map is then shown in metres. Each depth carries a bar: 2 standard deviations over the Ruler's 200 simulated retakes, combined with twice the scatter the fit leaves on the marked floor. It leaves out the model's own error away from that floor. A depth whose bar is wider than half of it reads "not measured".
+
+The fit is refused, with the reason and what to do, when the source is a camera or a video (the map would be of an earlier frame than the one the Ruler froze), when the picture does not pin down the focal length, when the marked floor's far edge is under 1.3 times as far as its near edge, when too few map cells fall on it, or when the map does not follow the floor (over 25 percent scatter). Depth then stays relative.
+
+Opening Depth for the first time downloads about 113 MB on the CPU path and about 126 MB on the GPU path (113,385,490 and 125,972,404 bytes, of which the model is 99,060,839). Nothing of it is fetched until you choose the mode, and a slow download is not timed out while bytes keep arriving. On the CPU it is slow: close to one second a frame on the one laptop it was timed on.
 
 ### Presence (beta)
 
@@ -110,7 +172,7 @@ No benchmark figures are published here: they depend on the device, its load and
 
 | Keys            | Action                                        |
 | --------------- | --------------------------------------------- |
-| 1 to 7          | Switch vision mode                            |
+| 1 to 8          | Switch vision mode                            |
 | R               | Start or stop recording                       |
 | S               | Save a screenshot                             |
 | M               | Mirror the view                               |
@@ -123,7 +185,7 @@ Shortcuts are ignored while you type in a field and while the command palette is
 
 ### Offline use
 
-The production site registers a service worker. After one visit the studio opens without a network connection: the browser keeps the app shell, the MediaPipe runtime and each model you have actually used. A model you never opened is not downloaded ahead of time and is not available offline. The site also ships a web app manifest and icons, so a browser that offers to install sites can install it; the install prompt itself has not been tested. The service worker is not registered by the development server.
+The production site registers a service worker. After one visit the studio opens without a network connection: the browser keeps the app shell, the runtime files and each model you have actually used. A model you never opened is not downloaded ahead of time and is not available offline. Depth follows the same rule: its 99 MB model and its ONNX Runtime files are kept only once you have opened Depth, under the same cache rule as the other models; opening Depth offline has not been tested by itself. The site also ships a web app manifest and icons, so a browser that offers to install sites can install it; the install prompt itself has not been tested. The service worker is not registered by the development server.
 
 **Recordings** capture the canvas at up to 24 fps, use a supported WebM/MP4 codec, and stop at 30 seconds or approximately 32 MB. Closing the app discards an unfinished recording. The exported clip includes source pixels and effects, without the surrounding interface. Recording stays in browser memory until downloaded.
 
@@ -131,18 +193,19 @@ The production site registers a service worker. After one visit the studio opens
 
 The file's `version` field is the version of this format, not of the app. It is `1.2.0`: version 1.1.0 files have the same fields, without the optional ones below, the size limit or the rounding. Every exported frame has the same five fields as in 1.1.0: `elapsedMs`, `latencyMs`, `detections`, `landmarks` and `handedness`. Format 1.2.0 adds optional fields, present only in the mode that produces them:
 
-| Field          | Mode     | Content                                                                                                                                            |
-| -------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `face`         | Face     | `blendshapes`: one object per face mapping every blendshape name to its score, 0 to 1. `headPose`: one `{ yaw, pitch, roll }` per face, in degrees |
-| `gestures`     | Gestures | One `{ name, score, handedness }` per hand, in the order of `landmarks`. `name` is the model's category name, `None` when it sees no gesture       |
-| `segmentation` | Segment  | `width` and `height` of the mask, and `classes`: all six classes with `label`, `pixels`, `share`, `score` and `box`. The masks are not exported    |
-| `tasks`        | Fusion   | The latest result of each model, keyed `pose`, `hand` and `face`: `elapsedMs`, `latencyMs`, `delegate`, `landmarks`, `handedness`                  |
+| Field          | Mode     | Content                                                                                                                                                               |
+| -------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `face`         | Face     | `blendshapes`: one object per face mapping every blendshape name to its score, 0 to 1. `headPose`: one `{ yaw, pitch, roll }` per face, in degrees                    |
+| `gestures`     | Gestures | One `{ name, score, handedness }` per hand, in the order of `landmarks`. `name` is the model's category name, `None` when it sees no gesture                          |
+| `segmentation` | Segment  | `width` and `height` of the mask, and `classes`: all six classes with `label`, `pixels`, `share`, `score` and `box`. The masks are not exported                       |
+| `tasks`        | Fusion   | The latest result of each model, keyed `pose`, `hand` and `face`: `elapsedMs`, `latencyMs`, `delegate`, `landmarks`, `handedness`                                     |
+| `depth`        | Depth    | `width`, `height`, `min` and `max` of the map, `delegate` and `metric`. With a metric fit also `scale`, `shift`, `floorCells` and `residual`. The map is not exported |
 
 In Segment, each entry of `detections` also carries `share` and `pixels`. In Fusion the flat `landmarks` are the pose model's, and a frame is recorded only once the pose model has answered; the hand and face results are under `tasks`.
 
 ## Privacy
 
-Camera frames and selected files stay in browser memory; SPECTRA has no image upload endpoint, account, analytics or face identification. Face mode measures the shape and expression of a face; it does not recognize who it is. The static host serves the app, fonts, runtime, models and demo assets and can receive normal HTTP request metadata. The build downloads models from Google's official storage, verifies their SHA-256 hashes, then serves them from the app's own origin.
+Camera frames and selected files stay in browser memory; SPECTRA has no image upload endpoint, account, analytics or face identification. Face mode measures the shape and expression of a face; it does not recognize who it is. The static host serves the app, fonts, runtime, models and demo assets and can receive normal HTTP request metadata. The build downloads the MediaPipe models from Google's official storage and the depth model from Hugging Face at a pinned commit, verifies their SHA-256 hashes, then serves them from the app's own origin. The Ruler's Box and Walls tools and Depth's metric fit are arithmetic on your taps in this browser; a saved OBJ, CSV or plan is a download you ask for.
 
 To open offline, the browser keeps a copy of the app and of each model you have used on this device; clear this site's data in your browser settings to remove them. That cache holds files the site served. It never holds camera frames, uploads, recordings, screenshots or exports.
 
@@ -161,7 +224,7 @@ pnpm run setup
 pnpm run dev
 ```
 
-Open the localhost URL printed by Vite. Run `pnpm run setup` explicitly: `pnpm setup` is a different, built-in pnpm command. Setup verifies the six models, copies the installed MediaPipe runtime, and assembles dependency license notices. Generated runtime/model files are deliberately excluded from Git.
+Open the localhost URL printed by Vite. Run `pnpm run setup` explicitly: `pnpm setup` is a different, built-in pnpm command. Setup downloads and verifies every model pinned in `scripts/models.json` (the depth model alone is 99 MB), copies the installed MediaPipe and ONNX Runtime Web files, and assembles dependency license notices. Generated runtime/model files are deliberately excluded from Git.
 
 The checks, in the order the workflow runs them:
 
@@ -186,25 +249,29 @@ Camera / local file / labeled still or animated demo
     → owned media source with generation token
     → ImageBitmap (one inference frame in flight per worker)
     → one dedicated vision worker per model / self-hosted MediaPipe WASM
+      (Depth: its own worker on self-hosted ONNX Runtime Web)
     → normalized detections / landmarks / masks, merged per mode
     → mode drawing + effects (canvas 2D and WebGL2) + inspector + Lab + JSON export
 ```
 
 React and TypeScript manage controls and source ownership. Modes, effects and inspector panels are plugins: one file in `src/modes`, `src/effects` or `src/panels` is one entry, found at build time. A dedicated worker per model performs synchronous inference away from the UI thread; the main thread renders the stage. Results from a replaced source or a previous mode are discarded and never reach a mode's drawing or inspector. Model initialization has a timeout and retry path, and mode changes terminate the previous workers. Model inference is capped at roughly 15 updates/second per model; canvas rendering is capped at roughly 30 draws/second. Actual throughput depends on your device. [docs/architecture.md](docs/architecture.md) has the plugin contracts.
 
-| Path                                                                   | Responsibility                                                                        |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `src/modes/`, `src/effects/`, `src/panels/`                            | The seven modes, ten effects and the Inspect, Lab, Library, Ruler and Presence panels |
-| `src/vision/useSource.ts`                                              | Permission, file decoding, camera ownership, cancellation and cleanup                 |
-| `src/vision/useVision.ts`, `task-runner.ts`, `public/vision-worker.js` | Model lifecycle, bounded frame transfer, delegate fallback, stale-result guards       |
-| `src/vision/useSession.ts`, `tracker.ts`                               | Object association, measured frame rate and the frames kept for export                |
-| `src/stage/`                                                           | The render loop, draw order, effect lifecycle and the shared WebGL2 layer             |
-| `src/gl/`                                                              | WebGL2 kit for effects: shaders, targets, bloom, particles, line batches              |
-| `src/shell/`, `src/components/`                                        | Shortcuts, command palette, immersive view, recorder, service worker registration     |
-| `src/telemetry/`                                                       | Measured events and the statistics the Lab shows                                      |
-| `public/sw.js`                                                         | Offline cache rules                                                                   |
-| `scripts/models.json` / `setup-assets.mjs`                             | Pinned model URLs, verified hashes, runtime and notices                               |
-| `tests/`                                                               | Unit tests and real-model browser workflows                                           |
+| Path                                                                   | Responsibility                                                                                                                   |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `src/modes/`, `src/effects/`, `src/panels/`                            | The eight modes, ten effects and the Inspect, Lab, Library, Ruler and Presence panels                                            |
+| `src/vision/useSource.ts`                                              | Permission, file decoding, camera ownership, cancellation and cleanup                                                            |
+| `src/vision/useVision.ts`, `task-runner.ts`, `public/vision-worker.js` | Model lifecycle, bounded frame transfer, delegate fallback, stale-result guards                                                  |
+| `src/vision/useSession.ts`, `tracker.ts`                               | Object association, measured frame rate and the frames kept for export                                                           |
+| `src/stage/`                                                           | The render loop, draw order, effect lifecycle and the shared WebGL2 layer                                                        |
+| `src/gl/`                                                              | WebGL2 kit for effects: shaders, targets, bloom, particles, line batches                                                         |
+| `src/shell/`, `src/components/`                                        | Shortcuts, command palette, immersive view, recorder, service worker registration                                                |
+| `src/telemetry/`                                                       | Measured events and the statistics the Lab shows                                                                                 |
+| `src/measure/`                                                         | Pure measuring helpers: smoothing, error bars and their formatting, angles, and the camera model recovered from a flat reference |
+| `src/panels/ruler/`, `fit/`, `walls/`                                  | The Ruler: the plane solve, fused known sizes and tape test, and the Box and Walls tools                                         |
+| `public/depth-worker.js`, `src/vision/depth/`, `src/modes/lib/depth-*` | Depth's worker, its pure maths (colours, the metric fit, unprojection, the 3D view's matrix) and its drawing                     |
+| `public/sw.js`                                                         | Offline cache rules                                                                                                              |
+| `scripts/models.json` / `setup-assets.mjs`                             | Pinned model URLs, verified hashes, runtime and notices                                                                          |
+| `tests/`                                                               | Unit tests and real-model browser workflows                                                                                      |
 
 ## Practical limits
 
@@ -218,6 +285,11 @@ React and TypeScript manage controls and source ownership. Modes, effects and in
 - Pinching uses aspect-correct thumb–index distance relative to palm length, with hysteresis. It is a gesture heuristic. Reduce glare and keep fingers visible.
 - The motion map and exported `x/y` positions are image coordinates; they are not physical depth. Landmark `z` values are model estimates, not calibrated distances.
 - Still demos repeatedly infer the same image. Animated demos pan a generated still photo; they do not simulate changing poses or supply prerecorded model results. A live camera or local video provides real scene motion. On slower devices, CPU inference can reduce frame rate. Fullscreen and video codec support vary by browser.
+- Ruler, Box and Walls measure a frozen frame or a photo of one flat surface. Their bars come from simulated tap error and leave out lens distortion, points off the surface and a bent reference. With one small reference the bars across a room are wide: in the simulated rooms a 1 m span 5 m from a Letter sheet had a median bar of 14.7 m against a median error of 0.33 m. A larger reference, a second reference or a known span narrows them.
+- The bars do not always hold the truth 95 times in 100. Measured in simulation: 91 to 94 in 100 for a span with one sheet and known spans only; 98, 91 and 86 in 100 for the Box clearance in the three cases given under Ruler. In 200 retakes of one Box scene, one gave a confident wrong "Does not fit". Every coverage figure here is from synthetic scenes with exact answers.
+- Walls needs every corner visible in one picture, assumes plumb walls and a flat ceiling, and does not subtract openings. Save OBJ still writes the full shell when the preview shows the floor only because the heights are too uncertain.
+- No Ruler tool has been tried on a physical phone or checked against a tape measure in a real room.
+- Depth is relative unless it is scaled against a floor marked in the Ruler on a still photo, and the scaled depths rest on that fit: the model's own error away from the marked floor is not in the bar. Depth's first load is 113 to 126 MB. It was run in Chrome on one Mac; Safari, Firefox and phones are untested for Depth, and the live site has not yet been checked to serve the 99 MB model file.
 - The tested browser path is Chromium on desktop and a narrow mobile viewport. Physical cameras, mobile Safari and every device/codec combination have not been verified.
 
 ## Ownership and third-party rights
