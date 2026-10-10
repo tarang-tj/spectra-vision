@@ -31,7 +31,7 @@ const MEAN = [0.485, 0.456, 0.406];
 const STD = [0.229, 0.224, 0.225];
 // The side the picture is resized toward, per delegate, unless the task's
 // options give another (`size: { CPU, GPU }`). 518 is the model's own size.
-const DEFAULT_SIZE = { CPU: 252, GPU: 518 };
+const DEFAULT_SIZE = { CPU: 196, GPU: 392 };
 // The runtime's files are served from a folder named after its version
 // (scripts/setup-assets.mjs copies them there), so a later upgrade can never
 // pair a cached wasm file with a newer script.
