@@ -6,7 +6,13 @@
 // origin.
 
 export type P = { x: number; y: number };
-export type Shot = { w: number; h: number; f: number; up: number; tilt: number };
+export type Shot = {
+  w: number;
+  h: number;
+  f: number;
+  up: number;
+  tilt: number;
+};
 
 /** The camera the fixed scenes use: 1.5 m up, looking 35 degrees down. */
 export const SHOT: Shot = {

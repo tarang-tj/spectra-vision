@@ -70,7 +70,9 @@ export function solveScene(setup: Setup, use: Use): Fusion | null {
           },
         ]
       : [],
-    use.known ? [{ a: stamp(KNOWN[0]), b: stamp(KNOWN[1]), mm: setup.tapeMm }] : [],
+    use.known
+      ? [{ a: stamp(KNOWN[0]), b: stamp(KNOWN[1]), mm: setup.tapeMm }]
+      : [],
     SIGMA_PX,
     TAPE_SD_MM,
   );
