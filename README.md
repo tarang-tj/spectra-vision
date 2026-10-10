@@ -22,7 +22,7 @@ _Interface design concept. The running app calculates its own detections, scores
 6. Use **Mirror**, **Pause**, **Screenshot**, **Fullscreen**, **Immersive** or **Export session**. **Demo** restores the sample for the selected mode. **Stop camera** releases its media tracks.
 7. Open the **Lab** tab in the right rail to see measured latency and frame rate, or press Ctrl K (Cmd K on a Mac) for the command palette.
 
-Use a current Chrome or Edge browser for the tested path. No account or API key is needed. The six MediaPipe model files behind every mode except Depth total about 49 MB (49,355,063 bytes, the sum of the sizes pinned in [scripts/models.json](scripts/models.json)), plus the WebAssembly runtime. Depth's model is a further 99 MB (99,060,839 bytes, pinned in the same file) and has a runtime of its own; see [Depth](#depth). Each mode downloads only its own model, the first time you open it; the first mode, Objects, needs about 7 MB.
+Use a current Chrome or Edge browser for the tested path. No account or API key is needed. The six MediaPipe model files that the modes other than Depth load by default total about 49 MB (49,355,063 bytes, the sum of the sizes pinned in [scripts/models.json](scripts/models.json)), plus the WebAssembly runtime. Depth's model is a further 99 MB (99,060,839 bytes, pinned in the same file) and has a runtime of its own; see [Depth](#depth). Each mode downloads only its own model, the first time you open it; the first mode, Objects, needs about 7 MB.
 
 ## What it does
 
@@ -91,6 +91,8 @@ How often these bars hold the truth was measured in 300 simulated rooms (a Lette
 | A second sheet                  | 96.0%, 96.7%, 97.0%                            |
 | One sheet and a known 3 m span  | 94.3%, 92.7%, 91.2%                            |
 | A second sheet and a known span | 97.0%, 95.0%, 95.0%                            |
+
+Each share counts only the spans the Ruler gave a number for. Where it declined to (18 of the 300 far spans with one sheet, 3 of 300 with one sheet and a known span), that room is left out of the share.
 
 So one sheet plus known spans alone holds the truth 91 to 94 times in 100, fewer than the 95 that 2 standard deviations suggest; the panel says this in that case and recommends a second reference. What a second known size buys is a narrower bar, not better coverage. For the far span, over 60 noisy retakes of one room, the median error and bar were 318 mm and 7,267 mm with one sheet, 39 mm and 94 mm with the second sheet, and 63 mm and 229 mm with the known 3 m span instead.
 
