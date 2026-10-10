@@ -1,28 +1,30 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+import BasisDetails from "../basis-details";
 import type { Derived } from "../derive";
 import type { RulerState } from "../state";
 import type { BoxState } from "./box-state";
-import { verdicts } from "./verdict";
+import { verdicts, type Row } from "./verdict";
+import { MARK } from "./verdict-mark";
 
-/** The fit verdicts for the placed box, each with its bar, and what the bar
- * covers. Rendered only while the picture is still and is the one the points
- * were tapped on. */
-export default function Verdicts({
-  s,
-  d,
-  box,
-}: {
-  s: RulerState;
-  d: Derived;
-  box: BoxState;
-}) {
+type Props = { s: RulerState; d: Derived; box: BoxState };
+
+/** The worst verdict of a row, for its edge colour. */
+const worst = (r: Row) =>
+  (["over", "close", "fits"] as const).find((k) =>
+    r.verdicts.some((v) => v.kind === k),
+  );
+
+/** The fit verdicts for the placed box, each with its mark and its bar.
+ * Rendered only while the picture is still and is the one the points were
+ * tapped on. */
+export default function Verdicts({ s, d, box }: Props) {
   if (!box.at)
     return (
       <p className="ruler-note" data-testid="fit-hint">
         No box on the picture yet. Choose Box and tap the floor.
       </p>
     );
-  const { rows, basis } = verdicts(s, d, box);
+  const { rows } = verdicts(s, d, box);
   if (!rows.length)
     return (
       <p className="ruler-note" data-testid="fit-hint">
@@ -31,14 +33,16 @@ export default function Verdicts({
       </p>
     );
   return (
-    <>
-      <ol className="ruler-results" aria-label="Does the box fit">
-        {rows.map((r) => (
-          <li key={r.label} data-testid="fit-row">
-            <span className="ruler-label">{r.label}</span>
-            {r.verdicts.map((v, i) => (
+    <ol className="ruler-results fit-verdicts" aria-label="Does the box fit">
+      {rows.map((r) => (
+        <li key={r.label} data-testid="fit-row" data-kind={worst(r)}>
+          <span className="ruler-label">{r.label}</span>
+          {r.verdicts.map((v, i) => (
+            <span key={i} className="fit-line" data-kind={v.kind}>
+              <span className="fit-mark" aria-hidden="true">
+                {MARK[v.kind]}
+              </span>
               <output
-                key={i}
                 className={i ? "ruler-sub" : "ruler-value"}
                 data-testid="fit-verdict"
                 data-kind={v.kind}
@@ -48,25 +52,35 @@ export default function Verdicts({
               >
                 {v.text}
               </output>
-            ))}
-            {r.reason && <p className="ruler-warn">{r.reason}</p>}
-            {r.warnings.map((w) => (
-              <p key={w} className="ruler-warn">
-                {w}
-              </p>
-            ))}
-          </li>
-        ))}
-      </ol>
-      {basis && (
-        <p className="ruler-basis" data-testid="fit-basis">
-          {basis}
-        </p>
-      )}
-      <p className="ruler-basis">
-        A verdict is given only when the whole bar is on one side of zero.
-        Otherwise it is too close to call from this picture.
+            </span>
+          ))}
+          {r.reason && <p className="ruler-warn">{r.reason}</p>}
+          {r.warnings.map((w) => (
+            <p key={w} className="ruler-warn">
+              {w}
+            </p>
+          ))}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** What the verdicts' bars are and what they leave out. */
+export function VerdictBasis({ s, d, box }: Props) {
+  if (!box.at) return null;
+  const { rows, basis } = verdicts(s, d, box);
+  if (!rows.length) return null;
+  const rule =
+    "A verdict is given only when the whole bar is on one side of zero. Otherwise it is too close to call from this picture.";
+  if (!basis) return <p className="ruler-basis">{rule}</p>;
+  return (
+    <BasisDetails
+      lead={`${rule} The bar is 2 standard deviations over simulated retakes of your taps, so a verdict can be wrong.`}
+    >
+      <p className="ruler-basis" data-testid="fit-basis">
+        {basis}
       </p>
-    </>
+    </BasisDetails>
   );
 }

@@ -3,6 +3,7 @@
 // camera's focal length is known, the whole box in perspective. Called by the
 // Ruler for every still frame; it keeps no loop and no state of its own.
 import type { DrawEnv } from "../extension-types";
+import { isCompact } from "../overlay-labels";
 import { dot, tag } from "../overlay-parts";
 import { fromMm, type Unit } from "../units";
 import { getBox } from "./box-state";
@@ -14,8 +15,11 @@ import {
   solidOf,
   type P2,
 } from "./project";
+import { verdicts } from "./verdict";
+import { COLOR, headline, tagText } from "./verdict-mark";
 
-/** The box's own colour: apart from the reference, spans, paths and edges. */
+/** The box's own colour until it has a verdict: apart from the reference,
+ * spans, paths and edges. With a verdict it takes the verdict's colour. */
 export const BOX = "#c9a8ff";
 /** The footprint corner that carries the turn handle. */
 export const TURN_CORNER = 2;
@@ -33,7 +37,10 @@ export function drawBox(ctx: CanvasRenderingContext2D, env: DrawEnv) {
     at = box.at,
     view = projectorOf(env);
   if (!at || !view) return;
-  const solid = solidOf({ ...box, at }),
+  // Memoized on the state (verdict.ts): no retakes are run again per frame.
+  const verdict = headline(verdicts(env.s, env.d, box).rows),
+    ink = verdict ? COLOR[verdict.kind] : BOX,
+    solid = solidOf({ ...box, at }),
     toward = view.camera ? facesToward(solid, view.camera.centre) : null,
     near = toward ? nearEdges(solid, toward) : null,
     // Without a focal length only the floor is drawn: the bottom face.
@@ -47,7 +54,7 @@ export function drawBox(ctx: CanvasRenderingContext2D, env: DrawEnv) {
     });
 
   // Faces, lightly: only those turned toward the camera and wholly in view.
-  ctx.fillStyle = BOX;
+  ctx.fillStyle = ink;
   ctx.globalAlpha = 0.14;
   faces.forEach((face, f) => {
     if (toward && !toward[f]) return;
@@ -67,7 +74,7 @@ export function drawBox(ctx: CanvasRenderingContext2D, env: DrawEnv) {
   });
 
   // Edges: the far ones thin and faint first, the near ones on top.
-  ctx.strokeStyle = BOX;
+  ctx.strokeStyle = ink;
   ctx.lineJoin = "round";
   for (const strong of [false, true]) {
     ctx.globalAlpha = strong ? 1 : 0.5;
@@ -90,11 +97,26 @@ export function drawBox(ctx: CanvasRenderingContext2D, env: DrawEnv) {
         .filter((l): l is [P2, P2] => !!l);
       if (!shown.length) return;
       const l = shown.reduce(lower);
-      tag(ctx, text, (l[0].x + l[1].x) / 2 + 6, (l[0].y + l[1].y) / 2 - 8, BOX);
+      // Typed by the user and shown in the panel: a detail on the stage.
+      tag(
+        text,
+        (l[0].x + l[1].x) / 2 + 6,
+        (l[0].y + l[1].y) / 2 - 8,
+        ink,
+        "detail",
+      );
     };
   label(`W ${sizeText(box.w, unit)}`, [0, 2]);
   label(`D ${sizeText(box.d, unit)}`, [1, 3]);
   if (view.full) label(`H ${sizeText(box.h, unit)}`, [8, 9, 10, 11]);
+
+  // The verdict beside the box, above its highest drawn point: a mark and a
+  // word in the verdict's colour, the same as in the panel.
+  const drawn = lines.filter((l): l is [P2, P2] => !!l).flat();
+  if (verdict && drawn.length) {
+    const top = drawn.reduce((a, b) => (b.y < a.y ? b : a));
+    tag(tagText(verdict), top.x + 8, top.y - (isCompact() ? 12 : 16), ink);
+  }
 
   // The turn handle, while the Box tool is the one taking taps.
   if (env.s.tool === "box") {
@@ -102,7 +124,7 @@ export function drawBox(ctx: CanvasRenderingContext2D, env: DrawEnv) {
       p = view.project(c[0], c[1], 0);
     if (p) {
       const h = env.toCanvas(p);
-      dot(ctx, h.x, h.y, BOX, "turn");
+      dot(ctx, h.x, h.y, ink, "turn", "detail");
     }
   }
 }

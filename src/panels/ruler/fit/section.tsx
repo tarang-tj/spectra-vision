@@ -16,7 +16,8 @@ import {
 } from "./box-state";
 import { sizeText } from "./draw";
 import NumberField from "./number-field";
-import Verdicts from "./verdicts-list";
+import Verdicts, { VerdictBasis } from "./verdicts-list";
+import "./fit.css";
 
 const SIDES = [
   ["w", "Width"],
@@ -39,12 +40,13 @@ export default function BoxSection({ show }: { show: boolean }) {
   return (
     <section className="ruler-block" aria-label="Box">
       <h3>Box</h3>
+      {show && <Verdicts s={s} d={d} box={box} />}
       <p className="ruler-note">
         A box of the size you type, stood on the same surface as the reference.
         Tap the floor to stand it there. Outline the space with Area, or measure
         a gap with Span, to learn whether it fits.
       </p>
-      <div className="ruler-custom" role="group" aria-label="Box size">
+      <div className="ruler-custom fit-size" role="group" aria-label="Box size">
         {SIDES.map(([side, name]) => (
           <NumberField
             key={side}
@@ -114,7 +116,7 @@ export default function BoxSection({ show }: { show: boolean }) {
           and is not affected.
         </p>
       )}
-      {show && <Verdicts s={s} d={d} box={box} />}
+      {show && <VerdictBasis s={s} d={d} box={box} />}
     </section>
   );
 }

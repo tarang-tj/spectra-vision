@@ -141,19 +141,19 @@ describe("the three-way verdict", () => {
   });
   it("words each case with the value and its bar", () => {
     expect(verdictOf("outline", 52, 13, "mm", "b").text).toBe(
-      "Fits, with 50 ± 10 mm of clearance",
+      "Fits, with 52 ± 13 mm of clearance",
     );
     expect(verdictOf("outline", -52, 13, "cm", "b").text).toBe(
-      "Does not fit: over by 5 ± 1 cm",
+      "Does not fit: over by 5.2 ± 1.3 cm",
     );
     expect(verdictOf("outline", -8, 13, "mm", "b").text).toBe(
-      "Too close to call: clearance -10 ± 10 mm",
+      "Too close to call: clearance too uncertain to state (bar ± 13 mm). Add a larger or second reference, or a known span.",
     );
     expect(verdictOf("width", 120, 13, "mm", "b").text).toBe(
-      "Width passes, with 120 ± 10 mm to spare",
+      "Width passes, with 120 ± 13 mm to spare",
     );
     expect(verdictOf("depth", -120, 13, "mm", "b").text).toBe(
-      "Depth does not pass: over by 120 ± 10 mm",
+      "Depth does not pass: over by 120 ± 13 mm",
     );
   });
 });

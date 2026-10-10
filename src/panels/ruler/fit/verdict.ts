@@ -3,11 +3,11 @@
 // footprint and the outline, with a bar from the same simulated retakes the
 // Ruler's camera uses. For each finished span: whether the box's width and
 // depth pass through a gap of that length, using the span's own bar.
-import { formatMeasured } from "../../../measure/format";
 import { measured, type Measured } from "../../../measure/noise";
 import type { Derived } from "../derive";
 import { basisFor, droppedNote } from "../monte-carlo";
 import { plumbVersion } from "../plumbs";
+import { readingText } from "../reading";
 import type { RulerState } from "../state";
 import { fromMm, type Unit } from "../units";
 import type { BoxState } from "./box-state";
@@ -49,12 +49,12 @@ const WORDS: Record<"outline" | "width" | "depth", Record<Kind, string>> = {
   width: {
     fits: "Width passes, with % to spare",
     over: "Width does not pass: over by %",
-    close: "Too close to call for the width: % to spare",
+    close: "Too close to call for the width: room to spare %",
   },
   depth: {
     fits: "Depth passes, with % to spare",
     over: "Depth does not pass: over by %",
-    close: "Too close to call for the depth: % to spare",
+    close: "Too close to call for the depth: room to spare %",
   },
 };
 
@@ -77,7 +77,9 @@ export function verdictOf(
     mm,
     errorMm,
     measured: m,
-    text: WORDS[what][kind].replace("%", formatMeasured(m)),
+    // "Too close to call" is exactly a bar as large as the room to spare, so
+    // its number is said the way every such size is (reading.ts).
+    text: WORDS[what][kind].replace("%", readingText(m)),
   };
 }
 
