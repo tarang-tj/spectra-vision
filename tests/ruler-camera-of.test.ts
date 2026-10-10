@@ -6,6 +6,7 @@ import { cameraOf, cameraTrials } from "../src/panels/ruler/camera-of";
 import { derive } from "../src/panels/ruler/derive";
 import { EXTENSIONS, extensionEnv } from "../src/panels/ruler/extensions";
 import { allPlumbs, setPlumbs } from "../src/panels/ruler/plumbs";
+import { endDrag, onRulerPointer } from "../src/panels/ruler/pointer";
 import {
   bindSource,
   clear,
@@ -98,6 +99,28 @@ describe("a tool from its own folder", () => {
     setTool("span");
     undo();
     expect(getState().corners).toHaveLength(3);
+  });
+
+  it("lets the reference be tapped again after Clear while it is still chosen", () => {
+    tapSheet();
+    setTool("box");
+    clear();
+    expect(getState().tool).toBe("box");
+    const press = (x: number, y: number) =>
+      onRulerPointer({
+        type: "down",
+        point: { x: x / W, y: y / H },
+        inside: true,
+        source: { width: W, height: H },
+        canvas: { x, y },
+        scale: 1,
+        pointerId: 1,
+        pointerType: "mouse",
+        cancelled: false,
+      });
+    expect(press(400, 500)).toBe(true);
+    endDrag();
+    expect(getState().corners).toHaveLength(1);
   });
 
   it("is not offered while it is only a placeholder", () => {
