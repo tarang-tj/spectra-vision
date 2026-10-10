@@ -15,13 +15,17 @@ describe("the accuracy fixture", () => {
     const u = uniform(777),
       n = 200_000;
     let sum = 0,
-      sq = 0;
+      sq = 0,
+      outside = 0;
     for (let i = 0; i < n; i++) {
       const v = u();
-      expect(v >= 0 && v < 1).toBe(true);
+      // Counted, not asserted one by one: 200,000 assertions took seconds
+      // on a busy machine and timed the test out.
+      if (!(v >= 0 && v < 1)) outside++;
       sum += v;
       sq += v * v;
     }
+    expect(outside).toBe(0);
     expect(sum / n).toBeCloseTo(0.5, 2);
     expect(sq / n - (sum / n) ** 2).toBeCloseTo(1 / 12, 2);
   });

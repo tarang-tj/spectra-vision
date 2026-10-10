@@ -1,6 +1,6 @@
 {
   "name": "spectra-vision",
-  "version": "2.2.3",
+  "version": "2.3.0",
   "private": true,
   "description": "A camera-first computer vision studio: eight on-device vision modes, effects driven by tracking, and a measured performance lab.",
   "author": "Tarang Jammalamadaka",

@@ -15,12 +15,13 @@ import type { ModeDef } from "../src/modes";
 import type { TaskKind } from "../src/vision/types";
 
 describe("keyboard shortcuts", () => {
-  it("maps digits to registered modes only, up to seven", () => {
+  it("maps digits to registered modes only, up to eight", () => {
     expect(matchShortcut({ key: "1" }, 3)).toEqual({ type: "mode", index: 0 });
     expect(matchShortcut({ key: "3" }, 3)).toEqual({ type: "mode", index: 2 });
     expect(matchShortcut({ key: "4" }, 3)).toBeNull();
     expect(matchShortcut({ key: "7" }, 9)).toEqual({ type: "mode", index: 6 });
-    expect(matchShortcut({ key: "8" }, 9)).toBeNull();
+    expect(matchShortcut({ key: "8" }, 9)).toEqual({ type: "mode", index: 7 });
+    expect(matchShortcut({ key: "9" }, 9)).toBeNull();
     expect(matchShortcut({ key: "0" }, 9)).toBeNull();
   });
   it("maps the letter keys in either case, and ? to help", () => {
@@ -61,7 +62,7 @@ describe("keyboard shortcuts", () => {
   });
   it("documents every action the matcher knows", () => {
     expect(SHORTCUTS.map((s) => s.keys)).toEqual([
-      "1 to 7",
+      "1 to 8",
       "R",
       "S",
       "M",

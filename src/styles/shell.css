@@ -330,8 +330,8 @@ kbd {
   }
 }
 /* More than four modes do not fit beside the brand on a tablet: the switch
-   takes its own row, as it does on a phone. */
-@media (max-width: 1000px) {
+   takes its own row, as it does on a phone. Eight modes need 1060 px. */
+@media (max-width: 1060px) {
   .topbar[data-many="true"] {
     grid-template-columns: 1fr auto;
     row-gap: 10px;
