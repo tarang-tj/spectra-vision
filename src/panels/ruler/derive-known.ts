@@ -152,8 +152,11 @@ export function tapeTest(
     }
     const diff = fromMm(r.span.mm - mm, s.unit),
       bar = fromMm(r.span.errorMm, s.unit),
-      places = bar > 0 ? Math.max(0, roundError(bar).decimals) : 2,
-      difference = `${diff >= 0 ? "+" : "-"}${Math.abs(diff).toFixed(Math.min(places, 6))} ${s.unit}`;
+      // One more place than the bar is written to, so a small difference
+      // does not read as nothing.
+      places = bar > 0 ? Math.max(0, roundError(bar).decimals + 1) : 2,
+      size = Math.abs(diff).toFixed(Math.min(places, 6)),
+      difference = `${Number(size) === 0 ? "" : diff > 0 ? "+" : "-"}${size} ${s.unit}`;
     if (knownUsed.has(r.index)) {
       checks.push({
         ...base,
