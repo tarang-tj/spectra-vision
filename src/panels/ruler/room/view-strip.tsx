@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useStudio } from "../../../studio-context";
 import { isEmpty, useRuler } from "../state";
+import ConfirmButton from "./confirm-button";
 import { blobOfSource, thumbOf } from "./picture";
 import RoomFileBar from "./room-file-bar";
 import {
@@ -106,14 +107,13 @@ export default function ViewStrip() {
                     {here ? " (on the stage)" : ""}
                   </span>
                 </button>
-                <button
-                  className="button"
-                  aria-label={`Remove picture ${i + 1}`}
+                <ConfirmButton
+                  label="Remove"
+                  again={`Press again to remove picture ${i + 1} and its taps`}
+                  name={`Remove picture ${i + 1}, with everything tapped on it. Asks once more first.`}
                   disabled={room.busy}
-                  onClick={() => void removeView(v.id, loadPicture)}
-                >
-                  Remove
-                </button>
+                  onConfirm={() => void removeView(v.id, loadPicture)}
+                />
               </li>
             );
           })}

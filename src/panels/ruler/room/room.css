@@ -138,3 +138,13 @@
   outline: 2px solid var(--accent);
   outline-offset: -6px;
 }
+/* Armed: the next press discards. Said in the button's words; the border
+   only draws the eye to them. */
+.room-confirm[data-armed] {
+  border-color: #ffd18d;
+  color: #ffd18d;
+}
+.room-ask p {
+  flex: 1 1 100%;
+  margin: 0;
+}

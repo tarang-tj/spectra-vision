@@ -2,10 +2,13 @@
 import { useState } from "react";
 import { useStudio } from "../../../studio-context";
 import { useRuler } from "../state";
+import ConfirmButton from "./confirm-button";
 import { clearIoNote, openRoom, saveRoom, useIoNote } from "./room-io";
 import { loadRoom } from "./store";
 import { dropFrames } from "./view-frame";
 import { resetViews, useViews } from "./views-store";
+
+const pictures = (n: number) => `${n} picture${n === 1 ? "" : "s"}`;
 
 /** Save room, Open room and Start a new room, with what the last one did. */
 export default function RoomFileBar() {
@@ -13,8 +16,10 @@ export default function RoomFileBar() {
     { unit } = useRuler(),
     room = useViews(),
     note = useIoNote(),
-    [pictures, setPictures] = useState(false),
+    [withPictures, setPictures] = useState(false),
     [working, setWorking] = useState(false),
+    // A room file chosen while a room is on show, waiting for a yes or no.
+    [waiting, setWaiting] = useState<File | null>(null),
     busy = working || room.busy;
   const run = async (job: () => Promise<void>) => {
     setWorking(true);
@@ -30,14 +35,14 @@ export default function RoomFileBar() {
         <button
           className="button"
           disabled={busy || !room.views.length}
-          onClick={() => void run(() => saveRoom(pictures, unit))}
+          onClick={() => void run(() => saveRoom(withPictures, unit))}
         >
           Save room
         </button>
         <label className="room-check">
           <input
             type="checkbox"
-            checked={pictures}
+            checked={withPictures}
             onChange={(e) => setPictures(e.target.checked)}
           />
           <span>Include the pictures in the file</span>
@@ -51,28 +56,59 @@ export default function RoomFileBar() {
             disabled={busy}
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) void run(() => openRoom(f, loadPicture));
+              // Opening replaces the room on show: with one there, ask first.
+              if (f && room.views.length) setWaiting(f);
+              else if (f) void run(() => openRoom(f, loadPicture));
               e.target.value = "";
             }}
           />
         </label>
-        <button
-          className="button"
+        <ConfirmButton
+          label="Start a new room"
+          again={`Press again to discard ${pictures(room.views.length)} and their taps`}
+          name={`Start a new room. Discards ${pictures(room.views.length)} and everything tapped on them. Asks once more first.`}
           disabled={busy || !room.views.length}
-          onClick={() => {
+          onConfirm={() => {
             resetViews();
             loadRoom(null);
             dropFrames();
             clearIoNote();
+            setWaiting(null);
           }}
-        >
-          Start a new room
-        </button>
+        />
       </div>
+      {waiting && (
+        <div
+          className="ruler-group room-ask"
+          role="group"
+          aria-label="Replace the room on show"
+          data-testid="room-open-ask"
+        >
+          <p className="ruler-warn" role="status">
+            Opening {waiting.name} replaces the room on show:{" "}
+            {pictures(room.views.length)} and everything tapped on them are
+            discarded. Save room first if you want them.
+          </p>
+          <button
+            className="button"
+            onClick={() => {
+              const f = waiting;
+              setWaiting(null);
+              void run(() => openRoom(f, loadPicture));
+            }}
+          >
+            Replace the room
+          </button>
+          <button className="button" onClick={() => setWaiting(null)}>
+            Keep the room
+          </button>
+        </div>
+      )}
       <p className="ruler-note">
         Save room writes one file to your downloads: every tap, the room's
         points and its numbers with their bars. The pictures go in only if the
-        box is ticked. Open room replaces the room on show. Nothing is uploaded.
+        box is ticked. Open room replaces the room on show, and asks first when
+        there is one. Nothing is uploaded.
       </p>
       {note && (
         <div role="status" data-testid="room-file-note" data-kind={note.kind}>

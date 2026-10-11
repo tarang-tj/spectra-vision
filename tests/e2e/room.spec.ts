@@ -154,7 +154,27 @@ test("two pictures of one room: each keeps its own reference and span across swi
   expect(await reading(page)).toEqual(first);
 
   // Removing the picture on the stage shows the other one, with its taps.
-  await page.getByRole("button", { name: "Remove picture 1" }).click();
+  // Remove asks once more: the first press only arms it, and a press
+  // anywhere else, or Escape, puts it back.
+  const remove = page.getByRole("button", { name: /^Remove picture 1,/ }),
+    armed = page.getByRole("button", {
+      name: "Press again to remove picture 1 and its taps",
+    });
+  await remove.click();
+  await expect(armed).toBeVisible();
+  await expect(page.getByTestId("room-strip").locator("li")).toHaveCount(2);
+  await page.getByRole("heading", { name: "Pictures of this room" }).click();
+  await expect(armed).toHaveCount(0);
+  await remove.focus();
+  await page.keyboard.press("Enter");
+  await expect(armed).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(armed).toHaveCount(0);
+  await expect(page.getByTestId("room-strip").locator("li")).toHaveCount(2);
+  // By keyboard, twice: removed.
+  await remove.focus();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
   await expect(page.getByTestId("room-strip").locator("li")).toHaveCount(1);
   await expect(thumb(page, 1)).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("ruler-result")).toHaveCount(2);
@@ -187,6 +207,14 @@ async function downloads(
       text: readFileSync((await d.path())!, "utf8"),
     })),
   );
+}
+/** Start a new room: one press arms the button, the second discards. */
+async function startNew(page: Page) {
+  await page.getByRole("button", { name: /^Start a new room\./ }).click();
+  await expect(page.getByTestId("room-strip")).toBeVisible();
+  await page
+    .getByRole("button", { name: /^Press again to discard \d+ pictures? and/ })
+    .click();
 }
 const shape = (page: Page, name: string) =>
   group(page, "Shape").getByRole("button", { name, exact: true });
@@ -448,7 +476,21 @@ test("a room from two pictures: refused and accepted anchors, an outline from co
   await expect(step(page)).toContainText("Tap two points");
 
   // The file without pictures: the plan and the numbers, and it says so.
+  // A room is on show now, so opening another asks first, and No keeps it.
+  const ask = page.getByTestId("room-open-ask");
   await openFile.setInputFiles(bare.path);
+  await expect(ask).toContainText(
+    "replaces the room on show: 2 pictures and everything tapped on them are discarded",
+  );
+  await page
+    .getByRole("button", { name: "Keep the room", exact: true })
+    .click();
+  await expect(ask).toHaveCount(0);
+  await expect(thumb(page, 2)).toHaveAttribute("aria-pressed", "true");
+  await openFile.setInputFiles(bare.path);
+  await page
+    .getByRole("button", { name: "Replace the room", exact: true })
+    .click();
   await expect(note).toContainText(
     "The pictures are not in the file: the plan and the numbers are shown, the pictures cannot be.",
   );
@@ -470,6 +512,9 @@ test("a room from two pictures: refused and accepted anchors, an outline from co
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify({ ...saved, version: 99 })),
   });
+  await page
+    .getByRole("button", { name: "Replace the room", exact: true })
+    .click();
   await expect(note).toHaveAttribute("data-kind", "refused");
   await expect(note).toContainText(
     "This room file is version 99. This SPECTRA reads version 1 only, so it was not opened.",
@@ -479,6 +524,9 @@ test("a room from two pictures: refused and accepted anchors, an outline from co
     mimeType: "application/json",
     buffer: Buffer.from("<html>not a room</html>"),
   });
+  await page
+    .getByRole("button", { name: "Replace the room", exact: true })
+    .click();
   await expect(note).toContainText("it could not be read as JSON");
   expect(await areaOf(page)).toEqual(area);
   expect(errors).toEqual([]);
@@ -623,9 +671,7 @@ test("a photo already on the stage joins the room with its taps, and a frozen ca
   expect(await reading(page)).toEqual(first);
 
   // A new room, and the same photo kept by its own button.
-  await page
-    .getByRole("button", { name: "Start a new room", exact: true })
-    .click();
+  await startNew(page);
   await expect(page.getByTestId("room-status")).toHaveText(
     "No pictures in this room yet.",
   );
@@ -638,9 +684,7 @@ test("a photo already on the stage joins the room with its taps, and a frozen ca
   await expect(thumb(page, 1).locator("img")).toBeVisible();
 
   // A camera: a moving picture cannot be a view; a frozen frame can.
-  await page
-    .getByRole("button", { name: "Start a new room", exact: true })
-    .click();
+  await startNew(page);
   await page.getByRole("button", { name: "Start camera" }).click();
   await expect(page.getByRole("button", { name: "Stop camera" })).toBeVisible();
   await expect(
