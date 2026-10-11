@@ -16,6 +16,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "check": "tsc -b",
     "test": "vitest run",
+    "test:fast": "vitest run --exclude tests/ruler-coverage.test.ts --exclude tests/walls-fused.test.ts --exclude tests/walls-numbers.test.ts --exclude tests/fit-fused.test.ts --exclude tests/ruler-fused.test.ts --exclude tests/fit-scene.test.ts",
     "test:e2e": "playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
