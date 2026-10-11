@@ -34,6 +34,8 @@ export function pixelsOf(view: View): Pixels | null {
   });
   return null;
 }
+/** How many pictures' pixels are held (tests). */
+export const heldPixels = () => cache.size;
 /** Let go of pixels of pictures no longer in the room. */
 export function keepOnly(ids: readonly number[]) {
   for (const id of cache.keys()) if (!ids.includes(id)) cache.delete(id);

@@ -9,6 +9,7 @@ import { useSyncExternalStore } from "react";
 import { subscribeBox } from "../fit/box-state";
 import { getState, subscribe, type Tool } from "../state";
 import { subscribeWalls } from "../walls/store";
+import { keepOnly } from "./rasters";
 import { dropView } from "./store";
 import {
   blankSnap,
@@ -182,6 +183,7 @@ export async function removeView(id: number, load: Load) {
     next = views[Math.min(at, views.length - 1)];
   emit({ ...state, views, current: wasCurrent ? null : state.current });
   dropView(id);
+  keepOnly(views.map((v) => v.id));
   if (wasCurrent && next?.blob) await showView(next.id, load);
 }
 
@@ -192,10 +194,13 @@ export const setThumb = (id: number, thumb: string) => {
 /** Replace the whole room (a room file was opened). */
 export function loadViews(views: readonly View[]) {
   nextId = views.reduce((m, v) => Math.max(m, v.id), 0) + 1;
+  // A file's pictures are new bytes even where an id is used again.
+  keepOnly([]);
   emit({ ...empty, views });
 }
 /** Back to no room (tests, and "Close room"). */
 export const resetViews = () => {
   nextId = 1;
+  keepOnly([]);
   emit(empty);
 };

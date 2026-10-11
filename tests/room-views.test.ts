@@ -19,6 +19,7 @@ import {
   type Load,
   type ViewSnap,
 } from "../src/panels/ruler/room/views-store";
+import { heldPixels, pixelsOf } from "../src/panels/ruler/room/rasters";
 import { randomSnaps } from "./helpers/room-random";
 import {
   addReference,
@@ -207,6 +208,21 @@ describe.each(["frame", "restore"] as const)(
     });
   },
 );
+
+it("lets go of a picture's pixels when it leaves the room, and of all of them with the room", async () => {
+  const load = stage("frame"),
+    a = (await addView(png("a"), "a.png", load))!,
+    b = (await addView(png("b"), "b.png", load))!;
+  // Asked for as the plan would: held (still being read) from then on.
+  pixelsOf(viewOf(a)!);
+  pixelsOf(viewOf(b)!);
+  expect(heldPixels()).toBe(2);
+  await removeView(b, load);
+  expect(heldPixels()).toBe(1);
+  pixelsOf(viewOf(a)!);
+  resetViews();
+  expect(heldPixels()).toBe(0);
+});
 
 it("cannot take a further reference along by accident: each picture has its own", async () => {
   const load = stage("frame");
