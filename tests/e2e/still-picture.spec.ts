@@ -361,15 +361,65 @@ test("Depth says the size of its model while it downloads for the first time", a
   await expect(page.getByTestId("latency")).toHaveText(/^\d+ ms$/, {
     timeout: 90_000,
   });
-  // Depth again, now stored on the device (production keeps it): no size.
-  if (production) {
-    const before = (await shown()).length;
-    await mode(page, "Depth").click();
-    await expect.poll(() => depth(page), { timeout: 120_000 }).not.toBeNull();
-    const later = (await shown()).slice(before);
-    expect(later.some((text) => text.includes("MB"))).toBe(false);
-    expect(later.join(" ")).toContain("Loading model");
-  }
+  // Depth again, with its model stored on the device: no size this time.
+  // In production the service worker has kept it; that is waited for, since
+  // writing 99 MB to storage takes a moment. A dev server has no service
+  // worker, so there the test stores the file itself, the same way.
+  const stored = () =>
+    page.evaluate(async () => {
+      const url = new URL(
+        "models/depth_anything_v2_small.onnx",
+        document.baseURI,
+      ).href;
+      return !!(await caches.match(url, { ignoreVary: true }));
+    });
+  if (!production)
+    await page.evaluate(async () => {
+      const url = new URL(
+          "models/depth_anything_v2_small.onnx",
+          document.baseURI,
+        ).href,
+        cache = await caches.open("spectra-test-stored");
+      await cache.add(url);
+    });
+  await expect.poll(stored, { timeout: 60_000 }).toBe(true);
+  const before = (await shown()).length,
+    maps = await results(page),
+    later = async () => (await shown()).slice(before);
+  await mode(page, "Depth").click();
+  // The whole second load is waited through, not sampled: first its plain
+  // loading line (every text the notice shows is on record, so a line that
+  // was on screen for one frame still counts), then a new depth map, then
+  // the notice gone. The probe's last map is the first visit's, so it
+  // cannot say that this load has finished; the result count can.
+  await expect
+    .poll(async () => (await later()).includes("Loading model…"), {
+      timeout: 60_000,
+    })
+    .toBe(true);
+  await expect
+    .poll(
+      () =>
+        page.evaluate((count) => {
+          const probe = (
+            window as unknown as {
+              __spectraResults: {
+                count: number;
+                last: { mode: string } | null;
+              };
+            }
+          ).__spectraResults;
+          // Body's last result may still land after `maps` was read.
+          return probe.count > count && probe.last?.mode === "depth";
+        }, maps),
+      { timeout: 120_000 },
+    )
+    .toBe(true);
+  await expect(loading).toHaveCount(0);
+  // Start to finish, no line of this load gave a size.
+  const lines = await later();
+  expect(lines.filter((text) => /MB|Downloading/.test(text))).toEqual([]);
+  expect(lines).toContain("Loading model…");
   expect((await shown()).some((text) => text === "Loading model…")).toBe(true);
   expect(errors).toEqual([]);
 });
