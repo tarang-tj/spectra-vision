@@ -38,7 +38,19 @@ export function roomCsv(
         ? `${Math.floor(q.kept * 100)}% of the simulated retakes could be used`
         : "";
   solution.views.forEach((v) =>
-    rows.push([v.name, "on the plan", "", "", "", "", "", "", v.text]),
+    // The column must say it as it is: a refused or provisional picture is
+    // not on the plan, whatever the sentence beside it goes on to explain.
+    rows.push([
+      v.name,
+      v.rigid ? "on the plan" : "not on the plan",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      v.text,
+    ]),
   );
   const n = solution.numbers,
     corners = solution.corners.map((c) => c.sample!.at);

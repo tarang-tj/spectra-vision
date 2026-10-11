@@ -210,6 +210,25 @@ describe("the merged top-down view", () => {
       "basis",
     )!;
     expect(scene.placed).toEqual([1, 2]);
+    // The CSV never calls a picture that is off the plan "on the plan".
+    const placement = roomCsv(asViews(moved), sol, false, "m")
+      .split("\n")
+      .filter((l) => /^Picture \d,/.test(l))
+      .map((l) => l.split(",").slice(0, 2).join(","));
+    expect(placement).toEqual([
+      "Picture 1,on the plan",
+      "Picture 2,on the plan",
+      "Picture 3,not on the plan",
+      "Picture 4,not on the plan",
+    ]);
+    // Nor one that a single shared point only suggests a turn for.
+    const one = solveRoom(
+      roomOf(moved.slice(0, 2), [mark(1, MARKS[0], [0, 1])]),
+    );
+    expect(one.views[1].state).toBe("provisional");
+    expect(roomCsv(asViews(moved.slice(0, 2)), one, false, "m")).toContain(
+      "Picture 2,not on the plan,",
+    );
     // All four have pixels at hand; only the two on the plan are laid down.
     const layers = planLayers(asViews(moved), sol, (v) => photo(v.id - 1));
     expect(layers).toHaveLength(2);
