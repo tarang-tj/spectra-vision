@@ -16,6 +16,7 @@ import {
   solveSheet,
   type Sheet,
 } from "./homography";
+import { chooseLongSide, type LongSide } from "./long-side";
 import {
   basisFor,
   droppedNote,
@@ -49,6 +50,9 @@ export type Derived = {
   lens: Lens | null;
   /** What the error bar covers for these results. */
   basis: string;
+  /** How the reference's long side was decided, before any Swap; null until
+   * the reference is solved. */
+  longSide: LongSide | null;
   /** Warnings about the reference itself. */
   referenceWarnings: string[];
   /** Further references and known spans, and what the fused solve made of
@@ -109,6 +113,7 @@ export function derive(s: RulerState): Derived {
   const reference = referenceOf(s);
   let problem: string | null = null,
     sheet: Sheet | null = null,
+    longSide: LongSide | null = null,
     order: number[] = [];
   const referenceWarnings: string[] = [],
     edges = s.shapes
@@ -130,15 +135,26 @@ export function derive(s: RulerState): Derived {
     if (bad) problem = `The four corners cannot be used: ${bad}.`;
     else {
       order = rawOrdered.map((p) => s.corners.indexOf(p));
+      const side = chooseLongSide(
+        ordered,
+        reference.long,
+        reference.short,
+        s.source,
+        edgeSigma(s, [s.corners]),
+      );
       sheet = solveSheet(
         ordered,
         reference.long,
         reference.short,
         s.swap,
-        lockedFirstIsLong(s.lock, order),
+        // Swap flips the choice; a drag holds the side it started with.
+        lockedFirstIsLong(s.lock, order) ?? side.firstIsLong !== s.swap,
       );
       if (!sheet) problem = "The four corners do not define a flat surface.";
-      else sheet = { ...sheet, raw: rawOrdered };
+      else {
+        sheet = { ...sheet, raw: rawOrdered };
+        longSide = side;
+      }
     }
     if (s.source && !bad) {
       const share = quadArea(rawOrdered) / (s.source.w * s.source.h);
@@ -210,6 +226,7 @@ export function derive(s: RulerState): Derived {
     lensFit,
     lens,
     basis,
+    longSide,
     referenceWarnings,
     known,
     tape: tapeTest(s, rows, known?.knownUsed ?? new Set()),

@@ -4,6 +4,7 @@ import { derive } from "./ruler/derive";
 import KnownSizes from "./ruler/known-sizes";
 import { EXTENSIONS, extensionEnv, extensionFor } from "./ruler/extensions";
 import LensSection from "./ruler/lens-section";
+import { longSideNote } from "./ruler/long-side";
 import PlanPanel from "./ruler/plan-panel";
 import ReferencePicker from "./ruler/reference-picker";
 import ClearButton from "./ruler/room/clear-button";
@@ -46,7 +47,9 @@ function Ruler() {
     // and Undo belong to the reference corners.
     toolActive = ext !== null && s.corners.length === 4,
     open = openShape(s),
-    adding = pendingRef(s);
+    adding = pendingRef(s),
+    // Said only for the picture on screen, like the values it is about.
+    sideNote = show ? longSideNote(d.longSide, s.swap) : null;
 
   let step: string;
   if (!hasSource) step = "Choose a camera, photo or demo first.";
@@ -74,9 +77,15 @@ function Ruler() {
   else if (s.tool === "path" || s.tool === "area") {
     const n = open?.pts.length ?? 0,
       finish = s.tool === "area" ? "Close outline" : "Finish path";
-    if (!n)
-      step = `Tap each point of the ${s.tool === "area" ? "outline" : "path"} in order.`;
-    else if (n < 3)
+    if (!n) {
+      // Say what the last one ended with: a count the user can check against
+      // the taps they made.
+      const last = s.shapes.filter((x) => x.kind === s.tool && x.done).pop(),
+        ended = last
+          ? `${s.tool === "area" ? "Outline closed" : "Path finished"} with ${last.pts.length} ${s.tool === "area" ? "corners" : "points"}. `
+          : "";
+      step = `${ended}Tap each point of ${ended ? "another" : "the"} ${s.tool === "area" ? "outline" : "path"} in order.`;
+    } else if (n < 3)
       step = `${n} point${n === 1 ? "" : "s"} placed. Tap at least ${3 - n} more.`;
     else step = `${n} points placed. Tap more, or press ${finish}.`;
   } else if (pending) step = "Tap the other end of the span.";
@@ -105,6 +114,15 @@ function Ruler() {
           {w}
         </p>
       ))}
+      {sideNote && (
+        <p
+          className="ruler-warn"
+          data-testid="ruler-long-side"
+          data-how={d.longSide?.how}
+        >
+          {sideNote}
+        </p>
+      )}
       <div className="ruler-group" role="group" aria-label="Ruler actions">
         {hasSource && still && paused ? (
           <button className="button" onClick={resume}>
@@ -157,8 +175,10 @@ function Ruler() {
       <LensSection s={s} d={d} />
       <ul className="ruler-guidance">
         <li>
-          The long side of the reference is guessed from how it looks. If the
-          labels on its edges are swapped, press Swap sides.
+          The long side of the reference is read from the picture's perspective
+          when that settles it, and guessed from how it looks when it does not;
+          the panel says which. If the labels on its edges are swapped, press
+          Swap sides.
         </li>
         <li>
           For a whole room, one sheet of paper gives wide error bars, because
