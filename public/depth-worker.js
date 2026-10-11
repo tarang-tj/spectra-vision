@@ -95,7 +95,12 @@ const PROGRESS_EVERY_MS = 5000;
 // while it arrives the page is told every few seconds that the load is alive
 // ({ type: "progress", loaded, total }); it would otherwise give up on a slow
 // connection after its fixed load timeout.
-async function download(url) {
+// `expected` is the file's size in bytes when the page knows it (the model's,
+// from scripts/models.json): the body is then read straight into one buffer
+// of that size, so the model is held once while it arrives and not twice
+// (every chunk, then a copy of them all). With no known size, or a body that
+// turns out longer than stated, the chunks are kept and joined as before.
+async function download(url, expected = 0) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
   files.push(url);
@@ -105,18 +110,26 @@ async function download(url) {
   // compressed size, so it is reported but never used to size anything.
   const total = Number(response.headers?.get("content-length")) || 0,
     chunks = [];
-  let loaded = 0,
+  let whole = expected > 0 ? new Uint8Array(expected) : null,
+    loaded = 0,
     told = performance.now();
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    chunks.push(value);
+    if (whole && loaded + value.length > whole.length) {
+      chunks.push(whole.subarray(0, loaded));
+      whole = null;
+    }
+    if (whole) whole.set(value, loaded);
+    else chunks.push(value);
     loaded += value.length;
     if (performance.now() - told >= PROGRESS_EVERY_MS) {
       told = performance.now();
       self.postMessage({ type: "progress", loaded, total });
     }
   }
+  // A body shorter than stated is handed on as it came, as it always was.
+  if (whole) return loaded === whole.length ? whole : whole.slice(0, loaded);
   const bytes = new Uint8Array(loaded);
   let at = 0;
   for (const chunk of chunks) {
@@ -159,7 +172,7 @@ async function start(base) {
   runtime.env.wasm.wasmPaths = folder;
   runtime.env.wasm.numThreads = 1;
   const [model, wasm] = await Promise.all([
-    download(`${base}models/${spec.model}`),
+    download(`${base}models/${spec.model}`, Number(spec.options?.bytes) || 0),
     download(`${folder}${stem}.wasm`),
   ]);
   runtime.env.wasm.wasmBinary = wasm;

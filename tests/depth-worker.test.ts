@@ -224,6 +224,104 @@ describe("the depth worker's preprocessing", () => {
   });
 });
 
+/** Runs of equal bytes, as [value, length]: chunk k arrives filled with k + 1. */
+function runs(bytes: Uint8Array): [number, number][] {
+  const out: [number, number][] = [];
+  for (const b of bytes) {
+    const last = out[out.length - 1];
+    if (last && last[0] === b) last[1]++;
+    else out.push([b, 1]);
+  }
+  return out;
+}
+
+/** Starts the worker on a fetch whose model body arrives in chunks of these
+ * sizes. `bytes` is the size the page states for the model (none when left
+ * out); `slow` moves the clock on six seconds before the third chunk.
+ * `events` lists, in order, each read of the model's body and each buffer of
+ * 100 bytes or more that the worker itself makes. */
+async function streamed(
+  sizes: number[],
+  options: { bytes?: number; slow?: boolean } = {},
+) {
+  const clock = { now: 0 },
+    posted: Message[] = [],
+    events: string[] = [],
+    buffers: Uint8Array[] = [],
+    seen: number[] = [],
+    self = {
+      onmessage: null as ((event: { data: unknown }) => Promise<void>) | null,
+      postMessage: (message: Message) => posted.push(message),
+      navigator: {},
+      location: { href: "https://site.test/depth-worker.js" },
+      ort: undefined as unknown,
+    };
+  let model: Uint8Array | null = null;
+  // The worker's own `new Uint8Array(n)`; the chunks below are made outside it.
+  class Counted extends Uint8Array {
+    constructor(a?: unknown, b?: unknown, c?: unknown) {
+      super(a as ArrayBuffer, b as number, c as number);
+      if (typeof a === "number" && a >= 100) {
+        events.push(`buffer ${a}`);
+        buffers.push(this);
+      }
+    }
+  }
+  const body = (parts: number[], watched: boolean) => {
+    let i = 0;
+    return {
+      getReader: () => ({
+        read: async () => {
+          if (watched) events.push(`read ${i}`);
+          if (options.slow && i === 2) clock.now += 6000;
+          return i < parts.length
+            ? { done: false, value: new Uint8Array(parts[i++]).fill(i) }
+            : { done: true, value: undefined };
+        },
+      }),
+    };
+  };
+  new Function(
+    "self",
+    "importScripts",
+    "OffscreenCanvas",
+    "fetch",
+    "performance",
+    "Uint8Array",
+    source,
+  )(
+    self,
+    () => {
+      self.ort = {
+        env: { wasm: {} },
+        InferenceSession: {
+          create: async (bytes: Uint8Array) => {
+            model = bytes;
+            seen.push(bytes.length, bytes[0], bytes[bytes.length - 1]);
+            return { inputNames: ["in"], outputNames: ["out"] };
+          },
+        },
+      };
+    },
+    class {
+      getContext() {
+        return {};
+      }
+    },
+    async (url: string) => ({
+      ok: true,
+      headers: { get: () => "600" },
+      body: /\.onnx$/.test(url) ? body(sizes, true) : body([8], false),
+    }),
+    { now: () => clock.now },
+    Counted,
+  );
+  await self.onmessage!({
+    data: init("CPU", options.bytes ? { bytes: options.bytes } : {}),
+  });
+  return { posted, events, buffers, seen, model: model as Uint8Array | null };
+}
+
 describe("the depth worker's messages", () => {
   it("names the runtime folder after the installed runtime version", () => {
     const version = manifest.devDependencies["onnxruntime-web"];
@@ -386,62 +484,7 @@ describe("the depth worker's messages", () => {
   it("reads a streamed download in full and reports progress while it is slow", async () => {
     // A fetch whose body arrives in three chunks, with the clock moved on six
     // seconds before the third: one progress report is due.
-    const clock = { now: 0 },
-      posted: Message[] = [],
-      self = {
-        onmessage: null as ((event: { data: unknown }) => Promise<void>) | null,
-        postMessage: (message: Message) => posted.push(message),
-        navigator: {},
-        location: { href: "https://site.test/depth-worker.js" },
-        ort: undefined as unknown,
-      },
-      seen: number[] = [];
-    const body = (sizes: number[]) => {
-      let i = 0;
-      return {
-        getReader: () => ({
-          read: async () => {
-            if (i === 2) clock.now += 6000;
-            return i < sizes.length
-              ? { done: false, value: new Uint8Array(sizes[i++]).fill(i) }
-              : { done: true, value: undefined };
-          },
-        }),
-      };
-    };
-    new Function(
-      "self",
-      "importScripts",
-      "OffscreenCanvas",
-      "fetch",
-      "performance",
-      source,
-    )(
-      self,
-      () => {
-        self.ort = {
-          env: { wasm: {} },
-          InferenceSession: {
-            create: async (bytes: Uint8Array) => {
-              seen.push(bytes.length, bytes[0], bytes[bytes.length - 1]);
-              return { inputNames: ["in"], outputNames: ["out"] };
-            },
-          },
-        };
-      },
-      class {
-        getContext() {
-          return {};
-        }
-      },
-      async (url: string) => ({
-        ok: true,
-        headers: { get: () => "600" },
-        body: /\.onnx$/.test(url) ? body([100, 200, 300]) : body([8]),
-      }),
-      { now: () => clock.now },
-    );
-    await self.onmessage!({ data: init("CPU") });
+    const { posted, seen } = await streamed([100, 200, 300], { slow: true });
     expect(posted.map((m) => m.type)).toEqual([
       "progress",
       "downloaded",
@@ -450,6 +493,59 @@ describe("the depth worker's messages", () => {
     expect(posted[0]).toEqual({ type: "progress", loaded: 600, total: 600 });
     // All 600 bytes, in order: the first chunk is filled with 1, the last 3.
     expect(seen).toEqual([600, 1, 3]);
+  });
+
+  it("reads a model of known size straight into one buffer of that size", async () => {
+    const { events, buffers, model } = await streamed([100, 200, 300], {
+      bytes: 600,
+    });
+    // The buffer exists before the first chunk is read, nothing else of the
+    // model's size is made afterwards, and it is what the runtime is handed.
+    expect(events).toEqual([
+      "buffer 600",
+      "read 0",
+      "read 1",
+      "read 2",
+      "read 3",
+    ]);
+    expect(model).toBe(buffers[0]);
+    expect(runs(model!)).toEqual([
+      [1, 100],
+      [2, 200],
+      [3, 300],
+    ]);
+  });
+
+  it("joins the chunks afterwards when the size is not known", async () => {
+    const { events, model } = await streamed([100, 200, 300]);
+    expect(events).toEqual([
+      "read 0",
+      "read 1",
+      "read 2",
+      "read 3",
+      "buffer 600",
+    ]);
+    expect(runs(model!)).toEqual([
+      [1, 100],
+      [2, 200],
+      [3, 300],
+    ]);
+  });
+
+  it("loses no byte when the body is longer or shorter than the stated size", async () => {
+    const longer = await streamed([100, 200, 300], { bytes: 250 });
+    expect(runs(longer.model!)).toEqual([
+      [1, 100],
+      [2, 200],
+      [3, 300],
+    ]);
+    const shorter = await streamed([100, 200, 300], { bytes: 700 });
+    expect(shorter.model!.length).toBe(600);
+    expect(runs(shorter.model!)).toEqual([
+      [1, 100],
+      [2, 200],
+      [3, 300],
+    ]);
   });
 
   it("drops a frame that arrives before the model is loaded, closing its bitmap", async () => {

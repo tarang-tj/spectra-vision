@@ -1,4 +1,5 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+import catalogue from "../../scripts/models.json";
 import { testHooksEnabled } from "../test-hooks";
 import type { DepthExtra, Source, TaskResult } from "../vision/types";
 import DepthControls from "./lib/depth-controls";
@@ -50,6 +51,8 @@ function exposeProbe() {
 }
 exposeProbe();
 
+const MODEL = "depth_anything_v2_small.onnx";
+
 const depth: ModeDef = {
   id: "depth",
   label: "Depth map",
@@ -57,12 +60,17 @@ const depth: ModeDef = {
   order: 80,
   task: {
     kind: "depth",
-    model: "depth_anything_v2_small.onnx",
+    model: MODEL,
     // The side the picture is resized toward before the model sees it. The
     // CPU size is the largest that stayed near one second a frame on one
     // WebAssembly thread; the GPU size about half a second on WebGPU (both
     // measured on an Apple silicon laptop in low power mode).
-    options: { size: { CPU: 196, GPU: 392 } },
+    // `bytes` is the model's size from the manifest: the worker reads the
+    // download into one buffer of that size instead of holding it twice.
+    options: {
+      size: { CPU: 196, GPU: 392 },
+      bytes: catalogue.find((m) => m.file === MODEL)?.bytes,
+    },
     // GPU here is WebGPU. AUTO asks for it only where the page has a hardware
     // renderer; a browser without WebGPU then falls back to CPU and says so.
     delegate: "AUTO",
