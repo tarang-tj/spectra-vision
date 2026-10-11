@@ -4,7 +4,10 @@
 // positions are in units of their spread. Pure.
 import type { Pt } from "../homography";
 
-/** A turn and a shift on the floor: x' = a x - b y + tx, y' = b x + a y + ty. */
+/** A turn and a shift on the floor: x' = a x - b y + tx, y' = b x + a y + ty.
+ * With `mirror` it is a reflection instead: x' = a x + b y + tx,
+ * y' = b x - a y + ty. A reflection is never where a picture is placed; it
+ * is a rival that the shared points must rule out. */
 export type Rigid = {
   /** Quarter turns between the picture's own frame and the room's. */
   turn: number;
@@ -12,6 +15,7 @@ export type Rigid = {
   b: number;
   tx: number;
   ty: number;
+  mirror?: true;
 };
 /** The spread of a floor position, mm squared. */
 export type Cov = { xx: number; xy: number; yy: number };
@@ -19,16 +23,22 @@ export type Cov = { xx: number; xy: number; yy: number };
 export type Fix = { at: Pt; cov: Cov };
 
 export const IDENTITY: Rigid = { turn: 0, a: 1, b: 0, tx: 0, ty: 0 };
-export const applyRigid = (t: Rigid, p: Pt): Pt => ({
-  x: t.a * p.x - t.b * p.y + t.tx,
-  y: t.b * p.x + t.a * p.y + t.ty,
-});
-/** The same spread, seen in the turned frame. */
-export const turnCov = (t: Rigid, c: Cov): Cov => ({
-  xx: t.a * t.a * c.xx - 2 * t.a * t.b * c.xy + t.b * t.b * c.yy,
-  xy: t.a * t.b * (c.xx - c.yy) + (t.a * t.a - t.b * t.b) * c.xy,
-  yy: t.b * t.b * c.xx + 2 * t.a * t.b * c.xy + t.a * t.a * c.yy,
-});
+/** The four numbers of its linear part, row by row. */
+const linear = (t: Rigid): [number, number, number, number] =>
+  t.mirror ? [t.a, t.b, t.b, -t.a] : [t.a, -t.b, t.b, t.a];
+export const applyRigid = (t: Rigid, p: Pt): Pt => {
+  const [m, n, o, q] = linear(t);
+  return { x: m * p.x + n * p.y + t.tx, y: o * p.x + q * p.y + t.ty };
+};
+/** The same spread, seen in the turned (or reflected) frame. */
+export const turnCov = (t: Rigid, c: Cov): Cov => {
+  const [m, n, o, q] = linear(t);
+  return {
+    xx: m * m * c.xx + 2 * m * n * c.xy + n * n * c.yy,
+    xy: m * o * c.xx + (m * q + n * o) * c.xy + n * q * c.yy,
+    yy: o * o * c.xx + 2 * o * q * c.xy + q * q * c.yy,
+  };
+};
 export const addCov = (p: Cov, q: Cov): Cov => ({
   xx: p.xx + q.xx,
   xy: p.xy + q.xy,

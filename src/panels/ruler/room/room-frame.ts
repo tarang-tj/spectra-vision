@@ -55,6 +55,44 @@ export function symmetries(from: readonly Pt[], to: readonly Pt[]): Rigid[] {
   return out;
 }
 
+/** Every reflection that lays the rectangle `from` onto the rectangle `to`:
+ * two for a rectangle (across its two centre lines), four for a square (the
+ * diagonals too), none when the sizes differ. A picture saved flipped left
+ * to right reads the floor through one of these. */
+export function reflections(from: readonly Pt[], to: readonly Pt[]): Rigid[] {
+  if (from.length !== 4 || to.length !== 4) return [];
+  const mid = (r: readonly Pt[]) => ({
+      x: (r[0].x + r[2].x) / 2,
+      y: (r[0].y + r[2].y) / 2,
+    }),
+    f = mid(from),
+    g = mid(to),
+    tol =
+      1e-6 *
+      Math.max(1, Math.hypot(from[2].x - from[0].x, from[2].y - from[0].y));
+  return [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ].flatMap(([a, b], turn): Rigid[] => {
+    const t: Rigid = {
+      turn,
+      a,
+      b,
+      tx: g.x - (a * f.x + b * f.y),
+      ty: g.y - (b * f.x - a * f.y),
+      mirror: true,
+    };
+    return from.every((c) => {
+      const m = applyRigid(t, c);
+      return to.some((w) => Math.hypot(m.x - w.x, m.y - w.y) <= tol);
+    })
+      ? [t]
+      : [];
+  });
+}
+
 /** One point marked in this picture (`here`, its own frame) and in pictures
  * already on the plan (`there`, where they together put it, room frame). */
 export type Anchor = {
@@ -130,13 +168,13 @@ export type Placement =
        * is listed and contributes nothing. */
       state: "provisional";
       turn: number;
-      reason: "one" | "close";
+      reason: "one" | "close" | "line";
       checks: AnchorCheck[];
       text: string;
     }
   | {
       state: "refused";
-      reason: "size" | "apart" | "contradiction" | "undecided";
+      reason: "size" | "apart" | "contradiction" | "undecided" | "mirror";
       checks: AnchorCheck[];
       text: string;
     }
@@ -169,6 +207,9 @@ export function placeView(
   name: string,
   candidates: readonly Rigid[],
   anchors: readonly Anchor[],
+  /** The reference's reflections onto itself (`reflections`). Never a
+   * placement: rivals the shared points must rule out. */
+  mirrors: readonly Rigid[] = [],
 ): Placement {
   if (!candidates.length)
     return {
@@ -186,7 +227,7 @@ export function placeView(
   const limit = limitFor(anchors.length),
     checks = anchors.map((a) => checkAnchor(candidates, a, limit)),
     refuse = (
-      reason: "apart" | "contradiction" | "undecided",
+      reason: "apart" | "contradiction" | "undecided" | "mirror",
       text: string,
     ): Placement => ({ state: "refused", reason, checks, text }),
     moved = (c: AnchorCheck, gap = c.gapMm, allowed = c.allowedMm) =>
@@ -194,7 +235,42 @@ export function placeView(
         "apart",
         `${name} is not on the plan: ${c.name} lands ${mm(gap)} from where the plan puts it, and its error bars allow only ${mm(allowed)}. Either the sheet moved between pictures (take them again without touching it), or these are different spots (unmark the point in one picture and mark the right spot), or the reference's long and short sides are swapped in one picture (check the lengths written on the sheet's edges in each, and press Swap sides in the picture where they are wrong). ${sharers([c])}`,
       ),
-    apart = checks.find((c) => c.verdict === "apart");
+    apart = checks.find((c) => c.verdict === "apart"),
+    // Does a reflection of the sheet fit every shared point, by the same
+    // test a turn must pass?
+    fits = (t: Rigid) =>
+      anchors.every((a) => {
+        const at = applyRigid(t, a.here.at);
+        return (
+          inBars(
+            { x: at.x - a.there.at.x, y: at.y - a.there.at.y },
+            addCov(turnCov(t, a.here.cov), a.there.cov),
+          ) <= limit
+        );
+      }),
+    mirrored = mirrors.some(fits),
+    turned = candidates.some((t) =>
+      checks.every((c) => c.bars[t.turn] <= limit),
+    ),
+    // Two of the shared points are two places on the floor.
+    apartEnough = anchors.some((p, i) =>
+      anchors.some(
+        (q, j) =>
+          j > i &&
+          inBars(
+            { x: p.there.at.x - q.there.at.x, y: p.there.at.y - q.there.at.y },
+            addCov(p.there.cov, q.there.cov),
+          ) >=
+            2 * limit,
+      ),
+    );
+  // No turn fits the shared points and a reflection does: the likeliest
+  // cause by far is a picture saved flipped left to right.
+  if (mirrored && !turned && apartEnough)
+    return refuse(
+      "mirror",
+      `${name} is not on the plan: its shared points fit only if the picture is turned over, so it appears to be a mirror image (flipped left to right), as some front cameras and apps save them. A mirror image cannot be used. Add the picture again unflipped. If it is not flipped, one of these marks is on the wrong spot: ${sharers(checks)}`,
+    );
   if (apart) return moved(apart);
   const deciding = checks.filter((c) => c.verdict === "agrees"),
     other = deciding.find((c) => c.turn !== deciding[0].turn);
@@ -233,6 +309,32 @@ export function placeView(
       );
     }),
     suggests = `it lies ${TURNS[rigid.turn]} from how its own corners read`;
+  // A reflection across a line through the sheet's middle leaves every point
+  // on that line where it is. Shared points all on one such line fit a turn
+  // and the mirror image alike, so they cannot rule the mirror image out.
+  // "Cannot rule it out" is judged on where the two readings would put each
+  // point, not on whether the mirror image happens to pass the test: noise
+  // fails a true fit 1 time in 20, and that must not place a mirror image.
+  const told = (m: Rigid) =>
+    anchors.some((a) => {
+      const p = applyRigid(rigid, a.here.at),
+        q = applyRigid(m, a.here.at);
+      return (
+        inBars(
+          { x: p.x - q.x, y: p.y - q.y },
+          addCov(turnCov(rigid, a.here.cov), a.there.cov),
+        ) >=
+        2 * limit
+      );
+    });
+  if (second && !mirrors.every(told))
+    return {
+      state: "provisional",
+      turn: rigid.turn,
+      reason: "line",
+      checks,
+      text: `${name} is not on the plan yet. ${deciding.map((c) => c.name).join(" and ")} lie on a line through the middle of the sheet, so they cannot tell this picture from its mirror image (a picture flipped left to right). Mark a shared point well off that line.`,
+    };
   if (!second)
     return {
       state: "provisional",

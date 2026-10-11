@@ -1,7 +1,11 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { beforeEach, describe, expect, it } from "vitest";
 import { applyHomography } from "../src/panels/ruler/homography";
-import { applyRigid, symmetries } from "../src/panels/ruler/room/room-frame";
+import {
+  applyRigid,
+  reflections,
+  symmetries,
+} from "../src/panels/ruler/room/room-frame";
 import { solveRoom } from "../src/panels/ruler/room/room-solve";
 import { dropFrames } from "../src/panels/ruler/room/view-frame";
 import {
@@ -41,17 +45,18 @@ function worstMiss(
   n: number,
   cam: number,
   first: number,
+  board = BOARD,
 ) {
   const sol = solveRoom(room),
     view = sol.views[n - 1],
     frame = room.views[n - 1].frame!,
-    k = baseCorner(room, first);
+    k = baseCorner(room, first, board);
   if (!view.rigid) throw new Error(view.text);
   return Math.max(
     ...PROBES.map((p) => {
       const own = applyHomography(frame.h, tapOn(cam, p))!,
         got = applyRigid(view.rigid!, own),
-        want = inBoardFrame(p, k);
+        want = inBoardFrame(p, k, board);
       return Math.hypot(got.x - want.x, got.y - want.y);
     }),
   );
@@ -405,7 +410,14 @@ describe("with noisy taps, 200 retakes each", () => {
   };
   /** Pictures from `cams` with `shared` marked in both, tapped with 1.5 px of
    * noise from a generator that is not the app's own. */
-  function run(shared: P[], cams: [number, number], shift?: P): Tally {
+  function run(
+    shared: P[],
+    cams: [number, number],
+    shift?: P,
+    /** The second picture is a mirror image; `board` moves the sheet. */
+    flip = false,
+    board = BOARD,
+  ): Tally {
     const normal = lcgNormal(777),
       nudge: Nudge = (p) => ({
         x: p.x + 1.5 * normal(),
@@ -416,17 +428,24 @@ describe("with noisy taps, 200 retakes each", () => {
       dropFrames();
       const room = roomOf(
           [
-            snapOf({ cam: cams[0], nudge }),
-            snapOf({ cam: cams[1], nudge, shift }),
+            snapOf({ cam: cams[0], nudge, board }),
+            snapOf({ cam: cams[1], nudge, shift, flip, board }),
           ],
-          shared.map((p, k) => mark(k + 1, p, cams, nudge)),
+          shared.map((p, k) => ({
+            id: k + 1,
+            seen: [
+              { view: 1, at: tapOn(cams[0], p, nudge) },
+              { view: 2, at: tapOn(cams[1], p, nudge, undefined, flip) },
+            ],
+          })),
         ),
         sol = solveRoom(room);
       if (sol.views[1].state === "provisional") tally.provisional++;
       else if (!sol.views[1].rigid) tally.refused++;
       // The right turn puts the room's far corners within a metre of truth;
       // the wrong one puts them several metres off.
-      else if (worstMiss(room, 2, cams[1], cams[0]) < 1000) tally.right++;
+      else if (!flip && worstMiss(room, 2, cams[1], cams[0], board) < 1000)
+        tally.right++;
       else tally.wrong++;
     }
     return tally;
@@ -455,6 +474,44 @@ describe("with noisy taps, 200 retakes each", () => {
     const mid = run([boardCentre()], [0, 2]);
     expect(mid.provisional).toBe(0);
     expect(mid.refused).toBe(RETAKES);
+  });
+  it("never places a mirror image, wherever its shared marks lie", () => {
+    // Any placement of a flipped picture is wrong, so `wrong` counts them.
+    const centred = { x: 1600, y: 1200, w: 1000, h: 700 },
+      c = { x: 2100, y: 1550 },
+      onLine = [
+        { x: c.x + 900, y: c.y },
+        { x: c.x - 900, y: c.y },
+      ],
+      line = run(onLine, [0, 2], undefined, true, centred),
+      off = run([MARKS[0], MARKS[1]], [0, 2], undefined, true),
+      three = run(
+        [...onLine, { x: 2900, y: 1900 }],
+        [0, 2],
+        undefined,
+        true,
+        centred,
+      );
+    for (const t of [line, off, three]) expect(t.right + t.wrong).toBe(0);
+    expect(line.provisional).toBeGreaterThanOrEqual(0.9 * RETAKES);
+    expect(off.refused).toBe(RETAKES);
+    expect(three.refused).toBe(RETAKES);
+    // A true picture with the same marks: held while they are on the line,
+    // placed the right way with the third mark off it.
+    const held = run(onLine, [0, 2], undefined, false, centred),
+      freed = run(
+        [...onLine, { x: 2900, y: 1900 }],
+        [0, 2],
+        undefined,
+        false,
+        centred,
+      );
+    expect(held.right + held.wrong).toBe(0);
+    expect(freed.wrong).toBe(0);
+    expect(freed.right / RETAKES).toBeGreaterThanOrEqual(0.9);
+    say(
+      `mirror image, marks on the centre line: ${JSON.stringify(line)}; off it: ${JSON.stringify(off)}; three marks: ${JSON.stringify(three)}. True picture, marks on the line: ${JSON.stringify(held)}; with a third off it: ${JSON.stringify(freed)}`,
+    );
   });
   it("refuses a sheet moved 50 mm in at least 9 of 10 retakes, and never places it turned", () => {
     const moved = run([MARKS[0], MARKS[1]], [0, 2], { x: 50, y: 0 });
@@ -627,5 +684,105 @@ describe("one shared point is never enough", () => {
         "placed",
       ]);
     });
+  });
+});
+
+describe("a picture and its mirror image", () => {
+  // The verifier's case: the board at the room's middle, facing cameras, the
+  // second picture saved flipped left to right, and two true shared marks on
+  // the sheet's long centre line. A reflection across that line leaves both
+  // marks where they are, so a turn fits them as well as the mirror does.
+  const board = { x: 1600, y: 1200, w: 1000, h: 700 },
+    c = { x: 2100, y: 1550 },
+    L1 = { x: c.x + 900, y: c.y },
+    L2 = { x: c.x - 900, y: c.y },
+    OFF = { x: 2900, y: 1900 },
+    probe = { id: 9, seen: [{ view: 2, at: tapOn(2, { x: 3000, y: 800 }) }] },
+    both = (id: number, p: P, flip: boolean) => ({
+      id,
+      seen: [
+        { view: 1, at: tapOn(0, p) },
+        { view: 2, at: tapOn(2, p, undefined, undefined, flip) },
+      ],
+    }),
+    solve = (flip: boolean, marks: P[]) =>
+      solveRoom(
+        roomOf(
+          [snapOf({ cam: 0, board }), snapOf({ cam: 2, board, flip })],
+          [...marks.map((p, i) => both(i + 1, p, flip)), probe],
+        ),
+      );
+
+  it("keeps a flipped picture off the plan when its two marks lie on the sheet's centre line", () => {
+    const sol = solve(true, [L1, L2]);
+    expect(sol.views[1].state).toBe("provisional");
+    expect(sol.views[1].rigid).toBeNull();
+    expect(sol.views[1].text).toContain(
+      "lie on a line through the middle of the sheet, so they cannot tell this picture from its mirror image",
+    );
+    expect(sol.views[1].text).toContain(
+      "Mark a shared point well off that line",
+    );
+    expect(sol.points.find((p) => p.id === 9)!.sample).toBeNull();
+    // The short centre line too, and marks 10 mm off the line.
+    const S1 = { x: c.x, y: c.y + 700 },
+      S2 = { x: c.x, y: c.y - 700 };
+    expect(solve(true, [S1, S2]).views[1].state).toBe("provisional");
+    expect(
+      solve(true, [
+        { x: L1.x, y: L1.y + 10 },
+        { x: L2.x, y: L2.y + 10 },
+      ]).views[1].rigid,
+    ).toBeNull();
+  });
+
+  it("refuses a flipped picture as a mirror image once a mark off the line is shared", () => {
+    const sol = solve(true, [L1, L2, OFF]);
+    expect(sol.views[1].state).toBe("refused");
+    expect(sol.views[1].rigid).toBeNull();
+    expect(sol.views[1].text).toContain(
+      "appears to be a mirror image (flipped left to right)",
+    );
+    // And with two marks anywhere off the lines.
+    const two = solve(true, [OFF, { x: 1300, y: 2300 }]);
+    expect(two.views[1].state).toBe("refused");
+    expect(two.views[1].text).toContain("appears to be a mirror image");
+  });
+
+  it("holds a true picture whose two marks lie on the centre line until a mark off the line agrees", () => {
+    const on = solve(false, [L1, L2]);
+    expect(on.views[1].state).toBe("provisional");
+    expect(on.views[1].text).toContain(
+      "Mark a shared point well off that line",
+    );
+    const with3 = solve(false, [L1, L2, OFF]);
+    expect(with3.views[1].state, with3.views[1].text).toBe("placed");
+    expect(with3.views[1].rigid!.turn).toBe(2);
+    expect(with3.points.find((p) => p.id === 9)!.sample).not.toBeNull();
+    // Two marks off the lines place a true picture as before.
+    expect(solve(false, [OFF, { x: 1300, y: 2300 }]).views[1].state).toBe(
+      "placed",
+    );
+  });
+
+  it("finds two reflections of a rectangle onto itself and four of a square", () => {
+    expect(reflections(rect(1000, 700), rect(1000, 700))).toHaveLength(2);
+    expect(reflections(rect(700, 1000), rect(1000, 700))).toHaveLength(2);
+    expect(reflections(rect(500, 500), rect(500, 500))).toHaveLength(4);
+    expect(reflections(rect(1000, 700), rect(297, 210))).toEqual([]);
+    for (const m of reflections(rect(1000, 700), rect(1000, 700))) {
+      // Each lays the rectangle on itself and is not a turn: it reverses the
+      // way round the corners run.
+      const got = rect(1000, 700).map((p) => applyRigid(m, p)),
+        area = got.reduce(
+          (t, p, i) => t + p.x * got[(i + 1) % 4].y - got[(i + 1) % 4].x * p.y,
+          0,
+        );
+      expect(area).toBeCloseTo(-2 * 1000 * 700, 6);
+      for (const p of got)
+        expect(
+          rect(1000, 700).some((q) => Math.hypot(p.x - q.x, p.y - q.y) < 1e-9),
+        ).toBe(true);
+    }
   });
 });

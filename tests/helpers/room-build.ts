@@ -29,6 +29,8 @@ export type Shot = {
   nudge?: Nudge;
   /** Tap uncertainty stored with each point, source pixels. */
   sigma?: number;
+  /** The picture is a mirror image (flipped left to right). */
+  flip?: boolean;
 };
 
 /** A tap on floor point `p` in camera `cam`'s picture. */
@@ -37,8 +39,12 @@ export const tapOn = (
   p: P,
   nudge: Nudge = exact,
   sigma = 1.5,
+  /** The picture was saved flipped left to right (a mirror image, as some
+   * front cameras and apps save them): written out here, by hand. */
+  flip = false,
 ): Pt => {
-  const q = nudge(cameraFor(cam, W, H).shoot(p.x, p.y));
+  const at = cameraFor(cam, W, H).shoot(p.x, p.y),
+    q = nudge(flip ? { x: W - at.x, y: at.y } : at);
   return { x: q.x, y: q.y, s: sigma };
 };
 
@@ -50,7 +56,9 @@ export function snapOf(shot: Shot): ViewSnap {
     dx = shot.shift?.x ?? 0,
     dy = shot.shift?.y ?? 0,
     physical = boardCorners(board).map((c) => ({ x: c.x + dx, y: c.y + dy })),
-    taps = physical.map((c) => tapOn(shot.cam, c, shot.nudge, shot.sigma)),
+    taps = physical.map((c) =>
+      tapOn(shot.cam, c, shot.nudge, shot.sigma, shot.flip),
+    ),
     make = (swap: boolean): ViewSnap => ({
       ruler: {
         refId: "custom",

@@ -9,6 +9,7 @@ import type { Pt } from "../homography";
 import {
   IDENTITY,
   placeView,
+  reflections,
   symmetries,
   type Anchor,
   type Placement,
@@ -147,6 +148,7 @@ export function solveRoom(input: RoomInput): RoomSolution {
         v.name,
         symmetries(v.frame.plane, base.plane),
         anchorsOf(v.id, on),
+        reflections(v.frame.plane, base.plane),
       );
       result.set(v.id, p);
       if (p.state === "placed") {
