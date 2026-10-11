@@ -5,9 +5,22 @@ import { filterCommands } from "../shell/commands";
 import type { Command } from "../shell/commands";
 import "../styles/palette.css";
 
-/** A modal list of everything the studio can do, filtered as you type.
+/** The control focus goes back to when the palette closes: whatever had focus
+ * when it opened, or the header's palette button when nothing had. Safari and
+ * Firefox on a Mac do not focus a button that is clicked, so there the button
+ * that opened the palette is not the focused element, and focus used to be
+ * left on the page body. */
+function openerOf(): HTMLElement | null {
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active !== document.body) return active;
+  return document.querySelector<HTMLElement>(
+    'button[aria-keyshortcuts~="Control+K"]',
+  );
+}
+
+/** A modal dialog listing everything the studio can do, filtered as you type.
  * Focus stays on the text field while it is open (the list is driven with the
- * arrow keys) and returns to wherever it was when the palette closes. */
+ * arrow keys) and returns to the control that opened it when it closes. */
 export default function CommandPalette({
   commands,
   onClose,
@@ -23,7 +36,7 @@ export default function CommandPalette({
     index = Math.min(active, Math.max(0, matches.length - 1));
   // Read once, at first render: under StrictMode an effect runs twice, and
   // the second time the focused element would already be the field itself.
-  const [opener] = useState(() => document.activeElement as HTMLElement | null);
+  const [opener] = useState(openerOf);
   useEffect(() => {
     input.current?.focus();
     return () => {
@@ -64,7 +77,11 @@ export default function CommandPalette({
     <div
       className="palette-backdrop"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target !== event.currentTarget) return;
+        // Without this the press itself moves focus to the page body, after
+        // the closing palette has given it back to its opener.
+        event.preventDefault();
+        onClose();
       }}
     >
       <div
