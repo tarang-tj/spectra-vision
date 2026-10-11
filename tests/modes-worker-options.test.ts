@@ -1,49 +1,26 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import type { TaskResult } from "../src/vision/types";
+import {
+  runWorker,
+  visionGlobals,
+  workerSource,
+} from "./helpers/worker-harness";
 
 // The real worker script against stand-ins for MediaPipe: the options message,
 // several people in one fixed order, and finer names (classifier on crops).
-const source = readFileSync(resolve("public/vision-worker.js"), "utf8");
+const source = workerSource("vision-worker.js");
 type Raw = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any -- loose stand-in output
 type Posted = Record<string, unknown>;
 
 function startWorker(vision: Raw, clock: { now: number }) {
   const posted: Posted[] = [],
-    self: {
-      onmessage: ((e: { data: unknown }) => Promise<void>) | null;
-    } & Raw = {
-      onmessage: null,
-      postMessage: (m: Posted) => posted.push(m),
-    };
-  class Canvas {
-    getContext(kind: string) {
-      return kind === "2d" ? { drawImage() {} } : null;
-    }
-  }
-  const fetched = async () => ({
-    ok: true,
-    arrayBuffer: async () => new ArrayBuffer(4),
-  });
-  new Function(
-    "self",
-    "importScripts",
-    "Vision",
-    "OffscreenCanvas",
-    "fetch",
-    "performance",
-    source,
-  )(
-    self,
-    () => {},
-    { FilesetResolver: { forVisionTasks: async () => ({}) }, ...vision },
-    Canvas,
-    fetched,
-    { now: () => clock.now },
-  );
-  return { posted, send: (data: unknown) => self.onmessage!({ data }) };
+    { send } = runWorker(
+      source,
+      { ...visionGlobals(vision), performance: { now: () => clock.now } },
+      (message) => posted.push(message),
+    );
+  return { posted, send };
 }
 const bitmap = () => ({ width: 100, height: 50, close() {} });
 const results = (posted: Posted[]) =>

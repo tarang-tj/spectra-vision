@@ -13,6 +13,7 @@ import {
   polygonArea,
   selfIntersects,
 } from "../src/panels/ruler/shapes";
+import { lcgNormal } from "./helpers/seeded";
 
 // A tilted plane (plane mm to image px) and a Letter sheet on it.
 const MAP: Mat3 = [1.2, 0.1, 300, 0.05, 1.0, 200, 0.0001, 0.0011, 1];
@@ -169,13 +170,7 @@ describe("measureShape under a known projective map", () => {
   });
   it("covers the truth within its bar for tap noise of the stated size", () => {
     // 200 independent noisy tappings of the same room: about 95% inside 2 sd.
-    let state = 7;
-    const rnd = () => {
-        state = (state * 1664525 + 1013904223) >>> 0;
-        return state / 4294967296;
-      },
-      gauss = () =>
-        Math.sqrt(-2 * Math.log(1 - rnd())) * Math.cos(2 * Math.PI * rnd());
+    const gauss = lcgNormal(7);
     const small: Pt[] = [
         { x: 100, y: 800 },
         { x: 1300, y: 820 },

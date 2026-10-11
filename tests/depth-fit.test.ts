@@ -6,14 +6,13 @@ import {
   MIN_FIT_POINTS,
   type FitSample,
 } from "../src/vision/depth/affine-fit";
+import { lcg } from "./helpers/seeded";
 
 // Seeded noise, so a failure repeats.
 function normal(seed: number) {
-  let state = seed;
-  const uniform = () => {
-    state = (state * 1664525 + 1013904223) >>> 0;
-    return (state + 0.5) / 4294967296;
-  };
+  // Never exactly 0, so the log below is finite.
+  const next = lcg(seed),
+    uniform = () => (next() + 0.5) / 4294967296;
   return () =>
     Math.sqrt(-2 * Math.log(uniform())) * Math.cos(2 * Math.PI * uniform());
 }

@@ -3,12 +3,13 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { DepthExtra, TaskResult } from "../src/vision/types";
+import { runWorker, workerSource } from "./helpers/worker-harness";
 
 // Runs the real Depth worker script against a stand-in for ONNX Runtime Web,
 // as tests/modes-worker.test.ts does for the MediaPipe worker: how it loads,
 // what it feeds the model and how it reads the answer. The model itself is
 // exercised in tests/e2e/depth.spec.ts.
-const source = readFileSync(resolve("public/depth-worker.js"), "utf8"),
+const source = workerSource("depth-worker.js"),
   manifest = JSON.parse(readFileSync(resolve("package.json"), "utf8"));
 
 type Message = Record<string, unknown>;
@@ -44,19 +45,6 @@ function startWorker(
     fed: Fed[] = [],
     drawn: number[][] = [],
     env = { wasm: {} as Message, logLevel: "" };
-  const self: {
-    onmessage: ((event: { data: unknown }) => Promise<void>) | null;
-    postMessage(message: Message, transfer?: unknown[]): void;
-    depthInternals?: Internals;
-    ort?: unknown;
-    navigator: unknown;
-    location: { href: string };
-  } = {
-    onmessage: null,
-    postMessage: (message, transfer = []) => posted.push({ message, transfer }),
-    navigator: options.gpu ? { gpu: { requestAdapter: async () => ({}) } } : {},
-    location: { href: "https://site.test/app/depth-worker.js" },
-  };
   class Tensor {
     constructor(
       public type: string,
@@ -111,19 +99,32 @@ function startWorker(
       };
     }
   }
-  new Function("self", "importScripts", "OffscreenCanvas", "fetch", source)(
-    self,
-    (url: string) => {
-      imported.push(url);
-      self.ort = ort;
+  const { self, send } = runWorker<{
+    depthInternals?: Internals;
+    ort?: unknown;
+    navigator: unknown;
+    location: { href: string };
+  }>(
+    source,
+    {
+      importScripts: (url: string) => {
+        imported.push(url);
+        self.ort = ort;
+      },
+      OffscreenCanvas: Canvas,
+      fetch: async (url: string) => {
+        fetched.push(url);
+        return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
+      },
     },
-    Canvas,
-    async (url: string) => {
-      fetched.push(url);
-      return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
+    (message, transfer) => posted.push({ message, transfer }),
+    {
+      navigator: options.gpu
+        ? { gpu: { requestAdapter: async () => ({}) } }
+        : {},
+      location: { href: "https://site.test/app/depth-worker.js" },
     },
   );
-  const send = (data: unknown) => self.onmessage!({ data });
   return {
     posted,
     imported,
@@ -248,14 +249,7 @@ async function streamed(
     posted: Message[] = [],
     events: string[] = [],
     buffers: Uint8Array[] = [],
-    seen: number[] = [],
-    self = {
-      onmessage: null as ((event: { data: unknown }) => Promise<void>) | null,
-      postMessage: (message: Message) => posted.push(message),
-      navigator: {},
-      location: { href: "https://site.test/depth-worker.js" },
-      ort: undefined as unknown,
-    };
+    seen: number[] = [];
   let model: Uint8Array | null = null;
   // The worker's own `new Uint8Array(n)`; the chunks below are made outside it.
   class Counted extends Uint8Array {
@@ -281,44 +275,42 @@ async function streamed(
       }),
     };
   };
-  new Function(
-    "self",
-    "importScripts",
-    "OffscreenCanvas",
-    "fetch",
-    "performance",
-    "Uint8Array",
+  const { self, send } = runWorker<{
+    ort?: unknown;
+    navigator: unknown;
+    location: { href: string };
+  }>(
     source,
-  )(
-    self,
-    () => {
-      self.ort = {
-        env: { wasm: {} },
-        InferenceSession: {
-          create: async (bytes: Uint8Array) => {
-            model = bytes;
-            seen.push(bytes.length, bytes[0], bytes[bytes.length - 1]);
-            return { inputNames: ["in"], outputNames: ["out"] };
+    {
+      importScripts: () => {
+        self.ort = {
+          env: { wasm: {} },
+          InferenceSession: {
+            create: async (bytes: Uint8Array) => {
+              model = bytes;
+              seen.push(bytes.length, bytes[0], bytes[bytes.length - 1]);
+              return { inputNames: ["in"], outputNames: ["out"] };
+            },
           },
-        },
-      };
+        };
+      },
+      OffscreenCanvas: class {
+        getContext() {
+          return {};
+        }
+      },
+      fetch: async (url: string) => ({
+        ok: true,
+        headers: { get: () => "600" },
+        body: /\.onnx$/.test(url) ? body(sizes, true) : body([8], false),
+      }),
+      performance: { now: () => clock.now },
+      Uint8Array: Counted,
     },
-    class {
-      getContext() {
-        return {};
-      }
-    },
-    async (url: string) => ({
-      ok: true,
-      headers: { get: () => "600" },
-      body: /\.onnx$/.test(url) ? body(sizes, true) : body([8], false),
-    }),
-    { now: () => clock.now },
-    Counted,
+    (message) => posted.push(message),
+    { navigator: {}, location: { href: "https://site.test/depth-worker.js" } },
   );
-  await self.onmessage!({
-    data: init("CPU", options.bytes ? { bytes: options.bytes } : {}),
-  });
+  await send(init("CPU", options.bytes ? { bytes: options.bytes } : {}));
   return { posted, events, buffers, seen, model: model as Uint8Array | null };
 }
 

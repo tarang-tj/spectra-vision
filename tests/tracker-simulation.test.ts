@@ -1,18 +1,14 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect } from "vitest";
 import { STEADY_TRACKER, Tracker } from "../src/vision/tracker";
+import { seededRandom } from "../src/panels/ruler/monte-carlo";
 import type { Detection } from "../src/vision/types";
+import { boxMuller } from "./helpers/seeded";
 
 // Seeded simulation: the only way to put a number on how often the tracker
 // hides a sparse object or swaps two ids. Every run is reproducible.
-const rng = (seed: number) => () => {
-  seed = (seed + 0x6d2b79f5) | 0;
-  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-};
-const gauss = (r: () => number) =>
-  Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r());
+const rng = seededRandom,
+  gauss = boxMuller;
 const det = (x: number, y: number, w: number, h: number): Detection => ({
   label: "person",
   score: 0.8,
