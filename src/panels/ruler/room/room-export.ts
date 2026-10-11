@@ -3,7 +3,6 @@
 // bar and the pictures it rests on, one per room point with where each
 // picture puts it, one per picture saying whether it is on the plan and why.
 // Built as text; the panel hands it to the browser as a local download.
-import { derive } from "../derive";
 import { csvField } from "../export-plan";
 import type { Pt } from "../homography";
 import { toPlane } from "../shapes";
@@ -12,7 +11,7 @@ import { applyRigid } from "./room-frame";
 import type { Quantity } from "./room-merge";
 import { pointName, type RoomSolution } from "./room-solve";
 import { roomBasis } from "./text";
-import { stateOf } from "./view-frame";
+import { solved } from "./view-frame";
 import type { View } from "./views-store";
 
 export const ROOM_CSV_HEADER =
@@ -124,8 +123,7 @@ export function roomCsv(
   views.forEach((v, k) => {
     const rigid = solution.views.find((x) => x.id === v.id)?.rigid;
     if (!rigid) return;
-    const s = { ...stateOf(v.snap), unit },
-      d = derive(s),
+    const { s, d } = solved(v.snap, unit),
       name = `picture ${k + 1}`,
       turn = (pts: Pt[] | null) => (pts ?? []).map((p) => applyRigid(rigid, p));
     if (!d.sheet) return;

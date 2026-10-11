@@ -39,6 +39,8 @@ async function screenOf(page: Page, p: P) {
   };
 }
 async function tap(page: Page, p: P) {
+  // On a phone the stage scrolls away while the panel is read.
+  await page.locator(".camera-stage canvas").scrollIntoViewIfNeeded();
   const s = await screenOf(page, p);
   await page.mouse.click(s.x, s.y);
 }
@@ -445,5 +447,92 @@ test("a room from two pictures: refused and accepted anchors, an outline from co
   });
   await expect(note).toContainText("it could not be read as JSON");
   expect(await areaOf(page)).toEqual(area);
+  expect(errors).toEqual([]);
+});
+
+test("at 390 px wide: a room is built by taps, nothing scrolls sideways and every room control is a finger wide", async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page);
+  await openRuler(page);
+  await addPicture(page, 0, 1);
+  await tapBoard(page, 0);
+  await shape(page, "Room").click();
+  await tap(page, on(0, CORNERS[2]));
+  await tap(page, on(0, CORNERS[3]));
+  await group(page, "Next tap adds")
+    .getByRole("button", { name: "Floor mark", exact: true })
+    .click();
+  await tap(page, on(0, MARKS[0]));
+  await addPicture(page, 2, 2);
+  const [c0, c1, c2, c3] = boardCorners().map((c) => on(2, c));
+  for (const c of [c2, c0, c3, c1]) await tap(page, c);
+  await page
+    .getByRole("button", { name: "Mark Room point 3 in this picture" })
+    .click();
+  await tap(page, on(2, MARKS[0]));
+  await expect(places(page).nth(1)).toHaveAttribute("data-state", "placed");
+  await group(page, "Next tap adds")
+    .getByRole("button", { name: "Outline corner", exact: true })
+    .click();
+  await tap(page, on(2, CORNERS[0]));
+  await tap(page, on(2, CORNERS[1]));
+  await page
+    .getByRole("button", { name: "Close outline", exact: true })
+    .click();
+  // On a phone a tap is coarser in the picture, so the bar is wider; the
+  // truth is still inside it.
+  const area = await areaOf(page);
+  expect(Math.abs(area.mm2 - AREA_MM2)).toBeLessThanOrEqual(area.bar);
+  await expect(page.getByTestId("room-plan")).toHaveAttribute(
+    "data-pictures",
+    "2",
+  );
+
+  const layout = await page.evaluate(() => {
+    const out = {
+      scrollWidth: document.documentElement.scrollWidth,
+      scrollX: window.scrollX,
+      small: [] as string[],
+      outside: [] as string[],
+      count: 0,
+    };
+    const sections = document.querySelectorAll(
+      '[aria-label="Pictures of this room"], section[aria-label="Room"]',
+    );
+    sections.forEach((section) =>
+      section
+        .querySelectorAll(
+          "button, label.button, label.room-check, select, summary, canvas",
+        )
+        .forEach((el) => {
+          const r = el.getBoundingClientRect(),
+            name =
+              el.getAttribute("aria-label") ||
+              el.textContent?.trim().slice(0, 40) ||
+              el.tagName;
+          if (!r.width) return;
+          out.count++;
+          if (el.tagName !== "CANVAS" && (r.height < 40 || r.width < 40))
+            out.small.push(
+              `${name}: ${r.width.toFixed(0)} x ${r.height.toFixed(0)}`,
+            );
+          if (r.left < 0 || r.right > window.innerWidth + 0.5)
+            out.outside.push(
+              `${name}: ${r.left.toFixed(0)} to ${r.right.toFixed(0)}`,
+            );
+        }),
+    );
+    return out;
+  });
+  expect(layout.scrollWidth).toBe(390);
+  expect(layout.scrollX).toBe(0);
+  expect(layout.count).toBeGreaterThan(20);
+  expect(layout.small).toEqual([]);
+  expect(layout.outside).toEqual([]);
   expect(errors).toEqual([]);
 });

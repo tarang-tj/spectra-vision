@@ -6,40 +6,20 @@
 // state back. Module level, like the Ruler's own state, and replaced, never
 // mutated.
 import { useSyncExternalStore } from "react";
-import {
-  getBox,
-  restoreBox,
-  snapshotBox,
-  subscribeBox,
-  type BoxState,
-} from "../fit/box-state";
-import {
-  getState,
-  restore,
-  snapshot,
-  subscribe,
-  type RulerSnapshot,
-  type Tool,
-} from "../state";
-import {
-  restoreKnown,
-  snapshotKnown,
-  type KnownSnapshot,
-} from "../store-known";
+import { subscribeBox } from "../fit/box-state";
+import { getState, subscribe, type Tool } from "../state";
+import { subscribeWalls } from "../walls/store";
 import { dropView } from "./store";
 import {
-  restoreWalls,
-  snapshotWalls,
-  subscribeWalls,
-  type WallsState,
-} from "../walls/store";
+  blankSnap,
+  enterSnap,
+  sameSnap,
+  takeSnap,
+  type ViewSnap,
+} from "./view-snap";
 
-export type ViewSnap = {
-  ruler: RulerSnapshot;
-  known: KnownSnapshot;
-  box: BoxState;
-  walls: WallsState;
-};
+export { blankSnap, takeSnap, type ViewSnap } from "./view-snap";
+
 export type View = {
   /** Stable for the life of the room and kept in the room file. */
   id: number;
@@ -84,37 +64,6 @@ export const viewOf = (id: number | null) =>
 export const viewName = (id: number, views = state.views) =>
   `Picture ${views.findIndex((v) => v.id === id) + 1}`;
 
-const NO_WALLS: WallsState = { corners: [], closed: false, pick: null };
-/** Everything the three stores hold for the picture on the stage. */
-export const takeSnap = (): ViewSnap => ({
-  ruler: snapshot(),
-  known: snapshotKnown(),
-  box: snapshotBox(),
-  walls: snapshotWalls(),
-});
-/** A new picture of the same room: the reference choice, the lens switch and
- * the typed box sizes carry over; nothing tapped does. */
-export const blankSnap = (): ViewSnap => ({
-  ruler: {
-    ...snapshot(),
-    corners: [],
-    measures: [],
-    shapes: [],
-    swap: false,
-    source: null,
-  },
-  known: { extraRefs: [], tapeSd: getState().tapeSd },
-  box: { ...getBox(), at: null, rot: 0 },
-  walls: NO_WALLS,
-});
-const sameSnap = (a: ViewSnap, b: ViewSnap) =>
-  a.box === b.box &&
-  a.walls === b.walls &&
-  a.known.extraRefs === b.known.extraRefs &&
-  a.known.tapeSd === b.known.tapeSd &&
-  (Object.keys(b.ruler) as (keyof RulerSnapshot)[]).every(
-    (k) => a.ruler[k] === b.ruler[k],
-  );
 const patch = (id: number, change: Partial<View>, more?: Partial<Views>) =>
   emit({
     ...state,
@@ -139,14 +88,12 @@ subscribe(capture);
 subscribeBox(capture);
 subscribeWalls(capture);
 
-/** Put a view's state back into the three stores, bound to `generation`. */
+/** Put a view's state back into the stores without saving the half-restored
+ * states in between as if they were the view's. */
 function enter(snap: ViewSnap, generation: number, tool: Tool) {
   restoring = true;
   try {
-    restore(snap.ruler, generation, tool);
-    restoreKnown(snap.known);
-    restoreBox(snap.box);
-    restoreWalls(snap.walls);
+    enterSnap(snap, generation, tool);
   } finally {
     restoring = false;
   }

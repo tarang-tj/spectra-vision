@@ -3,26 +3,32 @@
 // placed picture's spans, paths and outlines, its box and its Walls outline,
 // and the room's own points and outline. A picture that is not on the plan
 // contributes nothing. The canvas and the saved SVG draw from this.
-import { derive } from "../derive";
 import type { Pt } from "../homography";
-import { COLORS, type Prim } from "../plan-layout";
+import { COLORS } from "../plan-layout";
 import { buildScene, type PlanItem, type PlanScene } from "../plan-scene";
 import { readingText, shortReading } from "../reading";
 import { toPlane } from "../shapes";
-import type { Fit } from "../topdown";
 import type { Unit } from "../units";
 import { ROOM } from "./overlay";
 import { applyRigid } from "./room-frame";
-import { toRoomMap, type Layer } from "./room-plan";
 import type { RoomSolution } from "./room-solve";
 import type { RoomState } from "./store";
 import { areaOf, lengthOf } from "./text";
-import { stateOf } from "./view-frame";
+import { solved } from "./view-frame";
 import type { View } from "./views-store";
 
 /** Something drawn that is not a Ruler shape: lines and labelled dots. */
-type Extra =
-  | { kind: "ring"; pts: Pt[]; closed: boolean; color: string; label: string }
+export type Extra =
+  | {
+      kind: "ring";
+      pts: Pt[];
+      closed: boolean;
+      color: string;
+      label: string;
+      /** One label per side, and lines written under the label. */
+      legs?: string[];
+      more?: string[];
+    }
   | { kind: "dot"; at: Pt; color: string; label: string; faint?: boolean };
 export type RoomScene = {
   scene: PlanScene;
@@ -46,8 +52,7 @@ export function roomScene(
   views.forEach((v, n) => {
     const rigid = solution.views.find((x) => x.id === v.id)?.rigid;
     if (!rigid) return;
-    const s = { ...stateOf(v.snap), unit },
-      d = derive(s),
+    const { s, d } = solved(v.snap, unit),
       own = buildScene(s, d),
       name = `picture ${n + 1}`,
       turn = (p: Pt) => applyRigid(rigid, p);
@@ -117,22 +122,24 @@ export function roomScene(
   const numbers = solution.numbers,
     corners = solution.corners.map((c) => c.sample!.at);
   if (numbers && corners.length >= 2) {
-    const text = (i: number) => {
-      const w = numbers.walls[i];
-      return w ? shortReading(readingText(lengthOf(w, unit, ""))) : "";
-    };
-    items.push({
-      kind: room.closed ? "area" : "path",
-      name: "Room",
+    const read = (m: ReturnType<typeof lengthOf>) =>
+      shortReading(readingText(m));
+    // Not a Ruler shape: its label goes in a corner of the outline, clear of
+    // the reference, which usually lies near the middle of the room.
+    extras.push({
+      kind: "ring",
+      closed: room.closed,
+      color: COLORS.area,
+      label: "Room",
       pts: corners,
-      legs: numbers.walls.map((_, i) => text(i)),
-      length: numbers.length
-        ? shortReading(readingText(lengthOf(numbers.length, unit, "")))
-        : "not measured",
-      area: numbers.area
-        ? shortReading(readingText(areaOf(numbers.area, unit, "")))
-        : null,
-      note: numbers.selfIntersecting ? "crosses itself, no area" : null,
+      legs: numbers.walls.map((w) => (w ? read(lengthOf(w, unit, "")) : "")),
+      more: [
+        numbers.area ? `area ${read(areaOf(numbers.area, unit, ""))}` : "",
+        numbers.selfIntersecting ? "crosses itself, no area" : "",
+        numbers.length
+          ? `${room.closed ? "perimeter" : "length"} ${read(lengthOf(numbers.length, unit, ""))}`
+          : "",
+      ].filter(Boolean),
     });
   }
   for (const p of solution.points) {
@@ -177,77 +184,4 @@ export function roomScene(
     extras,
     placed,
   };
-}
-
-/** The extras as drawing primitives in output pixels. */
-export function layoutExtras(extras: readonly Extra[], fit: Fit): Prim[] {
-  const { box, ppm } = fit,
-    px = (p: Pt): [number, number] => [
-      (p.x - box.x0) * ppm,
-      (p.y - box.y0) * ppm,
-    ],
-    out: Prim[] = [];
-  for (const e of extras) {
-    if (e.kind === "ring") {
-      const pts = e.pts.map(px);
-      out.push({ t: "line", pts, closed: e.closed, color: e.color, width: 2 });
-      out.push({
-        t: "text",
-        x: pts[0][0] + 4,
-        y: pts[0][1] + 13,
-        text: e.label,
-        color: e.color,
-        size: 10,
-      });
-      continue;
-    }
-    const [x, y] = px(e.at);
-    if (e.faint) {
-      // A small cross: one picture's own estimate.
-      for (const [dx, dy] of [
-        [4, 4],
-        [4, -4],
-      ])
-        out.push({
-          t: "line",
-          pts: [
-            [x - dx, y - dy],
-            [x + dx, y + dy],
-          ],
-          closed: false,
-          color: COLORS.text,
-          width: 1,
-        });
-      continue;
-    }
-    out.push({ t: "dot", x, y, color: e.color });
-    if (e.label)
-      out.push({
-        t: "text",
-        x: x + 6,
-        y: y - 6,
-        text: e.label,
-        color: e.color,
-        size: 10,
-      });
-  }
-  return out;
-}
-
-/** The pictures to lay on the plan as pixels: those on the plan whose pixels
- * are at hand, each with its map into the room's frame. A picture that is
- * not on the plan gives no layer, whatever pixels it has. */
-export function planLayers(
-  views: readonly View[],
-  solution: RoomSolution,
-  pixels: (v: View) => Pick<Layer, "raster" | "scale"> | null,
-): Layer[] {
-  return views.flatMap((v) => {
-    const rigid = solution.views.find((x) => x.id === v.id)?.rigid,
-      px = rigid ? pixels(v) : null,
-      d = px ? derive(stateOf(v.snap)) : null;
-    return rigid && px && d?.sheet
-      ? [{ ...px, h: toRoomMap(rigid, d.sheet.h), lens: d.lens }]
-      : [];
-  });
 }

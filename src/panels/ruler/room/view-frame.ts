@@ -4,7 +4,7 @@
 // so they are made once and kept with the view: switching pictures does not
 // make them again. Each picture has its own random stream, so the retakes of
 // two pictures are independent of each other, as two real photos are.
-import { derive } from "../derive";
+import { derive, type Derived } from "../derive";
 import { fusedRuns } from "../fused-trials";
 import { solveHomography, type Mat3, type Pt } from "../homography";
 import {
@@ -14,6 +14,7 @@ import {
   TAP_SIGMA_SCREEN_PX,
 } from "../monte-carlo";
 import type { RulerState } from "../state";
+import type { Unit } from "../units";
 import type { ViewFrame } from "./room-merge";
 import type { ViewSnap } from "./views-store";
 
@@ -31,6 +32,23 @@ export const stateOf = (snap: ViewSnap): RulerState => ({
   lock: null,
   grab: null,
 });
+
+const solves = new WeakMap<ViewSnap, Map<Unit, Solved>>();
+export type Solved = { s: RulerState; d: Derived };
+/** The Ruler's own solve of one picture, with its numbers in `unit`. Kept
+ * per snapshot: the Ruler remembers one solve at a time, the one on the
+ * stage, and asking it about another picture every drawn frame would make it
+ * forget that one each time. */
+export function solved(snap: ViewSnap, unit: Unit = "mm"): Solved {
+  let byUnit = solves.get(snap);
+  if (!byUnit) solves.set(snap, (byUnit = new Map()));
+  let hit = byUnit.get(unit);
+  if (!hit) {
+    const s = { ...stateOf(snap), unit };
+    byUnit.set(unit, (hit = { s, d: derive(s) }));
+  }
+  return hit;
+}
 
 /** 0..n-1 in an order fixed by `seed` (Fisher-Yates). */
 function shuffled(n: number, seed: number): number[] {
@@ -55,8 +73,7 @@ export function frameOf(
   snap: ViewSnap,
   n = ROOM_TRIALS,
 ): ViewFrame | null {
-  const s = stateOf(snap),
-    d = derive(s),
+  const { s, d } = solved(snap),
     { sheet, lens } = d;
   if (!sheet) {
     memo.delete(id);

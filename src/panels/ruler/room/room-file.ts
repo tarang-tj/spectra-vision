@@ -6,13 +6,12 @@
 // opening, every number is worked out again from the taps and compared with
 // the saved one. Pure: no DOM. Nothing is uploaded.
 import { measured } from "../../../measure/noise";
-import { derive, type Derived } from "../derive";
 import { readingText } from "../reading";
 import { areaFromMm2, areaUnit, fromMm, type Unit } from "../units";
 import type { Quantity } from "./room-merge";
 import type { RoomPoint, RoomSolution } from "./room-solve";
 import { areaOf, lengthOf, roomBasis } from "./text";
-import { stateOf } from "./view-frame";
+import { solved } from "./view-frame";
 import type { View, ViewSnap } from "./views-store";
 
 export const ROOM_FILE_APP = "spectra-room";
@@ -93,7 +92,7 @@ export function derivedNumbers(
     );
   }
   views.forEach((v, k) => {
-    const d: Derived = derive({ ...stateOf(v.snap), unit }),
+    const { d } = solved(v.snap, unit),
       own = (name: string, mm: number, errorMm: number, area: boolean) => {
         const m = measured(
           area ? areaFromMm2(mm, unit) : fromMm(mm, unit),
@@ -144,7 +143,7 @@ export function roomFile(
   pictures: ReadonlyMap<number, string>,
   saved: string,
 ): RoomFile {
-  const first = views[0] ? derive(stateOf(views[0].snap)).reference : null;
+  const first = views[0] ? solved(views[0].snap).d.reference : null;
   return {
     app: ROOM_FILE_APP,
     version: ROOM_FILE_VERSION,

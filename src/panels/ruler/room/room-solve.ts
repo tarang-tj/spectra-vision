@@ -7,12 +7,10 @@
 // Pure: no DOM, no clock.
 import type { Pt } from "../homography";
 import {
-  applyRigid,
   IDENTITY,
   placeView,
   symmetries,
   type Anchor,
-  type AnchorCheck,
   type Placement,
   type Rigid,
 } from "./room-frame";
@@ -26,6 +24,10 @@ import {
   type Sample,
   type ViewFrame,
 } from "./room-merge";
+import { statusOf, type ViewStatus } from "./room-status";
+
+export { toOwn } from "./floor-maths";
+export type { ViewStatus } from "./room-status";
 
 /** A point on the room's floor, marked in one picture or in several. `at` is
  * the tap in that picture, source pixels. */
@@ -41,15 +43,6 @@ export type RoomInput = {
   /** Point ids in order round the room. */
   outline: readonly number[];
   closed: boolean;
-};
-export type ViewStatus = {
-  id: number;
-  name: string;
-  state: "first" | "placed" | "refused" | "unanchored" | "no-reference";
-  /** Its frame to the room's; null unless it is on the plan. */
-  rigid: Rigid | null;
-  text: string;
-  checks: AnchorCheck[];
 };
 export type Placed = {
   id: number;
@@ -144,45 +137,7 @@ export function solveRoom(input: RoomInput): RoomSolution {
       }
     }
   }
-  const status = views.map((v, i): ViewStatus => {
-    const p = result.get(v.id),
-      rigid = on.get(v.id) ?? null;
-    if (!v.frame)
-      return {
-        id: v.id,
-        name: v.name,
-        state: "no-reference",
-        rigid: null,
-        checks: [],
-        text: `${v.name} has no reference yet. Tap its four corners in that picture.`,
-      };
-    if (i === 0)
-      return {
-        id: v.id,
-        name: v.name,
-        state: "first",
-        rigid: IDENTITY,
-        checks: [],
-        text: `${v.name} sets the plan's frame: the plan is drawn as its reference reads.`,
-      };
-    if (!p)
-      return {
-        id: v.id,
-        name: v.name,
-        state: "unanchored",
-        rigid: null,
-        checks: [],
-        text: `${v.name} is not on the plan yet: ${first.name} has no reference to set the plan's frame.`,
-      };
-    return {
-      id: v.id,
-      name: v.name,
-      state: p.state,
-      rigid: p.state === "placed" ? rigid : null,
-      text: p.text,
-      checks: p.checks,
-    };
-  });
+  const status = statusOf(views, on, result);
   const placed = points.map((p): Placed => {
     const seen = own
         .filter((h) => h.point === p.id && on.has(h.view))
@@ -233,16 +188,3 @@ export function solveRoom(input: RoomInput): RoomSolution {
     missing,
   };
 }
-
-/** A room-frame position as picture `rigid` reads it in its own frame. */
-export const toOwn = (rigid: Rigid, p: Pt): Pt =>
-  applyRigid(
-    {
-      turn: rigid.turn,
-      a: rigid.a,
-      b: -rigid.b,
-      tx: -(rigid.a * rigid.tx + rigid.b * rigid.ty),
-      ty: -(-rigid.b * rigid.tx + rigid.a * rigid.ty),
-    },
-    p,
-  );

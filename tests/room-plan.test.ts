@@ -11,8 +11,8 @@ import {
 import {
   layoutExtras,
   planLayers,
-  roomScene,
-} from "../src/panels/ruler/room/room-scene";
+} from "../src/panels/ruler/room/room-plan-draw";
+import { roomScene } from "../src/panels/ruler/room/room-scene";
 import { solveRoom, toOwn } from "../src/panels/ruler/room/room-solve";
 import { dropFrames, stateOf } from "../src/panels/ruler/room/view-frame";
 import type { View, ViewSnap } from "../src/panels/ruler/room/views-store";
@@ -281,19 +281,23 @@ describe("the room plan's contents", () => {
     expect(near(span.pts[0], truth(MARKS[0]))).toBeLessThan(1e-3);
     expect(near(span.pts[1], truth(MARKS[1]))).toBeLessThan(1e-3);
     expect(span.label).toMatch(/^1\.81\d* ± 0\.\d+ m$/);
-    const outline = scene.scene.items.find((i) => i.kind === "area")!;
-    if (outline.kind !== "area") throw new Error("no room outline");
-    expect(outline.name).toBe("Room");
-    outline.pts.forEach((p, i) =>
-      expect(near(p, truth(corners[i]))).toBeLessThan(1e-3),
-    );
-    expect(outline.legs).toHaveLength(4);
-    expect(outline.area).toMatch(/^13\.0\d? ± \d/);
+    // The room's outline is the plan's own mark, with its numbers in words.
     const rings = scene.extras.filter((e) => e.kind === "ring");
     expect(rings.map((r) => r.label)).toEqual([
       "box, picture 2",
       "Walls, picture 2",
+      "Room",
     ]);
+    const outline = rings[2];
+    if (outline.kind !== "ring") throw new Error("no room outline");
+    outline.pts.forEach((p, i) =>
+      expect(near(p, truth(corners[i]))).toBeLessThan(1e-3),
+    );
+    expect(outline.closed).toBe(true);
+    expect(outline.legs).toHaveLength(4);
+    expect(outline.legs![0]).toMatch(/^4\.20? ± 0\.\d+ m$/);
+    expect(outline.more![0]).toMatch(/^area 13\.0\d? ± \d/);
+    expect(outline.more![1]).toMatch(/^perimeter 14\.6\d? ± \d/);
     if (rings[0].kind !== "ring" || rings[1].kind !== "ring") throw new Error();
     // The box's footprint is centred on the probe, 2000 by 900 mm.
     const cx = rings[0].pts.reduce((t, p) => t + p.x, 0) / 4,
