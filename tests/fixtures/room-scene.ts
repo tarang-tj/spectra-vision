@@ -111,6 +111,17 @@ export function cameraFor(i: number, w = 1600, h = 1200) {
       });
       return out;
     },
+    /** The floor point a picture pixel looks at, or null at or above the
+     * horizon: the ray through that pixel met with z = 0. */
+    floorAt(px: P): P | null {
+      const dir: V = [0, 1, 2].map(
+        (i) =>
+          f * FORWARD[i] + (px.x - w / 2) * RIGHT[i] + (px.y - h / 2) * DOWN[i],
+      ) as V;
+      if (dir[2] >= -1e-9) return null;
+      const t = -eye[2] / dir[2];
+      return { x: eye[0] + t * dir[0], y: eye[1] + t * dir[1] };
+    },
     sees(p: P, margin = 12): boolean {
       if (dot(sub([p.x, p.y, 0], eye), FORWARD) <= 0) return false;
       const q = shoot(p.x, p.y);
@@ -135,6 +146,21 @@ export function inBoardFrame(p: P, k: number, b: Board = BOARD): P {
   return {
     x: ((p.x - o.x) * (nx.x - o.x) + (p.y - o.y) * (nx.y - o.y)) / lx,
     y: ((p.x - o.x) * (ny.x - o.x) + (p.y - o.y) * (ny.y - o.y)) / ly,
+  };
+}
+
+/** The inverse of `inBoardFrame`: a position in the frame anchored at board
+ * corner `k`, back to the floor. */
+export function fromBoardFrame(p: P, k: number, b: Board = BOARD): P {
+  const c = boardCorners(b),
+    o = c[k % 4],
+    nx = c[(k + 1) % 4],
+    ny = c[(k + 3) % 4],
+    lx = Math.hypot(nx.x - o.x, nx.y - o.y),
+    ly = Math.hypot(ny.x - o.x, ny.y - o.y);
+  return {
+    x: o.x + (p.x * (nx.x - o.x)) / lx + (p.y * (ny.x - o.x)) / ly,
+    y: o.y + (p.x * (nx.y - o.y)) / lx + (p.y * (ny.y - o.y)) / ly,
   };
 }
 

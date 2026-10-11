@@ -4,6 +4,7 @@ import { derive } from "../derive";
 import { useRuler } from "../state";
 import { currentRoom, stageView } from "./current";
 import { dropGrab } from "./pointer";
+import RoomPlanPanel from "./room-plan-panel";
 import RoomPoints from "./room-points";
 import RoomResults from "./room-results";
 import { pointName } from "./room-solve";
@@ -101,6 +102,12 @@ export default function RoomSection() {
         order={order}
         unit={s.unit}
         closed={room.closed}
+      />
+      <RoomPlanPanel
+        views={views}
+        room={room}
+        solution={solution}
+        unit={s.unit}
       />
     </section>
   );

@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import { test, expect, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { test, expect, type Download, type Page } from "@playwright/test";
 import {
   AREA_MM2,
   boardCentre,
@@ -158,6 +159,33 @@ test("two pictures of one room: each keeps its own reference and span across swi
   expect(errors).toEqual([]);
 });
 
+/** The files one click saves, as text. */
+async function downloads(
+  page: Page,
+  count: number,
+  click: () => Promise<void>,
+) {
+  const got: Download[] = [];
+  const done = new Promise<void>((resolve) => {
+    const take = (d: Download) => {
+      got.push(d);
+      if (got.length === count) {
+        page.off("download", take);
+        resolve();
+      }
+    };
+    page.on("download", take);
+  });
+  await click();
+  await done;
+  return Promise.all(
+    got.map(async (d) => ({
+      name: d.suggestedFilename(),
+      path: (await d.path())!,
+      text: readFileSync((await d.path())!, "utf8"),
+    })),
+  );
+}
 const shape = (page: Page, name: string) =>
   group(page, "Shape").getByRole("button", { name, exact: true });
 const places = (page: Page) => page.getByTestId("room-places").locator("li");
@@ -286,6 +314,45 @@ test("a room from two pictures: a refused and an accepted anchor, an outline fro
     type: "measured",
     description: `floor area ${(area.mm2 / 1e6).toFixed(3)} +- ${(area.bar / 1e6).toFixed(3)} m2 (truth ${AREA_MM2 / 1e6}, off ${(((area.mm2 - AREA_MM2) / AREA_MM2) * 100).toFixed(2)}%)`,
   });
+  // The room plan: both pictures' floors in one frame, and its export.
+  const plan = page.getByTestId("room-plan");
+  await expect(plan).toHaveAttribute("data-pictures", "2");
+  await expect(page.getByTestId("room-plan-note")).toContainText(
+    "Drawn from pictures 1 and 2",
+  );
+  // The synthetic floor is one flat colour: a fifth of the plan or more.
+  await expect
+    .poll(() =>
+      plan.evaluate((c: HTMLCanvasElement) => {
+        const d = c
+          .getContext("2d")!
+          .getImageData(0, 0, c.width, c.height).data;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4)
+          if (
+            Math.abs(d[i] - 0x8a) < 12 &&
+            Math.abs(d[i + 1] - 0x85) < 12 &&
+            Math.abs(d[i + 2] - 0x7c) < 12
+          )
+            n++;
+        return n / (c.width * c.height);
+      }),
+    )
+    .toBeGreaterThan(0.2);
+  const files = await downloads(page, 2, () =>
+    page.getByRole("button", { name: "Save room plan", exact: true }).click(),
+  );
+  const svg = files.find((f) => f.name.endsWith(".svg"))!.text,
+    csv = files.find((f) => f.name.endsWith(".csv"))!.text;
+  expect(svg).toContain("<svg");
+  expect(svg).toContain(">Room<");
+  expect(svg).toContain("Rests on 2 pictures");
+  expect(svg).not.toContain("<image");
+  const row = csv.split("\n").find((l) => l.startsWith("room,floor area"))!;
+  expect(Number(row.split(",")[2])).toBeCloseTo(area.mm2 / 1e6, 4);
+  expect(row.split(",")[5]).toBe("1; 2");
+  expect(csv).toContain("Picture 2 is on the plan, half way round");
+
   // The numbers rest on the stored pictures: showing picture 1 changes none.
   await thumb(page, 1).click();
   await expect(thumb(page, 1)).toHaveAttribute("aria-pressed", "true");
