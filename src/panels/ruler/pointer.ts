@@ -4,6 +4,9 @@
 // point. The same press can go on dragging what it placed or grabbed, so a
 // finger can place a point roughly and then refine it under the loupe. A
 // grabbed handle moves only once the press has travelled: a tap leaves it.
+// With Path or Area chosen that tap is the first point of a new shape, put
+// where the finger was: an outline may start right beside a handle, and a
+// tap that silently made no point would close the outline one corner short.
 import type { StagePointerEvent } from "../../stage/stage-hooks";
 import { derive, longEdge } from "./derive";
 import { extensionFor, extensionPointer } from "./extensions";
@@ -48,6 +51,20 @@ function travelled(d: Drag, e: StagePointerEvent): boolean {
     d.moving =
       Math.hypot(e.canvas.x - d.from.x, e.canvas.y - d.from.y) >= TAP_TRAVEL;
   return d.moving;
+}
+
+/** True when a press that took hold of a handle and never travelled is the
+ * first point of a path or outline: one of those tools is chosen, and (as
+ * `building` was false when the press grabbed) no shape of it is open. */
+function startsShape(d: Drag): boolean {
+  const { tool, corners } = getState();
+  return (
+    d.grabbed &&
+    !d.moving &&
+    view.still &&
+    corners.length === 4 &&
+    (tool === "path" || tool === "area")
+  );
 }
 
 export function onRulerPointer(e: StagePointerEvent): boolean {
@@ -105,6 +122,11 @@ export function onRulerPointer(e: StagePointerEvent): boolean {
     return true;
   }
   if (!e.cancelled && travelled(drag, e)) move(drag.handle, at, sigma);
+  else if (!e.cancelled && startsShape(drag)) {
+    place(at, sigma);
+    // It placed a point after all, so there is no grab to report.
+    drag.grabbed = false;
+  }
   endDrag();
   return true;
 }

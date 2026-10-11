@@ -77,9 +77,15 @@ function Ruler() {
   else if (s.tool === "path" || s.tool === "area") {
     const n = open?.pts.length ?? 0,
       finish = s.tool === "area" ? "Close outline" : "Finish path";
-    if (!n)
-      step = `Tap each point of the ${s.tool === "area" ? "outline" : "path"} in order.`;
-    else if (n < 3)
+    if (!n) {
+      // Say what the last one ended with: a count the user can check against
+      // the taps they made.
+      const last = s.shapes.filter((x) => x.kind === s.tool && x.done).pop(),
+        ended = last
+          ? `${s.tool === "area" ? "Outline closed" : "Path finished"} with ${last.pts.length} ${s.tool === "area" ? "corners" : "points"}. `
+          : "";
+      step = `${ended}Tap each point of ${ended ? "another" : "the"} ${s.tool === "area" ? "outline" : "path"} in order.`;
+    } else if (n < 3)
       step = `${n} point${n === 1 ? "" : "s"} placed. Tap at least ${3 - n} more.`;
     else step = `${n} points placed. Tap more, or press ${finish}.`;
   } else if (pending) step = "Tap the other end of the span.";
