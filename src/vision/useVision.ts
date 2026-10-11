@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { tasksOf } from "../modes";
 import { telemetry } from "../telemetry/bus";
 import type { ModeDef } from "../modes";
+import { firstDownloadNote } from "./first-download";
 import { mergeResults } from "./merge";
 import { createTaskRunner } from "./task-runner";
 import type { TaskRunner } from "./task-runner";
@@ -42,6 +43,8 @@ export function useVision(
       raf = 0,
       failed = false,
       timeout: ReturnType<typeof setTimeout> | undefined,
+      // What the stage says while the models load.
+      loading = "Loading model",
       latest: Partial<Record<TaskKind, TaskResult>> = {};
     setError("");
     setResult(null);
@@ -59,7 +62,7 @@ export function useVision(
       if (stopped || failed) return;
       clearTimeout(timeout);
       if (loaded()) return setStatus("Ready");
-      setStatus("Loading model");
+      setStatus(loading);
       timeout = setTimeout(() => {
         if (!loaded())
           unavailable("Model load timed out. Check your connection and retry.");
@@ -124,6 +127,12 @@ export function useVision(
       }
     };
     report();
+    // A large model that is not on this device yet: say its size, once.
+    void firstDownloadNote(specs, base).then((note) => {
+      if (stopped || failed || !note || loaded()) return;
+      loading = note;
+      setStatus(note);
+    });
     raf = requestAnimationFrame(tick);
     return () => {
       stopped = true;
