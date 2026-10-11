@@ -6,12 +6,12 @@ import { EXTENSIONS, extensionEnv, extensionFor } from "./ruler/extensions";
 import LensSection from "./ruler/lens-section";
 import PlanPanel from "./ruler/plan-panel";
 import ReferencePicker from "./ruler/reference-picker";
+import ClearButton from "./ruler/room/clear-button";
 import ViewStrip from "./ruler/room/view-strip";
 import Results from "./ruler/results";
 import ShapeTools, { openShape } from "./ruler/shape-tools";
 import TapeTest from "./ruler/tape-test";
 import {
-  clear,
   handleName,
   isEmpty,
   pendingRef,
@@ -124,9 +124,7 @@ function Ruler() {
         >
           Undo
         </button>
-        <button className="button" onClick={clear} disabled={isEmpty(s)}>
-          Clear
-        </button>
+        <ClearButton />
         {d.sheet && (
           <button className="button" onClick={toggleSwap} aria-pressed={s.swap}>
             Swap sides

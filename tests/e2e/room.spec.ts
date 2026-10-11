@@ -471,6 +471,32 @@ test("a room from two pictures: refused and accepted anchors, an outline from co
   await expect(thumb(page, 1)).toHaveAttribute("aria-pressed", "true");
   expect(await areaOf(page)).toEqual(area);
 
+  // Clear on a room picture asks once more and says what goes. One press
+  // and a press elsewhere change nothing.
+  await page.getByRole("button", { name: /^Clear picture 1\./ }).click();
+  const clearing = page.getByRole("button", {
+    name: /^Press again to clear picture 1: its reference and taps go/,
+  });
+  await expect(clearing).toBeVisible();
+  await page.getByRole("heading", { name: "Pictures of this room" }).click();
+  await expect(clearing).toHaveCount(0);
+  expect(await areaOf(page)).toEqual(area);
+  // Twice: the picture's reference is gone and the room says why it has no
+  // numbers. Tapping the reference again brings every number back.
+  await page.getByRole("button", { name: /^Clear picture 1\./ }).click();
+  await clearing.click();
+  await expect(page.getByTestId("room-missing")).toContainText(
+    "No numbers yet",
+  );
+  await expect(page.getByTestId("room-next")).toContainText(
+    "tap the four corners of the reference",
+  );
+  {
+    const [b0, b1, b2, b3] = boardCorners().map((c) => on(0, c));
+    for (const c of [b2, b0, b3, b1]) await tap(page, c);
+  }
+  expect(await areaOf(page)).toEqual(area);
+
   // Save the room twice: with its pictures, and without.
   const note = page.getByTestId("room-file-note"),
     box = page.getByLabel("Include the pictures in the file"),
