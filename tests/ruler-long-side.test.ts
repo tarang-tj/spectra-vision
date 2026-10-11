@@ -4,7 +4,7 @@
 // with tap noise. The on-screen rule this replaces is kept here as `looksLong`
 // and shown to fail the same pictures.
 import { beforeEach, describe, expect, it } from "vitest";
-import { derive } from "../src/panels/ruler/derive";
+import { derive, resultsText } from "../src/panels/ruler/derive";
 import {
   looksLong,
   orderCorners,
@@ -69,6 +69,17 @@ describe("the room fixture's cameras", () => {
     expect(span.errorMm).toBeLessThan(400);
     // The picture overrules the look, and that is said beside the reference.
     expect(longSideNote(d.longSide, false)).toMatch(/looks shorter here/);
+  });
+
+  it("copied results carry the same long-side note the panel shows", () => {
+    const c = tapBoard(1);
+    place(c.shoot(0, 0), SIGMA);
+    place(c.shoot(0, 3100), SIGMA);
+    const s = getState(),
+      d = derive(s),
+      note = longSideNote(d.longSide, s.swap)!;
+    expect(note).toMatch(/looks shorter here/);
+    expect(resultsText(s, d)).toContain(note);
   });
 
   it("every camera gets the board the right way round, or says it guessed", () => {
