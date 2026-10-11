@@ -4,6 +4,7 @@ import { derive } from "./ruler/derive";
 import KnownSizes from "./ruler/known-sizes";
 import { EXTENSIONS, extensionEnv, extensionFor } from "./ruler/extensions";
 import LensSection from "./ruler/lens-section";
+import { longSideNote } from "./ruler/long-side";
 import PlanPanel from "./ruler/plan-panel";
 import ReferencePicker from "./ruler/reference-picker";
 import ViewStrip from "./ruler/room/view-strip";
@@ -46,7 +47,9 @@ function Ruler() {
     // and Undo belong to the reference corners.
     toolActive = ext !== null && s.corners.length === 4,
     open = openShape(s),
-    adding = pendingRef(s);
+    adding = pendingRef(s),
+    // Said only for the picture on screen, like the values it is about.
+    sideNote = show ? longSideNote(d.longSide, s.swap) : null;
 
   let step: string;
   if (!hasSource) step = "Choose a camera, photo or demo first.";
@@ -105,6 +108,15 @@ function Ruler() {
           {w}
         </p>
       ))}
+      {sideNote && (
+        <p
+          className="ruler-warn"
+          data-testid="ruler-long-side"
+          data-how={d.longSide?.how}
+        >
+          {sideNote}
+        </p>
+      )}
       <div className="ruler-group" role="group" aria-label="Ruler actions">
         {hasSource && still && paused ? (
           <button className="button" onClick={resume}>
@@ -159,8 +171,10 @@ function Ruler() {
       <LensSection s={s} d={d} />
       <ul className="ruler-guidance">
         <li>
-          The long side of the reference is guessed from how it looks. If the
-          labels on its edges are swapped, press Swap sides.
+          The long side of the reference is read from the picture's perspective
+          when that settles it, and guessed from how it looks when it does not;
+          the panel says which. If the labels on its edges are swapped, press
+          Swap sides.
         </li>
         <li>
           For a whole room, one sheet of paper gives wide error bars, because

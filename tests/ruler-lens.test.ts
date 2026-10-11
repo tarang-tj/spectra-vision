@@ -169,7 +169,33 @@ describe("lens correction changes a measurement toward the truth", () => {
     resetRuler();
     bindSource(1, W, H, 1);
     // A flat floor seen through a lens with k = 0.2: every tap is bent.
-    const MAP = [0.9, 0.05, 150, 0.03, 0.9, 120, 0.00005, 0.0006, 1],
+    // The plane map is a real camera's, built by hand: focal length 960 px,
+    // axis through the picture's middle, standing at `EYE` mm and looking at
+    // `AIM` on the floor. The long side of the reference is read from the
+    // camera the picture implies, so the fixture has to be a possible picture.
+    const EYE = [-300, -900, 1600],
+      AIM = [600, 450, 0],
+      F = 960,
+      away = AIM.map((v, i) => v - EYE[i]),
+      far = Math.hypot(...away),
+      fwd = away.map((v) => v / far),
+      flat = Math.hypot(fwd[0], fwd[1]),
+      right = [fwd[1] / flat, -fwd[0] / flat, 0],
+      down = [
+        fwd[1] * right[2] - fwd[2] * right[1],
+        fwd[2] * right[0] - fwd[0] * right[2],
+        fwd[0] * right[1] - fwd[1] * right[0],
+      ],
+      row = (v: number[]) => [
+        v[0],
+        v[1],
+        -(v[0] * EYE[0] + v[1] * EYE[1] + v[2] * EYE[2]),
+      ],
+      MAP = [
+        ...row(right.map((v, i) => F * v + (W / 2) * fwd[i])),
+        ...row(down.map((v, i) => F * v + (H / 2) * fwd[i])),
+        ...row(fwd),
+      ],
       k = 0.2,
       lens = lensFor(k, W, H),
       toImg = (x: number, y: number): Pt => {

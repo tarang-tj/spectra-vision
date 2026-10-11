@@ -193,22 +193,30 @@ export type Sheet = {
   fused?: Fused;
 };
 
-/** Assign the reference's long side by the longer-looking pair of opposite
- * sides in the image (`swap` flips it), then solve image pixels to plane mm.
- * `long` and `short` are the reference's sides in mm. */
+/** True when corner 0 to corner 1 (with its opposite side) looks at least as
+ * long on screen as corner 1 to corner 2. Only a guess at which side is the
+ * long one: perspective can reverse it (see long-side.ts). */
+export function looksLong(ordered: Pt[]): boolean {
+  if (ordered.length !== 4) return true;
+  return (
+    dist(ordered[0], ordered[1]) + dist(ordered[3], ordered[2]) >=
+    dist(ordered[1], ordered[2]) + dist(ordered[0], ordered[3])
+  );
+}
+
+/** Solve image pixels to plane mm for a reference `long` by `short` mm. The
+ * caller says which side is the long one with `forceFirstIsLong` (derive.ts
+ * asks long-side.ts, or holds the side during a drag). Without it the long
+ * side is the longer-looking pair of opposite sides, and `swap` flips that. */
 export function solveSheet(
   ordered: Pt[],
   long: number,
   short: number,
   swap: boolean,
-  /** Fixes which side is long (during a drag), overriding the guess. */
   forceFirstIsLong?: boolean,
 ): Sheet | null {
   if (ordered.length !== 4 || degenerateReason(ordered)) return null;
-  const first =
-      (dist(ordered[0], ordered[1]) + dist(ordered[3], ordered[2])) / 2,
-    second = (dist(ordered[1], ordered[2]) + dist(ordered[0], ordered[3])) / 2,
-    firstIsLong = forceFirstIsLong ?? first >= second !== swap,
+  const firstIsLong = forceFirstIsLong ?? looksLong(ordered) !== swap,
     w = firstIsLong ? long : short,
     d = firstIsLong ? short : long,
     plane = [
