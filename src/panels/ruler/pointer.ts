@@ -1,22 +1,54 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-// Pointer input for the Ruler. A press either grabs the nearest handle or
-// places the next point, and the same press can keep dragging it, so a finger
-// can place a point roughly and then refine it under the loupe.
+// Pointer input for the Ruler. While something is part built a press places
+// its next point. Otherwise a press grabs the handle it lands on, or places a
+// point. The same press can go on dragging what it placed or grabbed, so a
+// finger can place a point roughly and then refine it under the loupe. A
+// grabbed handle moves only once the press has travelled: a tap leaves it.
 import type { StagePointerEvent } from "../../stage/stage-hooks";
 import { derive, longEdge } from "./derive";
 import { extensionFor, extensionPointer } from "./extensions";
 import { TAP_SIGMA_SCREEN_PX } from "./monte-carlo";
 import { view } from "./overlay";
-import { getState, hit, move, place, setLock, type Handle } from "./store";
-import { hitRadius, tapPixel } from "./tap";
+import {
+  building,
+  getState,
+  hit,
+  move,
+  place,
+  set,
+  type Handle,
+} from "./store";
+import { hitFloor, hitRadius, tapPixel, TAP_TRAVEL } from "./tap";
 
-type Drag = { id: number; handle: Handle };
+type Drag = {
+  id: number;
+  handle: Handle;
+  /** Where the press went down, canvas CSS pixels. */
+  from: { x: number; y: number };
+  /** The press grabbed a handle that was already there. */
+  grabbed: boolean;
+  /** The handle follows the press: at once for a point this press placed,
+   * after `TAP_TRAVEL` for one it grabbed. */
+  moving: boolean;
+};
 let drag: Drag | null = null;
 export const endDrag = () => {
+  const d = drag,
+    s = getState();
   drag = null;
   view.loupe = null;
-  if (getState().lock) setLock(null);
+  // A grab that moved nothing stays on the step line; a real drag does not.
+  const grab =
+    d && d.grabbed && !d.moving ? { handle: d.handle, held: false } : null;
+  if (s.lock || s.grab) set({ lock: null, grab });
 };
+/** True once the press has travelled far enough to be a drag, not a tap. */
+function travelled(d: Drag, e: StagePointerEvent): boolean {
+  if (!d.moving)
+    d.moving =
+      Math.hypot(e.canvas.x - d.from.x, e.canvas.y - d.from.y) >= TAP_TRAVEL;
+  return d.moving;
+}
 
 export function onRulerPointer(e: StagePointerEvent): boolean {
   const at = tapPixel(e);
@@ -43,24 +75,36 @@ export function onRulerPointer(e: StagePointerEvent): boolean {
     // A moving picture cannot be measured; the panel stops listening for
     // taps then, and this guards the frame between the two.
     if (!view.still) return false;
-    const radius = hitRadius(e);
-    // With such a tool chosen a press never places a Ruler point, but it may
-    // still grab one, so the reference stays adjustable.
-    const handle = hit(at, radius) ?? (ext ? null : place(at, sigma));
+    // With an extension tool chosen a press never places a Ruler point, but
+    // it may still grab one, so the reference stays adjustable.
+    const grabbed =
+        !ext && building(getState())
+          ? null
+          : hit(at, hitRadius(e), hitFloor(e)),
+      handle = grabbed ?? (ext ? null : place(at, sigma));
     if (!handle) return false;
-    drag = { id: e.pointerId, handle };
+    drag = {
+      id: e.pointerId,
+      handle,
+      from: e.canvas,
+      grabbed: !!grabbed,
+      moving: !grabbed,
+    };
     // Hold the long-side guess for the whole drag.
-    setLock(longEdge(derive(getState())));
+    set({
+      lock: longEdge(derive(getState())),
+      grab: grabbed ? { handle: grabbed, held: true } : null,
+    });
     view.loupe = { at, canvas: e.canvas };
     return true;
   }
   if (!drag || drag.id !== e.pointerId) return false;
   if (e.type === "move") {
-    move(drag.handle, at, sigma);
+    if (travelled(drag, e)) move(drag.handle, at, sigma);
     view.loupe = { at, canvas: e.canvas };
     return true;
   }
-  if (!e.cancelled) move(drag.handle, at, sigma);
+  if (!e.cancelled && travelled(drag, e)) move(drag.handle, at, sigma);
   endDrag();
   return true;
 }

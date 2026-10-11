@@ -70,6 +70,9 @@ export type RulerState = {
   scale: number;
   /** While a handle is dragged: the long edge (tap indices) to hold fixed. */
   lock: [number, number] | null;
+  /** The handle the last press took hold of in place of placing a point, and
+   * whether that press is still down. The step line says so. */
+  grab: { handle: Handle; held: boolean } | null;
 };
 
 const UNIT_KEY = "spectra.ruler.unit.v1";
@@ -100,12 +103,21 @@ const initial = (): RulerState => ({
   source: null,
   scale: 1,
   lock: null,
+  grab: null,
 });
 
 let state = initial();
 const listeners = new Set<() => void>();
+const POINTS = ["corners", "extraRefs", "measures", "shapes", "tool"] as const;
 export const set = (patch: Partial<RulerState>) => {
-  state = { ...state, ...patch };
+  // The note about a press that grabbed and moved nothing lasts until the
+  // points or the tool change. A press still down keeps its own note.
+  const stale =
+    !!state.grab &&
+    !state.grab.held &&
+    !("grab" in patch) &&
+    POINTS.some((k) => k in patch);
+  state = { ...state, ...patch, ...(stale ? { grab: null } : {}) };
   listeners.forEach((l) => l());
 };
 
@@ -155,7 +167,9 @@ export const isEmpty = (s: RulerState) =>
 
 /** Called with each frame the overlay draws. Points belong to one source: a
  * new source (another photo, a camera restart) clears them, because they
- * would sit on the wrong picture. */
+ * would sit on the wrong picture. The reference goes with them, so the tool
+ * goes back to Span: the next taps are the reference corners, and the step
+ * line must not ask for an outline that has no reference under it. */
 export function bindSource(
   generation: number,
   w: number,
@@ -172,6 +186,8 @@ export function bindSource(
       measures: [],
       shapes: [],
       swap: false,
+      tool: "span",
+      grab: null,
     });
     pointsCleared();
   } else if (

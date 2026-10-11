@@ -11,6 +11,7 @@ import ShapeTools, { openShape } from "./ruler/shape-tools";
 import TapeTest from "./ruler/tape-test";
 import {
   clear,
+  handleName,
   isEmpty,
   pendingRef,
   setUnit,
@@ -53,6 +54,12 @@ function Ruler() {
       s.tool === "edge" || d.reference
         ? "Freeze the picture, then tap on it. A moving picture cannot be measured."
         : (d.problem ?? "");
+  else if (s.grab)
+    // The press landed on a handle, so it placed nothing: say so, or a tap
+    // meant as a new point looks as if it was lost.
+    step = s.grab.held
+      ? `Moving ${handleName(s.grab.handle, s)}. Tap elsewhere to place a point.`
+      : `That tap took hold of ${handleName(s.grab.handle, s)} and moved nothing. Drag it to adjust it, or tap elsewhere to place a point.`;
   else if (s.tool === "edge")
     step =
       "Tap three or more points along an edge that is straight in reality, then press Finish edge. Do at least two edges.";
