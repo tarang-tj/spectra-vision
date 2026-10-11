@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -16,13 +17,22 @@ import type { Unit } from "../units";
 import { keepOnly, pixelsOf, rasterVersion, subscribeRasters } from "./rasters";
 import { roomCsv } from "./room-export";
 import { mergeTopDown } from "./room-plan";
-import { layoutExtras, planLayers } from "./room-plan-draw";
+import {
+  FULL_LABELS_FROM,
+  keepInside,
+  layoutExtras,
+  planLayers,
+  thinFor,
+  WALL_LABELS_FROM,
+} from "./room-plan-draw";
 import { roomScene } from "./room-scene";
 import type { RoomSolution } from "./room-solve";
 import type { RoomState } from "./store";
 import { picturesText, roomBasis } from "./text";
 import type { View } from "./views-store";
 
+/** The plan is never drawn wider than this, and is saved at this width. */
+const FULL_WIDTH = 480;
 type Drawn = { fit: Fit; prims: Prim[]; floor: HTMLCanvasElement };
 
 /** The room seen from above: the floor of every picture on the plan laid in
@@ -41,7 +51,8 @@ export default function RoomPlanPanel({
 }) {
   const { notice } = useStudio(),
     canvas = useRef<HTMLCanvasElement>(null),
-    drawn = useRef<Drawn | null>(null),
+    holder = useRef<HTMLDivElement>(null),
+    [width, setWidth] = useState(0),
     [photo, setPhoto] = useState(false),
     pixels = useSyncExternalStore(subscribeRasters, rasterVersion),
     order = useMemo(() => views.map((v) => v.id), [views]),
@@ -50,41 +61,69 @@ export default function RoomPlanPanel({
       return roomScene(views, solution, room, unit, roomBasis(on, order));
     }, [views, solution, room, unit, order]);
 
+  const shown = !!built && views.length >= 2;
+  // The plan is drawn at the size it is shown, so a label is as large on a
+  // narrow rail as on a wide one, and it is drawn again when that changes.
   useEffect(() => {
-    const el = canvas.current;
-    drawn.current = null;
-    keepOnly(order);
-    if (!built || !el) return;
-    const fit = fitBox(built.scene.bounds),
-      floor = document.createElement("canvas");
-    floor.width = el.width = fit.width;
-    floor.height = el.height = fit.height;
-    const fctx = floor.getContext("2d"),
-      ctx = el.getContext("2d");
-    if (!fctx || !ctx) return;
-    const layers = planLayers(views, solution, pixelsOf);
-    if (layers.length) {
-      const top = mergeTopDown(layers, fit).image;
-      fctx.putImageData(new ImageData(top.data, top.w, top.h), 0, 0);
-    }
-    ctx.fillStyle = "#0b1214";
-    ctx.fillRect(0, 0, fit.width, fit.height);
-    ctx.drawImage(floor, 0, 0);
-    const prims = [
-      ...layoutScene(built.scene, fit),
-      ...layoutExtras(built.extras, fit),
-    ];
-    drawPrims(ctx, prims);
-    drawn.current = { fit, prims, floor };
-  }, [built, views, solution, pixels, order]);
+    const el = holder.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const watch = new ResizeObserver(() => setWidth(el.clientWidth));
+    watch.observe(el);
+    setWidth(el.clientWidth);
+    return () => watch.disconnect();
+  }, [shown]);
 
-  if (!built || views.length < 2) return null;
+  /** Draw the plan `wide` pixels wide; `el` is the canvas on the page, or
+   * null for the full-size drawing that is saved. */
+  const draw = useCallback(
+    (wide: number, el: HTMLCanvasElement | null): Drawn | null => {
+      if (!built) return null;
+      const scene = thinFor(built, wide),
+        fit = fitBox(scene.scene.bounds, wide, Math.round(wide * 0.75)),
+        floor = document.createElement("canvas"),
+        page = el ?? document.createElement("canvas");
+      floor.width = page.width = fit.width;
+      floor.height = page.height = fit.height;
+      const fctx = floor.getContext("2d"),
+        ctx = page.getContext("2d");
+      if (!fctx || !ctx) return null;
+      const layers = planLayers(views, solution, pixelsOf);
+      if (layers.length) {
+        const top = mergeTopDown(layers, fit).image;
+        fctx.putImageData(new ImageData(top.data, top.w, top.h), 0, 0);
+      }
+      ctx.fillStyle = "#0b1214";
+      ctx.fillRect(0, 0, fit.width, fit.height);
+      ctx.drawImage(floor, 0, 0);
+      const prims = keepInside(
+        [...layoutScene(scene.scene, fit), ...layoutExtras(scene.extras, fit)],
+        fit.width,
+        fit.height,
+        (text, size) => {
+          ctx.font = `600 ${size}px system-ui, sans-serif`;
+          return ctx.measureText(text).width;
+        },
+      );
+      drawPrims(ctx, prims);
+      return { fit, prims, floor };
+    },
+    [built, views, solution],
+  );
+
+  useEffect(() => {
+    keepOnly(order);
+    if (canvas.current && width)
+      draw(Math.min(FULL_WIDTH, Math.max(160, width)), canvas.current);
+  }, [draw, width, pixels, order]);
+
+  if (!built || !shown) return null;
   const on = built.placed,
     off = views.filter((v) => !on.includes(v.id)).map((v) => v.id),
     noPicture = views.filter((v) => on.includes(v.id) && !v.blob).length;
 
   function save() {
-    const out = drawn.current;
+    // The saved drawing is full size with every label, whatever the page shows.
+    const out = draw(FULL_WIDTH, null);
     if (!out || !built) {
       notice("The plan is still drawing. Try again in a moment.");
       return;
@@ -114,13 +153,20 @@ export default function RoomPlanPanel({
   }
 
   return (
-    <div className="ruler-plan room-plan">
+    <div className="ruler-plan room-plan" ref={holder}>
       <h4>Room plan</h4>
       <canvas
         ref={canvas}
         role="img"
         data-testid="room-plan"
         data-pictures={on.length}
+        data-labels={
+          width >= FULL_LABELS_FROM
+            ? "all"
+            : width >= WALL_LABELS_FROM
+              ? "walls"
+              : "few"
+        }
         aria-label={`The room seen from above, drawn to scale from ${picturesText(on, order)}, with the reference, every shape and the room's outline`}
       />
       <p className="ruler-basis" data-testid="room-plan-note">
@@ -134,7 +180,10 @@ export default function RoomPlanPanel({
           : ""}
         Where pictures overlap, the one that shows that patch of floor in more
         pixels is used, which is the nearer camera. A small cross is where one
-        picture alone puts a point that several show. {LEGEND}
+        picture alone puts a point that several show. {LEGEND}{" "}
+        {width < FULL_LABELS_FROM
+          ? `This plan is under ${width < WALL_LABELS_FROM ? WALL_LABELS_FROM : FULL_LABELS_FROM} px wide, so ${width < WALL_LABELS_FROM ? "the wall lengths and " : ""}the smaller labels are left out here: every number is in the lists above, and the saved plan has them all.`
+          : "Every number on the plan is also in the lists above."}
       </p>
       <div className="ruler-group" role="group" aria-label="Room plan">
         <button

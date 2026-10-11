@@ -5,7 +5,7 @@ import type { Pt } from "../homography";
 import { COLORS, type Prim } from "../plan-layout";
 import type { Fit } from "../topdown";
 import { toRoomMap, type Layer } from "./room-plan";
-import type { Extra } from "./room-scene";
+import type { Extra, RoomScene } from "./room-scene";
 import type { RoomSolution } from "./room-solve";
 import { solved } from "./view-frame";
 import type { View } from "./views-store";
@@ -25,7 +25,7 @@ export function layoutExtras(extras: readonly Extra[], fit: Fit): Prim[] {
       // The label and its lines go inside the outline's top left corner.
       const x0 = Math.min(...pts.map((p) => p[0])),
         y0 = Math.min(...pts.map((p) => p[1]));
-      [e.label, ...(e.more ?? [])].forEach((text, i) =>
+      [e.label, ...(e.more ?? [])].filter(Boolean).forEach((text, i) =>
         out.push({
           t: "text",
           x: (e.more ? x0 : pts[0][0]) + 5,
@@ -101,5 +101,70 @@ export function planLayers(
     return rigid && px && d?.sheet
       ? [{ ...px, h: toRoomMap(rigid, d.sheet.h), lens: d.lens }]
       : [];
+  });
+}
+
+/** A plan this many pixels wide or more has room for every label. */
+export const FULL_LABELS_FROM = 400;
+/** Under this width the wall lengths are left to the list beside the plan. */
+export const WALL_LABELS_FROM = 300;
+
+/** The scene with the labels a plan `width` pixels wide has no room for
+ * taken out, least important first. Under 400 px: how far apart the
+ * pictures put a point, the names on boxes, Walls outlines and height marks,
+ * and each picture's own span readings. Under 300 px also the lengths on
+ * walls and on each shape's legs. The room's name, area and perimeter and
+ * the R numbers stay at any width. Every number left out is in the lists
+ * beside the plan. */
+export function thinFor(scene: RoomScene, width: number): RoomScene {
+  if (width >= FULL_LABELS_FROM) return scene;
+  const walls = width >= WALL_LABELS_FROM;
+  return {
+    ...scene,
+    scene: {
+      ...scene.scene,
+      items: scene.scene.items.map((i) =>
+        i.kind === "span"
+          ? { ...i, label: "" }
+          : i.kind === "reference" || walls
+            ? i
+            : { ...i, legs: i.legs.map(() => "") },
+      ),
+    },
+    extras: scene.extras.map((e) =>
+      e.kind === "dot"
+        ? { ...e, label: /^R\d+/.exec(e.label)?.[0] ?? "" }
+        : e.more
+          ? { ...e, legs: walls ? e.legs : undefined }
+          : { ...e, label: "" },
+    ),
+  };
+}
+
+/** Every label moved to lie wholly inside a canvas `width` by `height`, and
+ * empty ones dropped. `measure` gives a text's width at a font size. */
+export function keepInside(
+  prims: readonly Prim[],
+  width: number,
+  height: number,
+  measure: (text: string, size: number) => number,
+): Prim[] {
+  const EDGE = 3;
+  return prims.flatMap((p): Prim[] => {
+    if (p.t !== "text") return [p];
+    if (!p.text) return [];
+    const w = measure(p.text, p.size),
+      before = p.anchor === "middle" ? w / 2 : p.anchor === "end" ? w : 0,
+      left = Math.min(
+        Math.max(p.x - before, EDGE),
+        Math.max(EDGE, width - EDGE - w),
+      );
+    return [
+      {
+        ...p,
+        x: left + before,
+        y: Math.min(Math.max(p.y, p.size + 1), height - EDGE),
+      },
+    ];
   });
 }

@@ -8,9 +8,12 @@ import {
   toRoomMap,
   type Layer,
 } from "../src/panels/ruler/room/room-plan";
+import { layoutScene } from "../src/panels/ruler/plan-layout";
 import {
+  keepInside,
   layoutExtras,
   planLayers,
+  thinFor,
 } from "../src/panels/ruler/room/room-plan-draw";
 import { roomScene } from "../src/panels/ruler/room/room-scene";
 import { solveRoom, toOwn } from "../src/panels/ruler/room/room-solve";
@@ -351,6 +354,72 @@ describe("the room plan's contents", () => {
         (e) => e.kind === "dot" && /^R1, \d+ mm apart$/.test(e.label),
       ),
     ).toBe(true);
+    // Labels by width: all from 400 px, no small labels under it, no wall
+    // lengths under 300; the room's name and numbers and the R numbers stay.
+    const texts = (width: number) => {
+        const t = thinFor(scene, width),
+          f = fitBox(t.scene.bounds, width, width * 0.75);
+        return keepInside(
+          [...layoutScene(t.scene, f), ...layoutExtras(t.extras, f)],
+          f.width,
+          f.height,
+          (text, size) => text.length * size * 0.6,
+        ).flatMap((p) => (p.t === "text" ? [p] : []));
+      },
+      has = (width: number, re: RegExp) =>
+        texts(width).some((p) => re.test(p.text));
+    for (const [width, small, walls] of [
+      [480, true, true],
+      [400, true, true],
+      [399, false, true],
+      [300, false, true],
+      [299, false, false],
+      [200, false, false],
+    ] as const) {
+      expect(has(width, /mm apart$/), `apart at ${width}`).toBe(small);
+      expect(has(width, /^Walls, picture 2$/), `names at ${width}`).toBe(small);
+      expect(has(width, /^1\.81\d* ± /), `span at ${width}`).toBe(small);
+      expect(has(width, /^4\.20? ± 0\.\d+ m$/), `walls at ${width}`).toBe(
+        walls,
+      );
+      expect(has(width, /^Room$/)).toBe(true);
+      expect(has(width, /^area 13\.0/)).toBe(true);
+      expect(has(width, /^R1/)).toBe(true);
+      // Every label lies wholly inside the canvas, and none is empty.
+      const f = fitBox(thinFor(scene, width).scene.bounds, width, width * 0.75);
+      for (const p of texts(width)) {
+        const w = p.text.length * p.size * 0.6,
+          left =
+            p.x - (p.anchor === "middle" ? w / 2 : p.anchor === "end" ? w : 0);
+        expect(p.text).not.toBe("");
+        if (w <= f.width - 6) {
+          expect(left, `${p.text} at ${width}`).toBeGreaterThanOrEqual(
+            3 - 1e-9,
+          );
+          expect(left + w, `${p.text} at ${width}`).toBeLessThanOrEqual(
+            f.width - 3 + 1e-9,
+          );
+        }
+        expect(p.y).toBeLessThanOrEqual(f.height - 3);
+      }
+    }
+    // Without the clamp at least one label would cross an edge at 300 px.
+    const raw = (() => {
+      const t = thinFor(scene, 300),
+        f = fitBox(t.scene.bounds, 300, 225);
+      return [...layoutScene(t.scene, f), ...layoutExtras(t.extras, f)].some(
+        (p) =>
+          p.t === "text" &&
+          !!p.text &&
+          (p.x -
+            (p.anchor === "middle" ? (p.text.length * p.size * 0.6) / 2 : 0) <
+            3 ||
+            p.x +
+              (p.anchor === "middle" ? 0.5 : 1) * p.text.length * p.size * 0.6 >
+              f.width - 3),
+      );
+    })();
+    expect(raw).toBe(true);
     const fit = fitBox(scene.scene.bounds),
       prims = layoutExtras(scene.extras, fit);
     expect(

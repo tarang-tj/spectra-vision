@@ -441,6 +441,20 @@ test("a room from two pictures: refused and accepted anchors, an outline from co
   await expect(page.getByTestId("room-plan-note")).toContainText(
     "Drawn from pictures 1 and 2",
   );
+  // Drawn at the size it is shown (so its labels are not shrunk), and it
+  // says which labels a plan this narrow leaves to the lists.
+  const sizes = await plan.evaluate((c: HTMLCanvasElement) => ({
+    drawn: c.width,
+    shown: Math.round(c.getBoundingClientRect().width),
+    labels: c.dataset.labels,
+  }));
+  expect(Math.abs(sizes.drawn - sizes.shown)).toBeLessThanOrEqual(2);
+  expect(sizes.labels).toBe(sizes.shown >= 400 ? "all" : "walls");
+  await expect(page.getByTestId("room-plan-note")).toContainText(
+    sizes.shown >= 400
+      ? "Every number on the plan is also in the lists above."
+      : "the smaller labels are left out here",
+  );
   // The synthetic floor is one flat colour: a fifth of the plan or more.
   await expect
     .poll(() =>

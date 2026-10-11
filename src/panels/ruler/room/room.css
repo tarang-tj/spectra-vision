@@ -148,3 +148,10 @@
   flex: 1 1 100%;
   margin: 0;
 }
+/* The room plan is drawn at the size it is shown: never stretched, so its
+   labels keep their size. */
+.ruler-plan.room-plan canvas {
+  width: auto;
+  max-width: 100%;
+  align-self: flex-start;
+}
