@@ -364,7 +364,7 @@ type Studio = {
   openPanel(id: string): void;
   immersive: boolean; // stage-only view
   stage: StageHooks; // draw on the stage, read pointer input: see "Measurement layer"
-  loadPicture(blob: Blob, label: string): Promise<number>; // put a still picture the caller holds on the stage; resolves with its source generation
+  loadPicture(blob: Blob, label: string): Promise<number>; // put a still picture the caller holds on the stage; resolves with its source generation, rejects when it cannot be read
 };
 ```
 
@@ -477,9 +477,12 @@ type RulerExtension = {
 - While something is part built, every press places its next point and none grabs a handle. `building(s)` is true for a first reference with fewer than four corners, a further reference being tapped, an open outline, path or edge of the chosen tool, and a span with one end. A reference that is small on screen can then be tapped corner by corner.
 - Otherwise a press grabs the nearest handle within reach (`hit`), or places a point. Reach is `HIT_MOUSE` (12) or `HIT_TOUCH` (24) canvas CSS pixels, cut to `SPACING_SHARE` (0.4) of the distance to the nearest other handle so two grab discs never overlap, and never under `FLOOR_MOUSE` (5) or `FLOOR_TOUCH` (8): `grabRadius`.
 - A press that grabbed a handle moves it only after `TAP_TRAVEL` (4 CSS pixels), so a tap on a handle moves nothing. A point the same press placed follows from the first pixel.
+- With Path or Area chosen and no shape of it open, a press that took hold of a handle and lifts without travelling is the shape's first point, placed where the press was (`startsShape` in `pointer.ts`). Nothing is part built before a shape's first point, so without this rule an outline started right beside a handle lost its first tap and closed one corner short. A press that travels still moves the handle, a cancelled press places nothing, and Span is unchanged: a tap on a handle places nothing and the step line says so.
 - `state.grab` holds the grabbed handle for the step line, which names it with `handleName` while it is held and after a tap that moved nothing. It goes when the points or the tool change.
 - `bindSource` sets the tool back to Span on a new picture, since the reference never survives one. The Room tool is the exception: it stays chosen when another of the room's pictures is opened.
 - With an extension tool chosen a press never places a Ruler point but may still grab one. Box and Walls hit-test their own handles with the plain `hitRadius`, without the spacing cut or the travel rule.
+
+**The reference's long side** (`long-side.ts`, `Derived.longSide`). How long a side looks on screen does not say which pair of sides is the long one: a sheet seen along its long side shows that side shorter. `chooseLongSide` lays the reference each way round, solves a plane map for each and fits a camera to each with `fitCamera`. Each fit's miss is its squared miss over the four corners divided by the squared tap uncertainty. The picture decides only when the two misses differ by more than `CLEAR_GAP` (16) and the smaller is under `FIT_LIMIT` (9); `how` is then `"picture"`. Otherwise the side that looks longer on screen stands (`looksLong` in `homography.ts`) and `how` is `"guessed"`; a square reference is `"square"`. Four taps give eight numbers and the camera has seven, so one is left to judge by, and for many pictures both ways round fit: guessed is the common case. `derive` passes `side.firstIsLong !== s.swap` to `solveSheet`, so Swap sides flips whatever was chosen, and a drag holds the side it started with. `longSideNote(side, swap)` is the panel's sentence: that the side was guessed and the edge labels should be checked; that the picture overrules the look; or, with Swap on against a clear picture, that the picture disagrees and the choice is kept. It is null when the picture agrees with the look and nothing was swapped. The choice is remembered by content in a 32-entry cache, so only a moved corner refits. The copied results text (`results-text.ts`) says when the sides were swapped by hand but does not carry the guessed note.
 
 **Adding a tool.**
 
@@ -531,6 +534,7 @@ type StagePointerEvent = {
 
 - **Overlay.** Drawn last, after the mode, the effects and the GL layer, on the one stage canvas in CSS pixels, so Record and Screenshot capture it. It is also drawn while paused (the stage keeps redrawing the held frame). Context state is saved and restored around it. An overlay that throws is logged once and skipped. Remove it in the effect cleanup.
 - **Pointer.** `onPointer(handler, { yields: true })` registers a handler that sees an event only after every other handler has declined it, whenever it was registered. It is for a handler that would take any press on the picture: Depth's 3D view turns on a drag this way, so with the Ruler open a press the Ruler uses is the Ruler's. Otherwise: events from the stage canvas; the newest handler sees an event first and returns `true` to consume it (later handlers do not see it, the browser default is prevented, and on a consumed `down` the canvas captures the pointer so a drag continues outside it). While any handler is registered the canvas sets `touch-action: none` and a crosshair cursor (`canvas[data-pointer="on"]`). With none registered the canvas behaves as before. To drag a handle, remember the pointer id on `down` and return `true` for its `move` and `up`.
+- **The canvas's own click listener.** While any pointer handler is registered, `CameraStage` adds an empty `click` listener to the canvas itself. Chrome's touch adjustment retargets a whole touch to the nearest element that answers a click unless the element under the finger answers clicks itself, and it counts only listeners on the element, which React's (on the root) are not. Without it a touch a few pixels above a stage button pressed the button. `.stage-tools` takes no pointer events itself, only its buttons, so its padding is picture too.
 - **Pause.** `setPaused(true)` stops detection and holds the last frame (a video source pauses too); an uploaded photo is already still. Whoever pauses resumes.
 - `unproject(point, rect, mirror)` in `src/vision/geometry.ts` is the pure inverse of `project`.
 
@@ -634,7 +638,7 @@ telemetry.on("result", (e) => {}); // { result, generation }  one per merged vis
 - **Command palette** (`commands.ts`, `palette-commands.ts`, `CommandPalette`): built from the registries only while it is open.
 - **Immersive view** (`ImmersiveDock`, `immersive.css`): the stage fixed to the viewport, nothing scroll-locked.
 - **Recorder and result card** (`use-clip-recorder.ts`, `ShareCard`): the one recorder implementation. A finished clip is downloaded and also shown in the card from an object URL that is revoked when the card is dismissed. Nothing is uploaded.
-- **Source controls** (`use-source-controls.ts`): mode, source, pause, mirror and motion demo, with the rules that tie them together.
+- **Source controls** (`use-source-controls.ts`): mode, source, pause, mirror and motion demo, with the rules that tie them together. `useSource().upload(file, onTake)` resolves with `Opened`: `{ ok: true, generation }` (the generation is null for a video, and for a picture a newer source overtook while it decoded) or `{ ok: false }`. A picture is decoded before the source on the stage is released, so a damaged image or a file that is neither an image nor a video leaves the stage, its taps and the switches as they were; `onTake` (which resets pause, mirror and the motion demo) does not run, and the stage's notice says the file could not be read. A damaged video still replaces the stage.
 
 ## Offline
 
@@ -679,7 +683,8 @@ src/panels/ruler/           the plane solve (homography.ts, derive.ts, monte-car
                             tape-test.tsx); the tool contract (extension-types.ts, extensions.ts,
                             camera-of.ts, plumbs.ts, reading.ts); tap.ts (grab radius, press to
                             pixel, clamp to the picture); grab.ts (which handle a press takes, and
-                            when a press places instead); fit/ (Box), walls/ (Walls) and room/
+                            when a press places instead); long-side.ts (which way round the
+                            reference lies); fit/ (Box), walls/ (Walls) and room/
                             (several pictures of one room, the Room tool, the room plan and file)
 src/studio-context.ts       Studio type and useStudio()
 src/session-export.ts       the JSON download
@@ -713,5 +718,5 @@ tests/                      unit: tracker, registry (with fixtures), vision, tel
                             e2e: studio, modes, effects, lab, shell, mode-switch, no-webgl, measure,
                             ruler*, fit, walls, room, depth, demo-page, detection-models,
                             detection-stability, library, presence, error-boundary,
-                            still-picture, panel-layout
+                            still-picture, panel-layout, unreadable-file
 ```

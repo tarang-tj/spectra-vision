@@ -39,15 +39,16 @@ export default function HelpPanel() {
         OBJ and CSV files; More known sizes adds further references and
         tape-measured spans, and the tape test checks a reading against a tape.
         The Ruler can also hold several still pictures of one room: each keeps
-        its own taps, a later picture joins the plan through a point marked in
-        it and in a picture already on the plan, and it is refused in words when
-        the pictures disagree. Its Room tool outlines the room from corners seen
-        in different pictures, with wall lengths, perimeter and floor area, a
-        merged plan to save as SVG and CSV, and a room file to save and open
-        again. The bars cover tap placement, not lens distortion. Several
-        pictures of one room have been checked on synthetic pictures only, and
-        none of the Ruler has been checked against a tape measure in a real
-        room.
+        its own taps, a later picture joins the plan only when two points marked
+        in it and in pictures already on the plan agree, and it is refused in
+        words when the pictures disagree. Where a picture does not settle which
+        side of the reference is the long one, a note says it was guessed. Its
+        Room tool outlines the room from corners seen in different pictures,
+        with wall lengths, perimeter and floor area, a merged plan to save as
+        SVG and CSV, and a room file to save and open again. The bars cover tap
+        placement, not lens distortion. Several pictures of one room have been
+        checked on synthetic pictures only, and none of the Ruler has been
+        checked against a tape measure in a real room.
       </p>
       <p>
         Use HTTPS or localhost for camera access. Start with good light; keep
