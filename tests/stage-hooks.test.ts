@@ -113,6 +113,38 @@ describe("stage pointer hooks", () => {
     expect(hooks.dispatch("down", 0.5, 0.5, who)).toBe(true);
     expect(order).toEqual(["new", "old"]);
   });
+  it("gives a yielding handler only what every other handler declined, whichever was registered first", () => {
+    for (const yieldingFirst of [true, false]) {
+      const { hooks } = ready(),
+        order: string[] = [];
+      let wanted = true;
+      const turn = () => {
+          order.push("turn");
+          return true;
+        },
+        ruler = () => {
+          order.push("ruler");
+          return wanted;
+        };
+      if (yieldingFirst) hooks.onPointer(turn, { yields: true });
+      const offRuler = hooks.onPointer(ruler);
+      if (!yieldingFirst) hooks.onPointer(turn, { yields: true });
+      // The other handler uses the press: the yielding one never sees it.
+      expect(hooks.dispatch("down", 0.5, 0.5, who)).toBe(true);
+      expect(order).toEqual(["ruler"]);
+      // It declines: the press falls through.
+      wanted = false;
+      order.length = 0;
+      expect(hooks.dispatch("down", 0.5, 0.5, who)).toBe(true);
+      expect(order).toEqual(["ruler", "turn"]);
+      // Alone, the yielding handler takes the press.
+      offRuler();
+      order.length = 0;
+      expect(hooks.dispatch("down", 0.5, 0.5, who)).toBe(true);
+      expect(order).toEqual(["turn"]);
+      expect(hooks.hasPointerHandlers()).toBe(true);
+    }
+  });
   it("does nothing, and consumes nothing, with no handler or no source", () => {
     const { hooks } = ready();
     expect(hooks.hasPointerHandlers()).toBe(false);

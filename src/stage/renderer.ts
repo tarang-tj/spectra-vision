@@ -62,6 +62,7 @@ export class StageRenderer {
     // Mode and source changes are picked up here, on the frame after
     // they happen, so the loop below is the only place that touches them.
     if (inputs.mode !== this.mode) {
+      this.leave();
       this.mode = inputs.mode;
       this.modeFailed = false;
       this.effects.setMode(inputs.mode);
@@ -137,7 +138,17 @@ export class StageRenderer {
       });
   }
 
+  /** Tell the mode on the stage that it is going. */
+  private leave() {
+    try {
+      this.mode?.leave?.();
+    } catch (error) {
+      console.error(`[spectra mode] ${this.mode?.id} leave failed:`, error);
+    }
+  }
+
   dispose() {
+    this.leave();
     this.effects.dispose();
     this.layer.dispose();
     this.mode = null;

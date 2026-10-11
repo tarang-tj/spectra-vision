@@ -6,7 +6,7 @@ import { drawLegend, drawMap, drawMarker, extremes } from "./lib/depth-map";
 import { measuredDepth } from "./lib/depth-measured";
 import { depthScale } from "./lib/depth-metric";
 import { depthExtra, depthRows, legendOf } from "./lib/depth-readout";
-import { cloudHeld, drawCloud } from "./lib/depth-session";
+import { cloudHeld, drawCloud, releaseCloud } from "./lib/depth-session";
 import { getDepthView } from "./lib/depth-store";
 import { drawChip } from "./lib/hud";
 import type { ModeDef } from "./types";
@@ -74,6 +74,9 @@ const depth: ModeDef = {
     label: "Demo studio",
   },
   controls: DepthControls,
+  // Another mode has the stage: the 3D view's WebGL objects and its pointer
+  // handler go now, not when that mode's model has finished loading.
+  leave: releaseCloud,
   drawBase(ctx, frame) {
     onStage = frame.source;
     const task = frame.result?.tasks.depth,
