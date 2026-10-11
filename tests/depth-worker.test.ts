@@ -27,6 +27,11 @@ type Internals = {
     finite: boolean;
   };
   DEFAULT_SIZE: { CPU: number; GPU: number };
+  contentRect(
+    rgba: ArrayLike<number>,
+    w: number,
+    h: number,
+  ): { x: number; y: number; width: number; height: number } | null;
 };
 type Fed = { name: string; dims: number[]; data: Float32Array };
 
@@ -36,6 +41,8 @@ function startWorker(
     /** The output for an input of these dims; default is a ramp. */
     output?: (dims: number[]) => { dims: number[]; data: Float32Array };
     fail?: string;
+    /** The RGBA bytes the canvas gives back for a w x h read; default grey. */
+    pixels?: (w: number, h: number) => Uint8ClampedArray;
   } = {},
 ) {
   const posted: Posted[] = [],
@@ -92,9 +99,11 @@ function startWorker(
           drawn.push([x, y, w, h]),
         // Mid grey with a little red, everywhere.
         getImageData: (_x: number, _y: number, w: number, h: number) => ({
-          data: Uint8ClampedArray.from({ length: w * h * 4 }, (_, i) =>
-            i % 4 === 0 ? 255 : i % 4 === 3 ? 255 : 128,
-          ),
+          data:
+            options.pixels?.(w, h) ??
+            Uint8ClampedArray.from({ length: w * h * 4 }, (_, i) =>
+              i % 4 === 0 ? 255 : i % 4 === 3 ? 255 : 128,
+            ),
         }),
       };
     }
@@ -546,5 +555,122 @@ describe("the depth worker's messages", () => {
     await worker.send(frame(bitmap));
     expect(worker.posted).toEqual([]);
     expect(bitmap.closed).toBe(1);
+  });
+});
+
+/** A w x h frame of mid-grey picture with bars of one colour and the given
+ * thickness on each side, as RGBA bytes. `noise` is added to the bars'
+ * channels, the way a compressed video leaves them not quite flat. Built
+ * here, without the worker's own code. */
+function barred(
+  w: number,
+  h: number,
+  bars: { top?: number; bottom?: number; left?: number; right?: number },
+  colour: [number, number, number] = [0, 0, 0],
+  noise = 0,
+) {
+  const { top = 0, bottom = 0, left = 0, right = 0 } = bars,
+    rgba = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const bar = y < top || y >= h - bottom || x < left || x >= w - right,
+        i = 4 * (y * w + x),
+        // The picture has dark specks too: darkness alone is not a bar.
+        picture = x % 7 === 0 && y % 5 === 0 ? 4 : 120 + ((x + y) % 60),
+        jitter = noise ? ((x * 31 + y * 17) % (noise + 1)) - noise / 2 : 0;
+      for (let c = 0; c < 3; c++)
+        rgba[i + c] = bar ? colour[c] + jitter : picture;
+      rgba[i + 3] = 255;
+    }
+  return rgba;
+}
+// The colour the motion demo's own bars have (read from the clip's pixels).
+const PAGE_DARK: [number, number, number] = [15, 24, 28];
+
+describe("dark bars round the picture", () => {
+  const { contentRect } = startWorker().internals;
+
+  it("finds the picture inside bars, one cell in from each cut side", () => {
+    // 42 x 28 with bars of 6 (left), 4 (right), 3 (top), 5 (bottom): the
+    // picture is columns 6..37 and rows 3..22; one cell in gives 7..36, 4..21.
+    const rect = contentRect(
+      barred(42, 28, { left: 6, right: 4, top: 3, bottom: 5 }),
+      42,
+      28,
+    );
+    expect(rect).toEqual({ x: 7, y: 4, width: 30, height: 18 });
+  });
+  it("takes bars in a dark colour that compression left not quite flat", () => {
+    expect(
+      contentRect(barred(42, 28, { left: 6, right: 6 }, PAGE_DARK, 6), 42, 28),
+    ).toEqual({ x: 7, y: 0, width: 28, height: 28 });
+  });
+  it("leaves a picture without bars whole", () => {
+    expect(contentRect(barred(42, 28, {}), 42, 28)).toBeNull();
+  });
+  it("does not take one dark line for a bar", () => {
+    expect(contentRect(barred(42, 28, { top: 1, left: 1 }), 42, 28)).toBeNull();
+  });
+  it("does not take a flat band that is not dark for a bar", () => {
+    // A dim wall or a white backdrop along an edge is picture.
+    for (const level of [70, 255])
+      expect(
+        contentRect(
+          barred(42, 28, { left: 6, top: 4 }, [level, level, level]),
+          42,
+          28,
+        ),
+        String(level),
+      ).toBeNull();
+  });
+  it("does not take a dark band that is not flat for a bar", () => {
+    // Dark but varying by 30 levels along the edge: a shadow, not a bar.
+    expect(
+      contentRect(barred(42, 28, { left: 6 }, [16, 16, 16], 30), 42, 28),
+    ).toBeNull();
+  });
+  it("has no picture rectangle for a frame that is one dark colour all over", () => {
+    expect(contentRect(new Uint8ClampedArray(42 * 28 * 4), 42, 28)).toBeNull();
+    expect(
+      contentRect(barred(42, 28, { left: 42 }, PAGE_DARK), 42, 28),
+    ).toBeNull();
+  });
+
+  it("a result names the picture's cells and takes its range from them alone", async () => {
+    // The model answers 9 (very near) on the bars and a ramp of 1 to 2 on
+    // the picture, as the real one does on a padded video.
+    const bars = { left: 28, right: 14, top: 0, bottom: 0 };
+    const w = startWorker({
+      pixels: (width, height) => barred(width, height, bars, PAGE_DARK, 4),
+      output: ([, , h, width]) => ({
+        dims: [1, h, width],
+        data: Float32Array.from({ length: h * width }, (_, i) => {
+          const x = i % width;
+          return x < 28 || x >= width - 14 ? 9 : 1 + x / width;
+        }),
+      }),
+    });
+    await w.send(init("CPU"));
+    // 1586 x 992 at the CPU size is 308 x 196 (see the sizing test above).
+    await w.send(frame(bitmapOf(1586, 992)));
+    const result = w.posted.find((p) => p.message.type === "result")!.message
+        .result as TaskResult,
+      extra = result.extra as DepthExtra;
+    expect(extra.content).toEqual({ x: 29, y: 0, width: 264, height: 196 });
+    // The picture's own range: 1 + 29 / 308 to 1 + 292 / 308, never the 9.
+    expect(extra.min).toBeCloseTo(1 + 29 / 308, 5);
+    expect(extra.max).toBeCloseTo(1 + 292 / 308, 5);
+    expect(extra.values).toHaveLength(308 * 196);
+  });
+  it("a result for a picture without bars carries no rectangle", async () => {
+    const w = startWorker();
+    await w.send(init("CPU"));
+    await w.send(frame(bitmapOf(1586, 992)));
+    const extra = (
+      w.posted.find((p) => p.message.type === "result")!.message
+        .result as TaskResult
+    ).extra as DepthExtra;
+    expect("content" in extra).toBe(false);
+    expect(extra.min).toBe(0);
   });
 });

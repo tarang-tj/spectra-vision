@@ -14,13 +14,28 @@ import type { DepthScale, MetricScale } from "./depth-metric";
 /** The depth map of a "depth" result, or null when it is missing. */
 export function depthExtra(result: TaskResult | undefined): DepthExtra | null {
   const extra = result?.kind === "depth" ? result.extra : undefined;
-  return extra &&
-    extra.values instanceof Float32Array &&
-    typeof extra.width === "number" &&
-    typeof extra.height === "number" &&
-    extra.values.length === extra.width * extra.height
-    ? (extra as DepthExtra)
-    : null;
+  if (
+    !extra ||
+    !(extra.values instanceof Float32Array) ||
+    typeof extra.width !== "number" ||
+    typeof extra.height !== "number" ||
+    extra.values.length !== extra.width * extra.height
+  )
+    return null;
+  // A picture rectangle that does not fit the map is not believed: the map
+  // is then taken whole, as a result without one is.
+  const c = extra.content as DepthExtra["content"],
+    fits =
+      !!c &&
+      [c.x, c.y, c.width, c.height].every(Number.isInteger) &&
+      c.x >= 0 &&
+      c.y >= 0 &&
+      c.width > 0 &&
+      c.height > 0 &&
+      c.x + c.width <= extra.width &&
+      c.y + c.height <= extra.height;
+  if (c !== undefined && !fits) delete extra.content;
+  return extra as DepthExtra;
 }
 
 const WORKING = "working out the error";

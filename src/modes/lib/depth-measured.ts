@@ -7,6 +7,8 @@
 import { combineErrors, measured, type Measured } from "../../measure/noise";
 import { sampleSd } from "../../measure/series";
 import { cameraTrials } from "../../panels/ruler/camera-of";
+import { subscribePlumbs } from "../../panels/ruler/plumbs";
+import { subscribe } from "../../panels/ruler/state";
 import { depthAt, fitDepth } from "../../vision/depth/affine-fit";
 import { samplesFor } from "./depth-floor";
 import type { MetricScale } from "./depth-metric";
@@ -22,6 +24,21 @@ const SETTLE_ASKS = 8;
 type Retake = { a: number; b: number; near: number; far: number };
 type Retakes = { asks: number; fits: Retake[] | null };
 const store = new WeakMap<MetricScale, Retakes>();
+
+// Told when a scale's retakes have just been worked out: what was "pending"
+// can now be read, without waiting for another depth map (on a still picture
+// there is none).
+const settled = new Set<() => void>();
+/** Called when what Depth shows for a map may have changed without a new
+ * map: the Ruler's points or plumb lines moved, or the retakes settled. */
+export function onDepthReadout(listener: () => void): () => void {
+  settled.add(listener);
+  const offs = [subscribe(listener), subscribePlumbs(listener)];
+  return () => {
+    settled.delete(listener);
+    offs.forEach((off) => off());
+  };
+}
 
 function refit(scale: MetricScale): Retake[] {
   const step = Math.max(1, Math.ceil(scale.cells.length / MAX_RETAKE_CELLS)),
@@ -42,6 +59,8 @@ function retakesOf(scale: MetricScale): Retake[] | null {
   if (!entry.fits) {
     if (++entry.asks < SETTLE_ASKS) return null;
     entry.fits = refit(scale);
+    // After this call returns, so no listener runs inside a draw.
+    queueMicrotask(() => settled.forEach((listener) => listener()));
   }
   return entry.fits;
 }

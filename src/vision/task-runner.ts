@@ -10,6 +10,7 @@ import {
   onDelegateChoice,
   requestedDelegate,
 } from "./delegate";
+import { downloadFailure } from "./download-failure";
 import { modelOf, onPrecisionChange } from "./settings";
 import type { Delegate, TaskResult, TaskSpec } from "./types";
 
@@ -120,7 +121,17 @@ export function createTaskRunner(
   const fail = (message: string) => {
     busy = false;
     ready = false;
-    const retry = fallbackDelegate(active);
+    // A download that failed is not the delegate's doing: the same fetch
+    // would fail on CPU too, so there is no retry and no GPU failure on
+    // record. It is said as what it is (offline, or the server's answer).
+    const download = produced
+        ? null
+        : downloadFailure(
+            message,
+            typeof navigator === "undefined" || navigator.onLine !== false,
+          ),
+      retry = download ? null : fallbackDelegate(active);
+    if (download) message = download;
     if (!retry && model !== spec.model && !produced) {
       // The precise model never produced a frame (offline on first use, a
       // failed download): run the standard one and say so, so a saved
@@ -249,8 +260,8 @@ export function createTaskRunner(
       fail("Vision worker failed. Retry or use a current Chrome/Edge browser.");
     };
     // `live` holds functions, which cannot be posted: its current values are
-    // folded into the options instead.
-    const { live, ...plain } = spec;
+    // folded into the options instead. `restate` is the page's own business.
+    const { live, restate: _page, ...plain } = spec;
     worker.postMessage({
       type: "init",
       base,

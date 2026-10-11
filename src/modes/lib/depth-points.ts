@@ -10,8 +10,8 @@ import {
   unprojectRelief,
   type Cloud,
 } from "../../vision/depth/unproject";
-import type { Frame } from "../../vision/frame";
 import type { DepthExtra } from "../../vision/types";
+import { contentOf } from "./depth-map";
 import type { DepthScale } from "./depth-metric";
 
 /** Metric points farther than this many times the marked floor's far edge
@@ -33,7 +33,11 @@ let scratch: HTMLCanvasElement | null = null;
 
 /** The picture's own colour for every point, read at the map's size. If the
  * picture cannot be read, the depth map's colours are used instead. */
-function colorsFor(frame: Frame, extra: DepthExtra, cloud: Cloud): Uint8Array {
+function colorsFor(
+  picture: CanvasImageSource,
+  extra: DepthExtra,
+  cloud: Cloud,
+): Uint8Array {
   const { width, height } = extra,
     out = new Uint8Array(cloud.count * 4);
   let pixels: Uint8ClampedArray;
@@ -42,7 +46,7 @@ function colorsFor(frame: Frame, extra: DepthExtra, cloud: Cloud): Uint8Array {
     scratch.width = width;
     scratch.height = height;
     const ctx = scratch.getContext("2d", { willReadFrequently: true })!;
-    ctx.drawImage(frame.source!.element, 0, 0, width, height);
+    ctx.drawImage(picture, 0, 0, width, height);
     pixels = ctx.getImageData(0, 0, width, height).data;
   } catch {
     pixels = colorize(
@@ -73,13 +77,15 @@ function middleDepth(cloud: Cloud): number {
 }
 
 /** The points of a depth result, their colours and the view they are first
- * seen from: metric when the scale is, else a relief. */
+ * seen from: metric when the scale is, else a relief. `picture` is what the
+ * colours are read from: the frame the map was computed from. */
 export function buildPoints(
-  frame: Frame,
+  picture: CanvasImageSource,
   extra: DepthExtra,
   scale: DepthScale,
 ): Points {
-  const { values, width, height } = extra;
+  const { values, width, height } = extra,
+    within = contentOf(extra);
   let cloud: Cloud, orbit: ViewBase;
   if (scale.metric) {
     const { camera, fit } = scale,
@@ -98,6 +104,7 @@ export function buildPoints(
       (output) => depthAt(fit, output),
       FAR_CUTOFF * fit.far,
       scale.flatten,
+      within,
     );
     // Seen from where the camera stood: with no turn this is the photo. It
     // turns about the point on the camera's axis at the middle depth, so a
@@ -116,7 +123,14 @@ export function buildPoints(
       fovY: 2 * Math.atan(source.h / 2 / camera.f),
     };
   } else {
-    cloud = unprojectRelief(values, width, height, extra.min, extra.max);
+    cloud = unprojectRelief(
+      values,
+      width,
+      height,
+      extra.min,
+      extra.max,
+      within,
+    );
     orbit = {
       eye: [0, 0, -1 / Math.tan(RELIEF_FOV / 2)],
       pivot: [0, 0, RELIEF_HEIGHT],
@@ -126,7 +140,7 @@ export function buildPoints(
   }
   return {
     positions: cloud.positions,
-    colors: colorsFor(frame, extra, cloud),
+    colors: colorsFor(picture, extra, cloud),
     count: cloud.count,
     orbit,
   };

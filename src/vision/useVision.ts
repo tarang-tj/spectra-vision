@@ -2,7 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { tasksOf } from "../modes";
 import { telemetry } from "../telemetry/bus";
 import type { ModeDef } from "../modes";
+import { firstDownloadNote } from "./first-download";
+import { createFrameHolder } from "./held-frame";
 import { mergeResults } from "./merge";
+import { createStillGate, setStillState } from "./still";
+import "./still-holds";
 import { createTaskRunner } from "./task-runner";
 import type { TaskRunner } from "./task-runner";
 import type { Source, TaskKind, TaskResult, VisionResult } from "./types";
@@ -42,6 +46,8 @@ export function useVision(
       raf = 0,
       failed = false,
       timeout: ReturnType<typeof setTimeout> | undefined,
+      // What the stage says while the models load.
+      loading = "Loading model",
       latest: Partial<Record<TaskKind, TaskResult>> = {};
     setError("");
     setResult(null);
@@ -59,22 +65,44 @@ export function useVision(
       if (stopped || failed) return;
       clearTimeout(timeout);
       if (loaded()) return setStatus("Ready");
-      setStatus("Loading model");
+      setStatus(loading);
       timeout = setTimeout(() => {
         if (!loaded())
           unavailable("Model load timed out. Check your connection and retry.");
       }, 45000);
     };
-    const runners: TaskRunner[] = specs.map((spec) =>
+    // How often a still picture is inferred (still.ts). Anything that can
+    // change the answer wakes it: here a restart or a live option, in the
+    // tick a new picture, a new confidence or a resume.
+    const gate = createStillGate(specs.map((spec) => spec.still === "once")),
+      offs = specs.flatMap((spec) => [
+        spec.live?.subscribe(gate.wake),
+        // The mode's readout changed without a new result: show it again.
+        spec.restate?.(() => {
+          if (!stopped) setResult((shown) => (shown ? { ...shown } : shown));
+        }),
+      ]);
+    // For a task that asks, the frame each result was computed from.
+    const holders = specs.map((spec) =>
+      spec.holdFrame ? createFrameHolder() : null,
+    );
+    const runners: TaskRunner[] = specs.map((spec, index) =>
       createTaskRunner(spec, base, {
         onReady: report,
         // A delegate switch or a GPU to CPU fallback loads the model again.
-        onRestart: report,
+        onRestart() {
+          holders[index]?.drop();
+          gate.wake();
+          report();
+        },
         onResult(taskResult) {
           if (stopped) return;
+          const held = holders[index]?.commit();
+          if (held) taskResult.frame = held;
           // Results for a source that has since been replaced are discarded.
           if (taskResult.generation !== settings.current.source?.generation)
             return;
+          gate.counted(index);
           const merged = mergeResults(mode.id, kinds, latest, taskResult);
           latest = merged.tasks;
           // The module-level result feed (result-feed.ts), built only while
@@ -91,16 +119,22 @@ export function useVision(
     );
     // Hand one frame to a runner that asked for it. Each worker gets its own
     // bitmap because a bitmap is transferred, not shared.
-    const feed = async (runner: TaskRunner, generation: number) => {
-      const state = settings.current;
+    const feed = async (index: number, generation: number) => {
+      const state = settings.current,
+        runner = runners[index];
       try {
-        const bitmap = await createImageBitmap(state.source!.element);
+        const element = state.source!.element,
+          bitmap = await createImageBitmap(element);
         if (stopped || generation !== settings.current.source?.generation) {
           bitmap.close();
           runner.release();
           return;
         }
-        runner.send(bitmap, performance.now(), generation, state.confidence);
+        const now = performance.now();
+        // A still picture never moves on, so there is nothing to hold.
+        if (element instanceof HTMLVideoElement)
+          holders[index]?.capture(bitmap, now);
+        runner.send(bitmap, now, generation, state.confidence);
       } catch {
         runner.release();
         if (!stopped)
@@ -113,22 +147,38 @@ export function useVision(
       if (stopped) return;
       raf = requestAnimationFrame(tick);
       const state = settings.current,
-        element = state.source?.element;
-      if (state.paused || !element) return;
+        element = state.source?.element,
+        resting = state.paused || !element,
+        paced = gate.tick(
+          !!element && !(element instanceof HTMLVideoElement),
+          state.source?.generation ?? -1,
+          state.confidence,
+          resting,
+        );
+      if (resting) return;
       if (element instanceof HTMLVideoElement && element.readyState < 2) return;
       for (let i = 0; i < runners.length; i++) {
         const runner = runners[i];
-        if (!runner.wants(time)) continue;
+        if (!runner.wants(time) || (paced && !gate.allows(i, time))) continue;
         runner.claim(time);
-        void feed(runner, state.source!.generation);
+        gate.sent(i, time);
+        void feed(i, state.source!.generation);
       }
     };
     report();
+    // A large model that is not on this device yet: say its size, once.
+    void firstDownloadNote(specs, base).then((note) => {
+      if (stopped || failed || !note || loaded()) return;
+      loading = note;
+      setStatus(note);
+    });
     raf = requestAnimationFrame(tick);
     return () => {
       stopped = true;
       clearTimeout(timeout);
       cancelAnimationFrame(raf);
+      offs.forEach((off) => off?.());
+      setStillState({ state: "live" });
       runners.forEach((runner) => runner.dispose());
     };
   }, [mode, restart]);
