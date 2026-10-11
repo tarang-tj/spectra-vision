@@ -3,7 +3,7 @@
 // picture, its legend, and where its nearest and farthest values are.
 import { colorAt, colorize } from "../../vision/depth/colormap";
 import type { Frame } from "../../vision/frame";
-import type { DepthExtra, Point } from "../../vision/types";
+import type { DepthExtra, MapRect, Point } from "../../vision/types";
 
 let painted: { values: Float32Array; canvas: HTMLCanvasElement } | null = null;
 
@@ -38,7 +38,43 @@ export function drawMap(
   ctx.globalAlpha = opacity;
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(mapCanvas(extra), rect.x, rect.y, rect.w, rect.h);
+  // Only the cells that are picture: a frame's black bars are not depth.
+  const c = contentOf(extra),
+    sx = rect.w / extra.width,
+    sy = rect.h / extra.height;
+  ctx.drawImage(
+    mapCanvas(extra),
+    c.x,
+    c.y,
+    c.width,
+    c.height,
+    rect.x + c.x * sx,
+    rect.y + c.y * sy,
+    c.width * sx,
+    c.height * sy,
+  );
+  ctx.restore();
+}
+
+/** The cells of a map that are picture: all of them unless the frame has
+ * bars (`DepthExtra.content`). */
+export const contentOf = (extra: DepthExtra): MapRect =>
+  extra.content ?? { x: 0, y: 0, width: extra.width, height: extra.height };
+
+/** Lay the frame a map was computed from over the live picture, in the
+ * picture's own rectangle and mirrored with it (depth-sync.ts). */
+export function drawHeld(
+  ctx: CanvasRenderingContext2D,
+  frame: Frame,
+  image: CanvasImageSource,
+) {
+  const { rect } = frame;
+  ctx.save();
+  if (frame.mirror) {
+    ctx.translate(frame.width, 0);
+    ctx.scale(-1, 1);
+  }
+  ctx.drawImage(image, rect.x, rect.y, rect.w, rect.h);
   ctx.restore();
 }
 
@@ -48,6 +84,8 @@ export type Legend = {
   far: string;
   /** One line under the bar: what kind of depth this is. */
   note: string;
+  /** A second line when the map is not of the live picture: how far behind. */
+  lag?: string;
 };
 
 const BAR = 132;
@@ -67,13 +105,14 @@ export function drawLegend(
       BAR,
       ctx.measureText(near).width + ctx.measureText(far).width + 18,
       ctx.measureText(legend.note).width,
+      legend.lag ? ctx.measureText(legend.lag).width : 0,
     ),
     width = Math.min(wide + 20, rect.w - 16),
     x = rect.x + 8,
     // Under the stage's source badge; the lower corners hold its buttons.
     y = rect.y + 44;
   ctx.fillStyle = "rgba(7, 19, 14, 0.82)";
-  ctx.fillRect(x, y, width, 58);
+  ctx.fillRect(x, y, width, legend.lag ? 73 : 58);
   const inner = width - 20,
     gradient = ctx.createLinearGradient(x + 10, 0, x + 10 + inner, 0);
   for (let i = 0; i <= 8; i++) {
@@ -91,6 +130,10 @@ export function drawLegend(
   ctx.font = "500 10px Inter Variable, sans-serif";
   ctx.fillStyle = "#b9cbc4";
   ctx.fillText(legend.note, x + 10, y + 49, inner);
+  if (legend.lag) {
+    ctx.fillStyle = "#eef7f3";
+    ctx.fillText(legend.lag, x + 10, y + 64, inner);
+  }
   ctx.restore();
 }
 
@@ -101,16 +144,19 @@ let found: {
 } | null = null;
 
 /** Where the map's largest value (nearest) and smallest value (farthest)
- * sit, image-normalized. Worked out once per result. */
+ * sit, image-normalized, among the cells that are picture. Worked out once
+ * per result. */
 export function extremes(extra: DepthExtra): { near: Point; far: Point } {
   if (found && found.values === extra.values) return found;
-  const { values, width, height } = extra;
-  let low = 0,
-    high = 0;
-  for (let i = 1; i < values.length; i++) {
-    if (values[i] < values[low]) low = i;
-    if (values[i] > values[high]) high = i;
-  }
+  const { values, width, height } = extra,
+    c = contentOf(extra);
+  let low = c.y * width + c.x,
+    high = low;
+  for (let y = c.y; y < c.y + c.height; y++)
+    for (let i = y * width + c.x, end = i + c.width; i < end; i++) {
+      if (values[i] < values[low]) low = i;
+      if (values[i] > values[high]) high = i;
+    }
   const at = (cell: number): Point => ({
     x: ((cell % width) + 0.5) / width,
     y: (Math.floor(cell / width) + 0.5) / height,

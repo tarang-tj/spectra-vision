@@ -3,6 +3,7 @@ import { tasksOf } from "../modes";
 import { telemetry } from "../telemetry/bus";
 import type { ModeDef } from "../modes";
 import { firstDownloadNote } from "./first-download";
+import { createFrameHolder } from "./held-frame";
 import { mergeResults } from "./merge";
 import { createTaskRunner } from "./task-runner";
 import type { TaskRunner } from "./task-runner";
@@ -68,13 +69,22 @@ export function useVision(
           unavailable("Model load timed out. Check your connection and retry.");
       }, 45000);
     };
-    const runners: TaskRunner[] = specs.map((spec) =>
+    // For a task that asks, the frame each result was computed from.
+    const holders = specs.map((spec) =>
+      spec.holdFrame ? createFrameHolder() : null,
+    );
+    const runners: TaskRunner[] = specs.map((spec, index) =>
       createTaskRunner(spec, base, {
         onReady: report,
         // A delegate switch or a GPU to CPU fallback loads the model again.
-        onRestart: report,
+        onRestart() {
+          holders[index]?.drop();
+          report();
+        },
         onResult(taskResult) {
           if (stopped) return;
+          const held = holders[index]?.commit();
+          if (held) taskResult.frame = held;
           // Results for a source that has since been replaced are discarded.
           if (taskResult.generation !== settings.current.source?.generation)
             return;
@@ -94,16 +104,22 @@ export function useVision(
     );
     // Hand one frame to a runner that asked for it. Each worker gets its own
     // bitmap because a bitmap is transferred, not shared.
-    const feed = async (runner: TaskRunner, generation: number) => {
-      const state = settings.current;
+    const feed = async (index: number, generation: number) => {
+      const state = settings.current,
+        runner = runners[index];
       try {
-        const bitmap = await createImageBitmap(state.source!.element);
+        const element = state.source!.element,
+          bitmap = await createImageBitmap(element);
         if (stopped || generation !== settings.current.source?.generation) {
           bitmap.close();
           runner.release();
           return;
         }
-        runner.send(bitmap, performance.now(), generation, state.confidence);
+        const now = performance.now();
+        // A still picture never moves on, so there is nothing to hold.
+        if (element instanceof HTMLVideoElement)
+          holders[index]?.capture(bitmap, now);
+        runner.send(bitmap, now, generation, state.confidence);
       } catch {
         runner.release();
         if (!stopped)
@@ -123,7 +139,7 @@ export function useVision(
         const runner = runners[i];
         if (!runner.wants(time)) continue;
         runner.claim(time);
-        void feed(runner, state.source!.generation);
+        void feed(i, state.source!.generation);
       }
     };
     report();

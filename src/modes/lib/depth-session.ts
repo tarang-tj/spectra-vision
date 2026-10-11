@@ -92,12 +92,15 @@ function ensure(): CloudRenderer | null {
 }
 
 /** Draw the 3D view over the picture's rectangle. Returns the number of
- * points drawn (0 when there is no view to draw). */
+ * points drawn (0 when there is no view to draw). The points are built once
+ * per result, so `picture` is read only when a new map arrives. */
 export function drawCloud(
   ctx: CanvasRenderingContext2D,
   frame: Frame,
   extra: DepthExtra,
   scale: DepthScale,
+  // What the points take their colours from: the frame the map was made from.
+  picture: CanvasImageSource,
 ): number {
   const { rect } = frame,
     target = ensure();
@@ -112,7 +115,7 @@ export function drawCloud(
     return 0;
   }
   if (!loaded || loaded.values !== extra.values || loaded.scale !== scale) {
-    const points = buildPoints(frame, extra, scale);
+    const points = buildPoints(picture, extra, scale);
     target.setPoints(points.positions, points.colors, points.count);
     loaded = {
       values: extra.values,

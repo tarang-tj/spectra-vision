@@ -40,6 +40,15 @@ export const cellCentre = (
   y: ((row + 0.5) / mapHeight) * height,
 });
 
+/** A rectangle of map cells; points are made for the cells inside it only. */
+export type Cells = { x: number; y: number; width: number; height: number };
+const whole = (mapWidth: number, mapHeight: number): Cells => ({
+  x: 0,
+  y: 0,
+  width: mapWidth,
+  height: mapHeight,
+});
+
 function finish(positions: Float32Array, cells: Uint32Array, n: number): Cloud {
   const low = [Infinity, Infinity, Infinity],
     high = [-Infinity, -Infinity, -Infinity];
@@ -64,8 +73,8 @@ function finish(positions: Float32Array, cells: Uint32Array, n: number): Cloud {
 }
 
 /** Metric points. `depthOf` gives a cell's depth along the camera axis from
- * the model's output, or null where it has none; such cells, and any deeper
- * than `maxDepth`, are left out. `undistort` maps a source pixel to the flat
+ * the model's output, or null where it has none; such cells, any deeper
+ * than `maxDepth` and any outside `within` are left out. `undistort` maps a source pixel to the flat
  * picture the camera model describes (the lens correction), if there is one. */
 export function unprojectMetric(
   values: Float32Array,
@@ -75,12 +84,13 @@ export function unprojectMetric(
   depthOf: (output: number) => number | null,
   maxDepth: number,
   undistort?: (p: { x: number; y: number }) => { x: number; y: number },
+  within: Cells = whole(mapWidth, mapHeight),
 ): Cloud {
   const positions = new Float32Array(values.length * 3),
     cells = new Uint32Array(values.length);
   let n = 0;
-  for (let row = 0; row < mapHeight; row++)
-    for (let col = 0; col < mapWidth; col++) {
+  for (let row = within.y; row < within.y + within.height; row++)
+    for (let col = within.x; col < within.x + within.width; col++) {
       const cell = row * mapWidth + col,
         z = depthOf(values[cell]);
       if (z === null || !(z > 0) || z > maxDepth) continue;
@@ -105,14 +115,15 @@ export function unprojectMetric(
 export const RELIEF_HEIGHT = 0.6;
 
 /** Relief points: x across the picture (-aspect to aspect), y down (-1 to 1),
- * and z from 0 at the nearest value back to RELIEF_HEIGHT * 2 at the farthest.
- * Nothing here is a length. */
+ * and z from 0 at the nearest value back to RELIEF_HEIGHT * 2 at the farthest,
+ * for the cells inside `within`. Nothing here is a length. */
 export function unprojectRelief(
   values: Float32Array,
   mapWidth: number,
   mapHeight: number,
   min: number,
   max: number,
+  within: Cells = whole(mapWidth, mapHeight),
 ): Cloud {
   const positions = new Float32Array(values.length * 3),
     cells = new Uint32Array(values.length),
@@ -120,8 +131,8 @@ export function unprojectRelief(
     span = max - min,
     scale = span > 0 ? (2 * RELIEF_HEIGHT) / span : 0;
   let n = 0;
-  for (let row = 0; row < mapHeight; row++)
-    for (let col = 0; col < mapWidth; col++) {
+  for (let row = within.y; row < within.y + within.height; row++)
+    for (let col = within.x; col < within.x + within.width; col++) {
       const cell = row * mapWidth + col;
       positions[3 * n] = (((col + 0.5) / mapWidth) * 2 - 1) * aspect;
       positions[3 * n + 1] = ((row + 0.5) / mapHeight) * 2 - 1;
