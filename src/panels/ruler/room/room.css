@@ -103,13 +103,38 @@
 .room-check {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;
   min-height: 42px;
   font-size: 13px;
   cursor: pointer;
 }
+/* As in the Library: the box a finger hits is 40 px square, the box drawn is
+   20 px in its middle, and ticked is a filled box with a tick. */
 .room-check input {
+  appearance: none;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  margin: 0 0 0 -10px;
+  display: grid;
+  place-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.room-check input::before {
+  content: "";
   width: 20px;
   height: 20px;
-  accent-color: var(--accent);
+  border: 1.5px solid #8b9a9f;
+  border-radius: 4px;
+}
+.room-check input:checked::before {
+  border-color: var(--accent);
+  background: var(--accent)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M4.5 10.5l3.5 3.5 7.5-8' fill='none' stroke='%2307130e' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 18px 18px no-repeat;
+}
+.room-check input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -6px;
 }

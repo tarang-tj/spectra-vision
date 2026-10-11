@@ -507,7 +507,7 @@ test("at 390 px wide: a room is built by taps, nothing scrolls sideways and ever
     sections.forEach((section) =>
       section
         .querySelectorAll(
-          "button, label.button, label.room-check, select, summary, canvas",
+          "button, label.button, label.room-check, input[type=checkbox], select, summary, canvas",
         )
         .forEach((el) => {
           const r = el.getBoundingClientRect(),
