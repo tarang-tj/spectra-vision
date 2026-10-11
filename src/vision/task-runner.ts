@@ -14,6 +14,11 @@ import { downloadFailure } from "./download-failure";
 import { modelOf, onPrecisionChange } from "./settings";
 import type { Delegate, TaskResult, TaskSpec } from "./types";
 
+/** Kinds whose worker fetches different runtime files on GPU and on CPU
+ * (public/depth-worker.js loads the WebGPU build of ONNX Runtime on GPU). For
+ * these a failed download on GPU says nothing about the CPU files. */
+const OWN_GPU_FILES: ReadonlySet<TaskSpec["kind"]> = new Set(["depth"]);
+
 // Inference is capped near 15 fps per task, as in v1.
 export const MIN_FRAME_GAP = 65;
 
@@ -121,9 +126,10 @@ export function createTaskRunner(
   const fail = (message: string) => {
     busy = false;
     ready = false;
-    // A download that failed is not the delegate's doing: the same fetch
-    // would fail on CPU too, so there is no retry and no GPU failure on
-    // record. It is said as what it is (offline, or the server's answer).
+    // A download that failed is not the delegate's doing: for most kinds the
+    // same fetch would fail on CPU too, so there is no retry and no GPU
+    // failure on record. It is said as what it is (offline, or the server's
+    // answer). Depth is the exception, handled just below.
     const download = produced
         ? null
         : downloadFailure(
@@ -131,6 +137,26 @@ export function createTaskRunner(
             typeof navigator === "undefined" || navigator.onLine !== false,
           ),
       retry = download ? null : fallbackDelegate(active);
+    if (
+      download &&
+      !produced &&
+      active === "GPU" &&
+      OWN_GPU_FILES.has(spec.kind)
+    ) {
+      // This kind fetches different runtime files on GPU and on CPU, so the
+      // CPU ones may be on the device when the GPU ones are not. Try CPU
+      // once. The GPU did nothing wrong: no failure is recorded against it.
+      console.warn(
+        `[spectra vision] ${spec.kind}: a file for GPU could not be fetched (${message}); trying CPU.`,
+      );
+      stop();
+      note = `A file the GPU path needs could not be downloaded. Running on CPU.`;
+      failedOver = true;
+      active = "CPU";
+      events.onRestart?.();
+      start();
+      return;
+    }
     if (download) message = download;
     if (!retry && model !== spec.model && !produced) {
       // The precise model never produced a frame (offline on first use, a

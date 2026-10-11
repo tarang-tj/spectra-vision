@@ -137,6 +137,25 @@ describe("a model that cannot be fetched", () => {
     );
     expect(gpuFailure("gesture")).toBeNull();
   });
+  it("Depth, whose GPU path loads files of its own: a failed fetch on GPU tries CPU once, without blaming the GPU", () => {
+    vi.stubGlobal("navigator", { onLine: false });
+    const h = harness(spec("depth"));
+    expect(h.workers[0].posted[0].task?.delegate).toBe("GPU");
+    h.reply(0, { type: "error", error: FETCH });
+    // The CPU files may be on the device when the GPU ones are not.
+    expect(h.workers).toHaveLength(2);
+    expect(h.workers[1].posted[0].task?.delegate).toBe("CPU");
+    expect(h.events.onError).not.toHaveBeenCalled();
+    expect(gpuFailure("depth")).toBeNull();
+    expect(taskStatus("depth", "depth.task")?.note).toContain(
+      "could not be downloaded",
+    );
+    // CPU cannot fetch its files either: now it is said, and not tried again.
+    h.reply(1, { type: "error", error: FETCH });
+    expect(h.workers).toHaveLength(2);
+    expect(h.events.onError).toHaveBeenCalledExactlyOnceWith(OFFLINE_MESSAGE);
+    expect(gpuFailure("depth")).toBeNull();
+  });
   it("a GPU failure that is not a download still falls back to CPU and is recorded", () => {
     vi.stubGlobal("navigator", { onLine: false });
     const h = harness(spec("segment"));
