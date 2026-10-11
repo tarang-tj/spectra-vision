@@ -55,6 +55,15 @@ export type TaskSpec = {
    * hand it over as `TaskResult.frame` (vision/held-frame.ts). For a model
    * slow enough that the picture moves on before it answers. */
   holdFrame?: boolean;
+  /** "once": on a still picture one result is all this task is asked for,
+   * until something changes (vision/still.ts). For a task whose results
+   * nothing counts or compares. Others are checked once a second. */
+  still?: "once";
+  /** For a mode that shows more than the result itself (Depth's metres follow
+   * the Ruler): call the listener when that changes, and the page hands the
+   * mode its latest result again without running the model. Returns the
+   * unsubscribe function. */
+  restate?: (listener: () => void) => () => void;
 };
 /** Normalized output of one task for one frame. `delegate` is the one that
  * actually ran, which differs from the requested one after a GPU fallback. */

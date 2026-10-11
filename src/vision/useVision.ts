@@ -5,6 +5,8 @@ import type { ModeDef } from "../modes";
 import { firstDownloadNote } from "./first-download";
 import { createFrameHolder } from "./held-frame";
 import { mergeResults } from "./merge";
+import { createStillGate, setStillState } from "./still";
+import "./still-holds";
 import { createTaskRunner } from "./task-runner";
 import type { TaskRunner } from "./task-runner";
 import type { Source, TaskKind, TaskResult, VisionResult } from "./types";
@@ -69,6 +71,17 @@ export function useVision(
           unavailable("Model load timed out. Check your connection and retry.");
       }, 45000);
     };
+    // How often a still picture is inferred (still.ts). Anything that can
+    // change the answer wakes it: here a restart or a live option, in the
+    // tick a new picture, a new confidence or a resume.
+    const gate = createStillGate(specs.map((spec) => spec.still === "once")),
+      offs = specs.flatMap((spec) => [
+        spec.live?.subscribe(gate.wake),
+        // The mode's readout changed without a new result: show it again.
+        spec.restate?.(() => {
+          if (!stopped) setResult((shown) => (shown ? { ...shown } : shown));
+        }),
+      ]);
     // For a task that asks, the frame each result was computed from.
     const holders = specs.map((spec) =>
       spec.holdFrame ? createFrameHolder() : null,
@@ -79,6 +92,7 @@ export function useVision(
         // A delegate switch or a GPU to CPU fallback loads the model again.
         onRestart() {
           holders[index]?.drop();
+          gate.wake();
           report();
         },
         onResult(taskResult) {
@@ -88,6 +102,7 @@ export function useVision(
           // Results for a source that has since been replaced are discarded.
           if (taskResult.generation !== settings.current.source?.generation)
             return;
+          gate.counted(index);
           const merged = mergeResults(mode.id, kinds, latest, taskResult);
           latest = merged.tasks;
           // The module-level result feed (result-feed.ts), built only while
@@ -132,13 +147,21 @@ export function useVision(
       if (stopped) return;
       raf = requestAnimationFrame(tick);
       const state = settings.current,
-        element = state.source?.element;
-      if (state.paused || !element) return;
+        element = state.source?.element,
+        resting = state.paused || !element,
+        paced = gate.tick(
+          !!element && !(element instanceof HTMLVideoElement),
+          state.source?.generation ?? -1,
+          state.confidence,
+          resting,
+        );
+      if (resting) return;
       if (element instanceof HTMLVideoElement && element.readyState < 2) return;
       for (let i = 0; i < runners.length; i++) {
         const runner = runners[i];
-        if (!runner.wants(time)) continue;
+        if (!runner.wants(time) || (paced && !gate.allows(i, time))) continue;
         runner.claim(time);
+        gate.sent(i, time);
         void feed(i, state.source!.generation);
       }
     };
@@ -154,6 +177,8 @@ export function useVision(
       stopped = true;
       clearTimeout(timeout);
       cancelAnimationFrame(raf);
+      offs.forEach((off) => off?.());
+      setStillState({ state: "live" });
       runners.forEach((runner) => runner.dispose());
     };
   }, [mode, restart]);

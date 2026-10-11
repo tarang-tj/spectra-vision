@@ -10,7 +10,7 @@ import {
   drawMarker,
   extremes,
 } from "./lib/depth-map";
-import { measuredDepth } from "./lib/depth-measured";
+import { measuredDepth, onDepthReadout } from "./lib/depth-measured";
 import { depthScale } from "./lib/depth-metric";
 import { depthExtra, depthRows, legendOf } from "./lib/depth-readout";
 import { cloudHeld, drawCloud, releaseCloud } from "./lib/depth-session";
@@ -84,6 +84,11 @@ const depth: ModeDef = {
     // A map takes long enough that a moving picture moves on: each result
     // carries the frame it was made from, and the map is drawn over that.
     holdFrame: true,
+    // Nothing counts depth maps, so a still picture is inferred once. Its
+    // metres follow the Ruler, and their error bars are worked out a moment
+    // after the Ruler settles: either is shown without a new map.
+    still: "once",
+    restate: onDepthReadout,
   },
   hint: "Depth from one camera. Yellow is near, purple is far. For metres, mark a reference and a patch of floor in the Ruler on a photo.",
   demo: {
