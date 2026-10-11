@@ -46,7 +46,8 @@ export default function StageMessage({
   onDemo: () => void;
 }) {
   const cause = CAUSES.find((c) => error.startsWith(c.match)),
-    camera = !!cause || /camera/i.test(error);
+    // The camera icon is for camera trouble only, not for a missing model.
+    camera = /camera/i.test(cause?.match ?? error);
   return (
     <div className="stage-message error" role="alert">
       {camera ? <CameraOff size={26} /> : <TriangleAlert size={26} />}

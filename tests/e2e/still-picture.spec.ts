@@ -292,6 +292,8 @@ test("offline, a mode never opened says the device is offline and the model is n
   );
   await expect(alert).not.toContainText(/GPU|Failed to fetch/);
   await expect(alert).not.toContainText("get you seeing");
+  // A warning sign, not the crossed-out camera of a camera fault.
+  await expect(alert.locator("svg").first()).toHaveClass(/triangle-alert/);
   // One attempt at the model, and nothing in the console blaming a delegate.
   expect(failed.length).toBeLessThanOrEqual(1);
   expect(warnings.filter((w) => /GPU failed|using CPU/.test(w))).toEqual([]);
