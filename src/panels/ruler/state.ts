@@ -214,3 +214,35 @@ export function bindStillness(isVideo: boolean, still: boolean) {
     pointsCleared();
   }
 }
+
+/** What the Ruler holds for one picture, without what belongs to the session
+ * (the unit, the chosen tool), to the press in progress, or to the known
+ * sizes (store-known.ts keeps that pair). Built by leaving fields out, so a
+ * field added to the state later is part of it without an edit here. */
+export type RulerSnapshot = Omit<
+  RulerState,
+  "generation" | "tool" | "unit" | "lock" | "grab" | "extraRefs" | "tapeSd"
+>;
+export function snapshot(s: RulerState = state): RulerSnapshot {
+  const { generation, tool, unit, lock, grab, extraRefs, tapeSd, ...rest } = s;
+  void [generation, tool, unit, lock, grab, extraRefs, tapeSd];
+  return rest;
+}
+/** Put a picture's points back, bound to the source `generation` it is now
+ * shown as. Everything on the picture before is dropped first, and the other
+ * tools told, exactly as on a new picture. */
+export function restore(
+  snap: RulerSnapshot,
+  generation: number,
+  tool: Tool = "span",
+) {
+  pointsCleared();
+  set({
+    ...snap,
+    extraRefs: [],
+    generation,
+    tool: snap.corners.length === 4 ? tool : "span",
+    lock: null,
+    grab: null,
+  });
+}

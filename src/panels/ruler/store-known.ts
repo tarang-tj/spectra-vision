@@ -88,3 +88,12 @@ export const setTape = (m: number, tape: string) =>
 export const setKnown = (m: number, known: boolean) =>
   patchMeasure(m, { known });
 export const setTapeSd = (tapeSd: string) => set({ tapeSd });
+
+/** The further known sizes of one picture: the pair to state.ts's snapshot. */
+export type KnownSnapshot = Pick<RulerState, "extraRefs" | "tapeSd">;
+export const snapshotKnown = (s: RulerState = getState()): KnownSnapshot => ({
+  extraRefs: s.extraRefs,
+  tapeSd: s.tapeSd,
+});
+export const restoreKnown = (k: KnownSnapshot) =>
+  set({ extraRefs: k.extraRefs, tapeSd: k.tapeSd });

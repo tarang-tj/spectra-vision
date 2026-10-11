@@ -6,6 +6,7 @@ import { EXTENSIONS, extensionEnv, extensionFor } from "./ruler/extensions";
 import LensSection from "./ruler/lens-section";
 import PlanPanel from "./ruler/plan-panel";
 import ReferencePicker from "./ruler/reference-picker";
+import ViewStrip from "./ruler/room/view-strip";
 import Results from "./ruler/results";
 import ShapeTools, { openShape } from "./ruler/shape-tools";
 import TapeTest from "./ruler/tape-test";
@@ -94,6 +95,7 @@ function Ruler() {
         for a room, add a second sheet or a tape-measured span under More known
         sizes. Points under the stage buttons cannot be tapped.
       </p>
+      <ViewStrip />
       <ReferencePicker s={s} />
       <p className="ruler-step" role="status" data-testid="ruler-step">
         {step}

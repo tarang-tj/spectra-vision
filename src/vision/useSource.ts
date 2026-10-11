@@ -177,7 +177,7 @@ export function useSource() {
     [begin, commit, dispose, fail],
   );
   const upload = useCallback(
-    async (file: File) => {
+    async (file: File): Promise<number | null> => {
       const token = begin();
       try {
         if (!file.type.startsWith("image/") && !file.type.startsWith("video/"))
@@ -189,6 +189,9 @@ export function useSource() {
           image.src = objectUrl;
           await image.decode();
           commit(image, "image", file.name, token);
+          // The generation this picture was committed as, or null when a
+          // newer source overtook it while it was decoding.
+          return token === generation.current ? token : null;
         } else {
           const video = document.createElement("video");
           video.muted = true;
@@ -212,6 +215,7 @@ export function useSource() {
           token,
         );
       }
+      return null;
     },
     [begin, commit, fail],
   );
