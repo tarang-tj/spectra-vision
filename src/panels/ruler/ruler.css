@@ -71,7 +71,8 @@
   padding: 8px 14px;
   font-size: 13px;
   white-space: normal;
-  min-width: 0;
+  /* Wide enough for a finger even when the label is two letters ("ft"). */
+  min-width: 42px;
 }
 .ruler-panel .button[aria-pressed="true"] {
   border-color: var(--accent);
@@ -205,7 +206,9 @@
   font-weight: 600;
   color: var(--accent);
   cursor: pointer;
-  padding: 11px 0;
+  /* 40 px tall: a finger opens it. */
+  line-height: 16px;
+  padding: 12px 0;
   width: fit-content;
 }
 .ruler-details summary:focus-visible {
