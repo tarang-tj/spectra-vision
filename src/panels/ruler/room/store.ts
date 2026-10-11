@@ -61,10 +61,13 @@ export function setNote(note: RoomState["note"]) {
   state = { ...state, note };
   listeners.forEach((l) => l());
 }
-/** What a tap does once a link is made or cannot be: corners while the
- * outline is open, floor marks once it is closed. */
+/** The kind of new point last chosen with the buttons. It stays chosen tap
+ * after tap, so marking two floor marks does not add an unwanted corner. */
+let chosen: "corner" | "mark" = "corner";
+/** What a tap does after a point is made or marked: the kind last chosen,
+ * and floor marks only once the outline is closed. */
 const resting = (closed: boolean): Next => ({
-  kind: closed ? "mark" : "corner",
+  kind: closed ? "mark" : chosen,
 });
 
 /** A tap at `at` in picture `view`. Returns the point it made or marked. */
@@ -137,6 +140,7 @@ export function moveObs(point: number, view: number, at: Pt) {
 }
 export function setNext(next: Next) {
   if (next.kind === "corner" && state.closed) return;
+  if (next.kind !== "link") chosen = next.kind;
   commit({ ...state, next }, false);
 }
 export function removePoint(id: number) {
@@ -215,6 +219,7 @@ export function loadRoom(
   room: Pick<RoomState, "points" | "outline" | "closed"> | null,
 ) {
   history = [];
+  chosen = "corner";
   commit(
     room
       ? {

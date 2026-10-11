@@ -114,7 +114,8 @@ describe("the Room tool through the stores", () => {
     click(0, CORNERS[3]);
     setNext({ kind: "mark" });
     click(0, MARKS[0]);
-    setNext({ kind: "mark" });
+    // Floor mark stays chosen: the second mark needs no second press.
+    expect(getRoom().next).toEqual({ kind: "mark" });
     click(0, MARKS[1]);
     expect(getRoom().outline).toEqual([1, 2]);
     expect(getRoom().points.map((p) => p.obs[0].view)).toEqual([a, a, a, a]);
@@ -124,6 +125,14 @@ describe("the Room tool through the stores", () => {
     expect(getState().tool).toBe("room");
     let cur = currentRoom();
     expect(cur.solution.views[1].state).toBe("unanchored");
+    setNext({ kind: "corner" });
+    // Before any tap here the step line says corners will not count yet.
+    expect(roomStep(getRoom(), 2, viewOf(b), true, false)).toContain(
+      "corners marked here will not count until it is",
+    );
+    expect(roomStep(getRoom(), 2, viewOf(b), true, true)).toContain(
+      "2 corners in the outline",
+    );
     click(2, CORNERS[0]);
     click(2, CORNERS[1]);
     closeOutline(true);

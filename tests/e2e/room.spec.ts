@@ -331,6 +331,14 @@ test("a room from two pictures: refused and accepted anchors, an outline from co
   for (const c of [c2, c0, c3, c1]) await tap(page, c);
   await expect(places(page).nth(1)).toHaveAttribute("data-state", "unanchored");
   await expect(places(page).nth(1)).toContainText("not on the plan yet");
+  // Outline corner is chosen, and this picture is not on the plan: the step
+  // line says so before any corner is tapped here.
+  await group(page, "Next tap adds")
+    .getByRole("button", { name: "Outline corner", exact: true })
+    .click();
+  await expect(roomStep(page)).toContainText(
+    "corners marked here will not count until it is",
+  );
   // The one wall so far lies wholly in picture 1 and rests on it alone.
   await expect(page.getByTestId("room-wall")).toHaveCount(1);
   await expect(page.getByTestId("room-basis")).toContainText(

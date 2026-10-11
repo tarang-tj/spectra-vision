@@ -17,6 +17,8 @@ export function roomStep(
   pictures: number,
   here: View | null,
   ready: boolean,
+  /** False when the picture on the stage is not on the plan. */
+  onPlan = true,
 ): string {
   if (!pictures)
     return "Add a picture of the room first, under Pictures of this room.";
@@ -32,6 +34,9 @@ export function roomStep(
     return `Tap ${pointName(room.next.point)} in this picture: the same spot on the floor.`;
   if (room.next.kind === "mark")
     return "Tap a spot on the floor that you can find again in another picture.";
+  // Said before any tap: a corner marked here would end in "No numbers yet".
+  if (!onPlan)
+    return "This picture is not on the plan yet, so corners marked here will not count until it is. First mark two points here that are also marked in a picture on the plan: press Mark in this picture beside each, below, and tap the same spot.";
   const n = room.outline.length;
   return n < 3
     ? `${n} corner${n === 1 ? "" : "s"} in the outline. Tap a floor corner of the room. Go in order round the room; switch pictures for the corners this one does not show.`
@@ -72,7 +77,13 @@ export default function RoomSection() {
       </p>
       {s.tool === "room" && (
         <p className="ruler-step" role="status" data-testid="room-step">
-          {roomStep(room, views.length, here, !!derive(s).sheet)}
+          {roomStep(
+            room,
+            views.length,
+            here,
+            !!derive(s).sheet,
+            !here || !!solution.views.find((v) => v.id === here.id)?.rigid,
+          )}
         </p>
       )}
       <ul className="room-places" data-testid="room-places">
