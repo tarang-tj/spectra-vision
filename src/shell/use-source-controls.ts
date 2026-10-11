@@ -63,6 +63,23 @@ export function useSourceControls(notice: (text: string) => void) {
     setMirror(false);
     void input.upload(file);
   };
+  /** Put a stored still picture on the stage through the upload path, and
+   * give the generation it became. Rejects when it could not be shown. */
+  const loadPicture = async (blob: Blob, label: string): Promise<number> => {
+    setPaused(false);
+    setMotionDemo(false);
+    setMirror(false);
+    const file =
+        blob instanceof File
+          ? blob
+          : new File([blob], label, { type: blob.type }),
+      generation = blob.type.startsWith("image/")
+        ? await input.upload(file)
+        : null;
+    if (generation === null)
+      throw new Error("That picture could not be opened.");
+    return generation;
+  };
   return {
     input,
     modeId,
@@ -78,5 +95,6 @@ export function useSourceControls(notice: (text: string) => void) {
     onCamera,
     openCamera,
     onUpload,
+    loadPicture,
   };
 }

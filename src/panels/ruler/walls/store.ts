@@ -126,6 +126,14 @@ export function undoWalls() {
   commit(back, false);
 }
 
+/** What Walls holds for one picture, and putting it back (its plumb edges
+ * are published again; Undo starts afresh). */
+export const snapshotWalls = (): WallsState => state;
+export function restoreWalls(walls: WallsState) {
+  history = [];
+  commit(walls, false);
+}
+
 function reset() {
   history = [];
   if (state !== empty) commit(empty, false);

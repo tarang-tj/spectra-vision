@@ -350,6 +350,7 @@ type Studio = {
   openPanel(id: string): void;
   immersive: boolean; // stage-only view
   stage: StageHooks; // draw on the stage, read pointer input: see "Measurement layer"
+  loadPicture(blob: Blob, label: string): Promise<number>; // put a still picture the caller holds on the stage; resolves with its source generation
 };
 ```
 
@@ -424,7 +425,7 @@ Rules for a measured number: it is a `Measured`, it carries an error that someth
 
 ### Ruler tools: `src/panels/ruler/`
 
-The Ruler solves one plane map from the tapped reference (`derive(state)` gives `Derived`, whose `sheet.h` maps picture pixels to plane mm). A tool that needs more than spans, paths and areas lives in its own folder and plugs in through `extension-types.ts`. Box (`fit/`) and Walls (`walls/`) are built this way.
+The Ruler solves one plane map from the tapped reference (`derive(state)` gives `Derived`, whose `sheet.h` maps picture pixels to plane mm). A tool that needs more than spans, paths and areas lives in its own folder and plugs in through `extension-types.ts`. Box (`fit/`), Walls (`walls/`) and Room (`room/`) are built this way.
 
 ```ts
 type ExtensionEnv = {
@@ -440,7 +441,7 @@ type DrawEnv = ExtensionEnv & {
   toCanvas(flat: Pt): { x: number; y: number };
 };
 type RulerExtension = {
-  tool: ExtensionTool; // "box" | "wall", declared in state.ts
+  tool: ExtensionTool; // "box" | "wall" | "room", declared in state.ts
   label: string; // tool button text
   hint: string; // its tooltip
   step(env: ExtensionEnv): string; // the one-line instruction while the tool is chosen
@@ -563,6 +564,17 @@ function Sway() {
 - **More known sizes and the tape test**: `fuse-inputs.ts`, `fused.ts`, `fused-maths.ts`, `fused-trials.ts`, `derive-known.ts`, `store-known.ts`, `known-sizes.tsx`, `tape-entry.tsx`, `tape-test.tsx`. Further references and tape-measured spans go into one solve of the surface; a tape reading typed beside a span is only compared with it unless it is used as a known span. `SECOND_SHEET_COVERAGE` (`results.tsx`) and `COVERAGE_NOTE` (`monte-carlo.ts`) hold the measured coverage the panel prints, enforced by `tests/ruler-coverage.test.ts`.
 - **Display of sizes**: `roundError` keeps two figures of an error that starts with 1 or 2, and `reading.ts` words a size whose bar is as large as itself. Stage labels are queued and placed together at the end of the frame (`overlay-labels.ts`).
 - **Shell**: number keys reach eight modes (`MAX_MODE_KEYS` in `src/shell/shortcuts.ts`).
+
+## Added in 2.4: several pictures of one room
+
+`src/panels/ruler/room/`. A room is an ordered list of views. A view is one still picture, held in memory and never uploaded, with everything the Ruler, its known sizes, Box and Walls hold for it.
+
+- **Views** (`views-store.ts`, `view-snap.ts`, `view-strip.tsx`). Each store has a snapshot and restore pair beside it (`snapshot`/`restore` in `state.ts`, `snapshotKnown`/`restoreKnown` in `store-known.ts`, `snapshotBox`/`restoreBox`, `snapshotWalls`/`restoreWalls`); nothing reaches into a store. The view on the stage is saved whenever one of those stores changes. Entering a view calls `useStudio().loadPicture`, which goes through the upload path and gives the new source generation, then restores the state bound to that generation, so the Ruler's `bindSource` does not clear it. When the stage moves on to a picture that is not one of the room's, the views store lets go of it. A video or camera frame becomes a view through "Keep this frame as a picture".
+- **One frame** (`floor-maths.ts`, `room-frame.ts`, `room-solve.ts`, `room-status.ts`). The first view's plane frame is the room's. A later view's frame differs from it by one of the reference's turns onto itself (`symmetries`: two for a rectangle, four for a square). A room point marked both in that view and in a view already on the plan chooses the turn (`placeView`). The view is refused, in words, when no such point decides (it is too near the sheet's middle for its bar), when the best turn still leaves the two positions further apart than their combined spread allows (`limitFor`: the region that holds all of a view's shared points 95 times in 100), when two points choose different turns, or when its reference is another size. A view that is not on the plan contributes no point, no line and no pixel anywhere.
+- **Numbers** (`view-frame.ts`, `room-merge.ts`, `text.ts`). Each view has 200 seeded retakes of its own plane map from its own random stream, kept with the view (`frameOf`), independent of which picture is on the stage. A tapped point is a cloud over its view's retakes; a point marked in several views is the clouds weighted by the inverse of their spreads (`combine`); walls, perimeter and floor area are worked out again per retake (`outlineNumbers`) and shown only when 80% of the retakes could produce them. Every number is a `Measured` whose basis says how many pictures it rests on (`roomBasis`). Coverage is tested from both sides in `tests/room-merge.test.ts`.
+- **The Room tool** (`index.tsx`, `store.ts`, `pointer.ts`, `overlay.ts`, `room-section.tsx`). A `RulerExtension` with tool id `"room"`. Room points and the outline's order live in `store.ts`; taps are in the source pixels of the picture they were made in.
+- **Room plan** (`room-plan.ts`, `room-scene.ts`, `room-plan-draw.ts`, `room-export.ts`, `room-plan-panel.tsx`). `mergeTopDown` lays every placed view's floor in the room's frame with topdown.ts's rules per picture; where views overlap the one with the fewest floor millimetres per pixel wins. Heights stay with the picture they were tapped in: the plan only marks where one was measured.
+- **Room file** (`room-file.ts`, `room-file-parse.ts`, `room-file-check.ts`, `room-io.ts`). One JSON document, schema version 1: per view its snapshot, the room's points and outline, the numbers with their bars, and each picture as a data URL only when the box is ticked. Opening parses JSON only, checks and copies every field by name, refuses another version, a damaged file, one over 60 MB or a picture that is not a JPEG or PNG, and compares every number worked out again from the taps with the saved one (`numbersThatDiffer`).
 
 ## Telemetry bus
 

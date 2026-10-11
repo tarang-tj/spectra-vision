@@ -28,10 +28,11 @@ export type ExtraRef = {
  * an edge that is straight in reality (for the lens correction). */
 export type Tool = "span" | "path" | "area" | "edge" | ExtensionTool;
 /** Tools that live in their own folder and plug in through extensions.ts: a
- * box of real size stood on the surface, and the walls of a room. */
-export type ExtensionTool = "box" | "wall";
+ * box of real size stood on the surface, the walls of a room, and a room's
+ * floor from several pictures. */
+export type ExtensionTool = "box" | "wall" | "room";
 export const isExtensionTool = (t: Tool): t is ExtensionTool =>
-  t === "box" || t === "wall";
+  t === "box" || t === "wall" || t === "room";
 export type ShapeKind = "path" | "area" | "edge";
 export type Shape = { kind: ShapeKind; pts: Pt[]; done: boolean };
 /** Fewest points that make a finished shape of each kind. */
@@ -213,4 +214,39 @@ export function bindStillness(isVideo: boolean, still: boolean) {
     });
     pointsCleared();
   }
+}
+
+/** What the Ruler holds for one picture, without what belongs to the session
+ * (the unit, the chosen tool), to the press in progress, or to the known
+ * sizes (store-known.ts keeps that pair). Built by leaving fields out, so a
+ * field added to the state later is part of it without an edit here. */
+export type RulerSnapshot = Omit<
+  RulerState,
+  "generation" | "tool" | "unit" | "lock" | "grab" | "extraRefs" | "tapeSd"
+>;
+export function snapshot(s: RulerState = state): RulerSnapshot {
+  const { generation, tool, unit, lock, grab, extraRefs, tapeSd, ...rest } = s;
+  void [generation, tool, unit, lock, grab, extraRefs, tapeSd];
+  return rest;
+}
+/** Put a picture's points back, bound to the source `generation` it is now
+ * shown as. Everything on the picture before is dropped first, and the other
+ * tools told, exactly as on a new picture. */
+export function restore(
+  snap: RulerSnapshot,
+  generation: number,
+  tool: Tool = "span",
+) {
+  pointsCleared();
+  set({
+    ...snap,
+    extraRefs: [],
+    generation,
+    // Without its reference a picture takes corner taps first, so a shape
+    // tool goes back to Span as on any new picture. The Room tool stays: it
+    // is worked across pictures, and it waits for the corners by itself.
+    tool: snap.corners.length === 4 || tool === "room" ? tool : "span",
+    lock: null,
+    grab: null,
+  });
 }

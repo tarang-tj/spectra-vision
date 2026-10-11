@@ -121,6 +121,7 @@ export default function App() {
     openPanel: shell.openPanel,
     immersive: shell.immersive,
     stage: stageHooks,
+    loadPicture: controls.loadPicture,
   };
   // The immersive effects popover starts closed each time the view is entered.
   useEffect(() => {
