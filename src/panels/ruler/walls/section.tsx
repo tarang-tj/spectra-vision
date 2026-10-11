@@ -9,10 +9,10 @@ import { plumbVersion, subscribePlumbs } from "../plumbs";
 import { useRuler } from "../state";
 import { currentWalls } from "./current";
 import { wallsCsv } from "./export-shell";
-import { meshObj } from "./mesh";
 import { dropGrab } from "./pointer";
 import PreviewPanel from "./preview-panel";
 import WallsResults from "./results";
+import { floorOnly, roomObj } from "./save-obj";
 import { closeRoom, copyOutline, pickCorner, useWalls } from "./store";
 import { heightReason, heightUncertain, liveStep } from "./text";
 
@@ -45,28 +45,28 @@ export default function WallsSection({ show }: { show: boolean }) {
     preview = cur?.preview ?? null,
     // The bar on the height is as large as the height: no walls are drawn.
     vague = !!n && heightUncertain(n),
+    // Why the view and the OBJ hold the floor alone, when they do.
+    flat = cur ? floorOnly(cur, vague) : null,
     canSave = !!n && !!mesh && !!n.floorArea;
 
   function save(kind: "obj" | "csv") {
     if (!n || !mesh || !cur) return;
     try {
-      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-      if (kind === "obj")
-        downloadText(
-          `spectra-room-${stamp}.obj`,
-          meshObj(
-            mesh,
-            `${mesh.faces.length === 1 ? "Floor only: no height was measured.\n" : ""}${cur.basis}`,
-          ),
-          "text/plain",
-        );
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-"),
+        obj = kind === "obj" ? roomObj(cur, vague) : null;
+      if (obj) downloadText(`spectra-room-${stamp}.obj`, obj, "text/plain");
+      else if (kind === "obj") return;
       else
         downloadText(
           `spectra-room-${stamp}.csv`,
           wallsCsv(n, s.unit, why, cur.basis),
           "text/csv",
         );
-      notice("Saved to your downloads.");
+      notice(
+        kind === "obj" && flat
+          ? "Saved the floor only to your downloads."
+          : "Saved to your downloads.",
+      );
     } catch {
       notice("The file could not be saved by this browser.");
     }
@@ -141,9 +141,9 @@ export default function WallsSection({ show }: { show: boolean }) {
           mesh={preview}
           describedBy={LIST}
           note={
-            vague
+            flat === "uncertain"
               ? "Floor only: the heights are too uncertain to draw."
-              : preview.faces.length === 1
+              : flat
                 ? "Floor only: no height is measured yet."
                 : null
           }
@@ -163,10 +163,14 @@ export default function WallsSection({ show }: { show: boolean }) {
               Save CSV
             </button>
           </div>
-          <p className="ruler-basis">
-            Save OBJ downloads the shell in metres, z up: the floor, one face
-            per wall and the ceiling. Save CSV downloads every number with its
-            bar. Both stay on this device.
+          <p className="ruler-basis" data-testid="walls-save-note">
+            {flat === "uncertain"
+              ? "Save OBJ downloads the floor only, in metres, as the 3D view draws it: the heights are too uncertain to write as walls."
+              : flat
+                ? "Save OBJ downloads the floor only, in metres: no height is measured yet."
+                : "Save OBJ downloads the shell in metres, z up: the floor, one face per wall and the ceiling."}{" "}
+            Save CSV downloads every number with its bar. Both stay on this
+            device.
           </p>
           <BasisDetails
             lead={`Each bar is 2 standard deviations over ${DEFAULT_TRIALS} simulated retakes of your taps. It leaves things out.`}
