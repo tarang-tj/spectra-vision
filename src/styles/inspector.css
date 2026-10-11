@@ -19,6 +19,16 @@
 }
 /* The chosen panel. It carries the column layout the rail itself had in v1,
    and it is what scrolls when a panel is longer than the stage is tall. */
+.panel-fault {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.panel-fault p {
+  margin: 0 0 12px;
+}
 .panel-body {
   display: flex;
   flex-direction: column;

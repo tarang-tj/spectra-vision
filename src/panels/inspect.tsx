@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { ChevronRight, Lightbulb } from "lucide-react";
+import ErrorBoundary from "../components/ErrorBoundary";
 import MeasureSettings from "../components/MeasureSettings";
 import {
   filterSummary,
@@ -149,7 +150,11 @@ function Inspect() {
           </button>
         )}
         <MeasureSettings mode={mode} />
-        {mode.controls && <mode.controls />}
+        {mode.controls && (
+          <ErrorBoundary key={mode.id} name={`The ${mode.short} settings`}>
+            <mode.controls />
+          </ErrorBoundary>
+        )}
       </div>
       <p className="mode-tip">
         <Lightbulb size={22} />
