@@ -200,7 +200,7 @@ async function areaOf(page: Page) {
   };
 }
 
-test("a room from two pictures: a refused and an accepted anchor, an outline from corners in both, area against truth", async ({
+test("a room from two pictures: refused and accepted anchors, an outline from corners in both, area against truth, saved, reloaded and reopened", async ({
   page,
 }) => {
   test.setTimeout(300_000);
@@ -356,6 +356,94 @@ test("a room from two pictures: a refused and an accepted anchor, an outline fro
   // The numbers rest on the stored pictures: showing picture 1 changes none.
   await thumb(page, 1).click();
   await expect(thumb(page, 1)).toHaveAttribute("aria-pressed", "true");
+  expect(await areaOf(page)).toEqual(area);
+
+  // Save the room twice: with its pictures, and without.
+  const note = page.getByTestId("room-file-note"),
+    box = page.getByLabel("Include the pictures in the file"),
+    save = () =>
+      downloads(page, 1, () =>
+        page.getByRole("button", { name: "Save room", exact: true }).click(),
+      );
+  await box.check();
+  const [full] = await save();
+  await expect(note).toContainText("The pictures are in the file.");
+  await box.uncheck();
+  const [bare] = await save();
+  await expect(note).toContainText("The pictures are not in the file.");
+  const saved = JSON.parse(full.text);
+  expect(full.name).toMatch(/^spectra-room-.*\.json$/);
+  expect(saved.app).toBe("spectra-room");
+  expect(saved.version).toBe(1);
+  expect(saved.views).toHaveLength(2);
+  expect(saved.views[0].picture).toMatch(/^data:image\/png;base64,/);
+  expect(saved.numbers[0].name).toBe("room floor area");
+  expect(saved.numbers[0].value).toBeCloseTo(area.mm2 / 1e6, 6);
+  expect(
+    JSON.parse(bare.text).views.every((v: object) => !("picture" in v)),
+  ).toBe(true);
+
+  // Reload the page: nothing is left. Open the file: the same room.
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.getByTestId("latency")).toHaveText(/^\d+ ms$/);
+  await page.getByRole("button", { name: "Ruler", exact: true }).click();
+  await expect(page.getByTestId("room-status")).toHaveText(
+    "No pictures in this room yet.",
+  );
+  await expect(page.getByTestId("room-area")).toHaveCount(0);
+  const openFile = page.getByLabel("Open a room file");
+  await openFile.setInputFiles(full.path);
+  await expect(note).toHaveAttribute("data-kind", "opened");
+  await expect(note).toContainText(
+    "All 6 numbers were worked out again from the taps and equal the saved ones.",
+  );
+  await expect(page.getByTestId("room-strip").locator("li")).toHaveCount(2);
+  await expect(thumb(page, 1)).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".hud-badge").first()).toHaveText("LOCAL IMAGE");
+  expect(await areaOf(page)).toEqual(area);
+  await expect(places(page).nth(1)).toHaveAttribute("data-state", "placed");
+  await expect(page.getByTestId("room-plan")).toHaveAttribute(
+    "data-pictures",
+    "2",
+  );
+  // Picture 2 comes back with its own reference.
+  await thumb(page, 2).click();
+  await expect(thumb(page, 2)).toHaveAttribute("aria-pressed", "true");
+  await expect(step(page)).toContainText("Tap two points");
+
+  // The file without pictures: the plan and the numbers, and it says so.
+  await openFile.setInputFiles(bare.path);
+  await expect(note).toContainText(
+    "The pictures are not in the file: the plan and the numbers are shown, the pictures cannot be.",
+  );
+  await expect(thumb(page, 1)).toBeDisabled();
+  await expect(thumb(page, 1)).toContainText("no picture in the file");
+  expect(await areaOf(page)).toEqual(area);
+  await expect(page.getByTestId("room-plan")).toHaveAttribute(
+    "data-pictures",
+    "2",
+  );
+  await expect(page.getByTestId("room-plan-note")).toContainText(
+    "A picture that is not in the room file is drawn as lines only.",
+  );
+
+  // A file of a version this build does not know, and one that is not JSON:
+  // refused in words, and the room on show stays.
+  await openFile.setInputFiles({
+    name: "from-the-future.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify({ ...saved, version: 99 })),
+  });
+  await expect(note).toHaveAttribute("data-kind", "refused");
+  await expect(note).toContainText(
+    "This room file is version 99. This SPECTRA reads version 1 only, so it was not opened.",
+  );
+  await openFile.setInputFiles({
+    name: "notes.json",
+    mimeType: "application/json",
+    buffer: Buffer.from("<html>not a room</html>"),
+  });
+  await expect(note).toContainText("it could not be read as JSON");
   expect(await areaOf(page)).toEqual(area);
   expect(errors).toEqual([]);
 });

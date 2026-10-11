@@ -99,3 +99,17 @@
   font-size: 13px;
   font-weight: 600;
 }
+/* A real checkbox with its words: 42 px tall like the buttons beside it. */
+.room-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.room-check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}

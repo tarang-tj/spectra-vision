@@ -2,6 +2,7 @@
 import { useStudio } from "../../../studio-context";
 import { isEmpty, useRuler } from "../state";
 import { blobOfSource, thumbOf } from "./picture";
+import RoomFileBar from "./room-file-bar";
 import {
   addView,
   adoptView,
@@ -153,6 +154,7 @@ export default function ViewStrip() {
               ? `${room.views.length} picture${room.views.length === 1 ? "" : "s"} in this room.${onStage ? "" : " The stage shows a picture that is not one of them."}`
               : "No pictures in this room yet."))}
       </p>
+      <RoomFileBar />
     </section>
   );
 }
