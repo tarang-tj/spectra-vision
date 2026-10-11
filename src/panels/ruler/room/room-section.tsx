@@ -70,14 +70,22 @@ export default function RoomSection() {
       <p className="ruler-warn" data-testid="room-shared-warning">
         Choose shared points that cannot be mistaken: a door edge, a mark on the
         floor. Opposite corners of a room can look alike, and the wrong one fits
-        the sheet turned half way round. Two shared points catch one mistaken
-        mark in the picture being placed. Not caught: two mistaken marks that
-        mislead the same way, whether both are in this picture or one is here
-        and the other is an earlier picture's mark of a point that only these
-        two pictures share, which nothing else checks. A picture saved flipped
-        left to right (a mirror image) is not placed: it is refused, or held
-        until a shared point well off the lines through the middle of the sheet
-        rules the mirror image out.
+        the sheet turned half way round. In a picture that is not a mirror
+        image, two shared points catch one mistaken mark. Not caught: two
+        mistaken marks that mislead the same way, whether both are in this
+        picture or one is here and the other is an earlier picture's mark of a
+        point that only these two pictures share, which nothing else checks.
+      </p>
+      <p className="ruler-warn" data-testid="room-mirror-warning">
+        Do not use pictures saved as mirror images (some front cameras save them
+        flipped left to right), and mark shared points away from the lines
+        through the middle of the sheet. A flipped picture is refused, or held
+        until a shared point well off those lines is marked, in every case
+        tested except two: marks very close to such a line (none of 400,000
+        noisy flipped pictures was placed, which is a count, not a proof), and
+        marks on two different lines through the middle with one of them
+        mistaken for its look-alike, which looks exactly like an honest picture
+        and is placed mirrored.
       </p>
       {s.tool === "room" && (
         <p className="ruler-step" role="status" data-testid="room-step">

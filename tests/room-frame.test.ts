@@ -786,3 +786,109 @@ describe("a picture and its mirror image", () => {
     }
   });
 });
+
+describe("a mirror image with marks near the sheet's centre lines, noisy", () => {
+  // The verifier's sweep, on this repo's fixture: a flipped second picture,
+  // two true shared marks e mm off a centre line of the sheet, 1.5 px of
+  // noise on every tap of both pictures. Any placement is a mirrored one.
+  // ROOM_SWEEP sets the runs per step (2,000 gives the 200,000 of the
+  // report); the default keeps the suite short and stays near the line,
+  // where every placement the sweep ever found lay.
+  const PER = Number(process.env.ROOM_SWEEP ?? 60),
+    full = !!process.env.ROOM_SWEEP,
+    board = { x: 1600, y: 1200, w: 1000, h: 700 },
+    c = { x: 2100, y: 1550 },
+    layouts: Record<string, (e: number) => P[]> = {
+      "long line, both the same side": (e) => [
+        { x: c.x + 900, y: c.y + e },
+        { x: c.x - 900, y: c.y + e },
+      ],
+      "long line, one on and one off": (e) => [
+        { x: c.x + 900, y: c.y },
+        { x: c.x - 900, y: c.y + e },
+      ],
+      "long line, opposite sides": (e) => [
+        { x: c.x + 900, y: c.y + e },
+        { x: c.x - 900, y: c.y - e },
+      ],
+      "short line, both the same side": (e) => [
+        { x: c.x + e, y: c.y + 800 },
+        { x: c.x + e, y: c.y - 800 },
+      ],
+    };
+  /** How the second picture came out over `PER` noisy runs. */
+  function sweep(marks: P[], flip: boolean, normal: () => number) {
+    const nudge: Nudge = (p) => ({
+        x: p.x + 1.5 * normal(),
+        y: p.y + 1.5 * normal(),
+      }),
+      t = { placed: 0, provisional: 0, refused: 0 };
+    for (let i = 0; i < PER; i++) {
+      dropFrames();
+      const v = solveRoom(
+        roomOf(
+          [
+            snapOf({ cam: 0, nudge, board }),
+            snapOf({ cam: 2, nudge, board, flip }),
+          ],
+          marks.map((p, k) => ({
+            id: k + 1,
+            seen: [
+              { view: 1, at: tapOn(0, p, nudge) },
+              { view: 2, at: tapOn(2, p, nudge, undefined, flip) },
+            ],
+          })),
+        ),
+      ).views[1];
+      if (v.rigid) t.placed++;
+      else if (v.state === "provisional") t.provisional++;
+      else t.refused++;
+    }
+    return t;
+  }
+  const say = (line: string) => {
+    if (process.env.ROOM_REPORT) process.stderr.write(`\n[room] ${line}\n`);
+  };
+
+  it("places no flipped picture at any offset from the line", () => {
+    const normal = lcgNormal(31337),
+      steps = full
+        ? Array.from({ length: 25 }, (_, i) => i * 5)
+        : [0, 5, 10, 15, 20];
+    let runs = 0,
+      placed = 0;
+    for (const [name, at] of Object.entries(layouts)) {
+      const rows: string[] = [];
+      let here = 0;
+      for (const e of steps) {
+        const t = sweep(at(e), true, normal);
+        runs += PER;
+        here += t.placed;
+        if (t.placed) rows.push(`${e} mm: ${t.placed}`);
+      }
+      placed += here;
+      say(
+        `mirror sweep, ${name}: placed ${here} of ${steps.length * PER}${rows.length ? ` (${rows.join(", ")})` : ""}`,
+      );
+    }
+    say(
+      `mirror sweep: ${placed} placed mirrored in ${runs} noisy flipped runs`,
+    );
+    expect(placed).toBe(0);
+  }, 3_000_000);
+
+  it("holds a true picture with marks near the line, and places it once they are clear of it", () => {
+    const normal = lcgNormal(4141),
+      at = layouts["long line, both the same side"],
+      rows = [0, 20, 40, 60, 80, 100, 150, 200].map((e) => ({
+        e,
+        ...sweep(at(e), false, normal),
+      }));
+    say(
+      `true picture, both marks e mm off the long centre line, of ${PER}: ${rows.map((r) => `${r.e} mm placed ${r.placed}, held ${r.provisional}, refused ${r.refused}`).join("; ")}`,
+    );
+    // On the line it is held; well clear of it, placed.
+    expect(rows[0].placed).toBe(0);
+    expect(rows[rows.length - 1].placed / PER).toBeGreaterThanOrEqual(0.9);
+  }, 3_000_000);
+});

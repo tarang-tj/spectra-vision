@@ -196,6 +196,20 @@ const sharers = (checks: AnchorCheck[]) =>
       ", ",
     )}; any one of those marks may be the wrong one, in an earlier picture as well as in this one.`;
 
+/** A turn and a reflection count as told apart by a shared point only when
+ * the two positions they predict for it are this many agreement radii apart.
+ * At 2 (the bare "the two regions do not overlap") noise could carry a mark
+ * of a flipped picture that far from a centre line while the turn still
+ * passed: 21 of 200,000 noisy flipped pictures with marks 0 to 120 mm off a
+ * centre line were placed mirrored (the verifier's sweep, 1.5 px noise), and
+ * 5 of 100,000 in this repo's sweep, all within 15 mm of the long line. At 4
+ * both sweeps place 0 of 200,000 (tests/room-frame.test.ts with
+ * ROOM_SWEEP=2000). The cost, accepted: a true picture whose two marks are
+ * both within about 40 mm of a centre line is held provisional (of 2,000 each:
+ * 0 mm 0 placed, 20 mm 0, 40 mm 285, 60 mm 1,925); the two standard cases of
+ * the placement tests hold none (195 and 193 of 200 placed, as before). */
+export const MIRROR_MARGIN = 4;
+
 /** Place one picture in the room's frame from its anchors, or say why not.
  * `name` is the picture's ("Picture 2"). A picture is placed only when two
  * shared points, at different places on the floor, choose the same turn,
@@ -324,7 +338,7 @@ export function placeView(
           { x: p.x - q.x, y: p.y - q.y },
           addCov(turnCov(rigid, a.here.cov), a.there.cov),
         ) >=
-        2 * limit
+        MIRROR_MARGIN * limit
       );
     });
   if (second && !mirrors.every(told))
