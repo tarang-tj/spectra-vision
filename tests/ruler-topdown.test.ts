@@ -7,9 +7,9 @@ import {
   type Mat3,
   type Pt,
 } from "../src/panels/ruler/homography";
+import { invert3 } from "../src/panels/ruler/fused-maths";
 import {
   fitBox,
-  invert3,
   renderTopDown,
   SMEAR_LIMIT,
   type Raster,

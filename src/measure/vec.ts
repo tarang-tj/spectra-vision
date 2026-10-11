@@ -64,8 +64,10 @@ export const fromColumns = (a: V3, b: V3, c: V3): number[] => [
   c[2],
 ];
 
-/** Inverse of a 3x3 matrix, or null when it is singular. */
-export function invert3(m: M3): number[] | null {
+/** Inverse of a 3x3 matrix, or null when it is singular. `checked` also
+ * refuses a result with a non-finite entry; the Ruler's plane maps pass false,
+ * as their own copy of this never made that check. */
+export function invert3(m: M3, checked = true): number[] | null {
   const d =
     m[0] * (m[4] * m[8] - m[5] * m[7]) -
     m[1] * (m[3] * m[8] - m[5] * m[6]) +
@@ -82,7 +84,7 @@ export function invert3(m: M3): number[] | null {
     (m[1] * m[6] - m[0] * m[7]) / d,
     (m[0] * m[4] - m[1] * m[3]) / d,
   ];
-  return out.every(Number.isFinite) ? out : null;
+  return !checked || out.every(Number.isFinite) ? out : null;
 }
 
 /** Rotation matrix for a rotation vector (axis times angle in radians). */
@@ -107,15 +109,25 @@ export function rodrigues(w: V3): number[] {
 }
 
 /** Solve A x = b (A is n x n, row arrays) by Gaussian elimination with
- * partial pivoting. Null when the system is singular. */
-export function solveLinear(a: number[][], b: number[]): number[] | null {
+ * partial pivoting. Null when the system is singular: a pivot not above
+ * `floor`. The floor is part of each caller's results, so it is a parameter:
+ * the camera fit uses the default and the Ruler's plane solve 1e-12
+ * (PIVOT_FLOOR in homography.ts). `checked` also refuses a non-finite pivot
+ * or answer; the Ruler passes false, as its own copy never made that check. */
+export function solveLinear(
+  a: number[][],
+  b: number[],
+  floor = 1e-300,
+  checked = true,
+): number[] | null {
   const n = b.length,
     m = a.map((row, i) => [...row, b[i]]);
   for (let col = 0; col < n; col++) {
     let best = col;
     for (let r = col + 1; r < n; r++)
       if (Math.abs(m[r][col]) > Math.abs(m[best][col])) best = r;
-    if (!(Math.abs(m[best][col]) > 1e-300)) return null;
+    const pivot = Math.abs(m[best][col]);
+    if (checked ? !(pivot > floor) : pivot < floor) return null;
     [m[col], m[best]] = [m[best], m[col]];
     for (let r = col + 1; r < n; r++) {
       const k = m[r][col] / m[col][col];
@@ -128,5 +140,5 @@ export function solveLinear(a: number[][], b: number[]): number[] | null {
     for (let c = r + 1; c < n; c++) sum -= m[r][c] * x[c];
     x[r] = sum / m[r][r];
   }
-  return x.every(Number.isFinite) ? x : null;
+  return !checked || x.every(Number.isFinite) ? x : null;
 }

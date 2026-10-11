@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Plane geometry for the Ruler, in source pixels (never normalized units, so
 // the aspect ratio is right). Pure: no DOM, no clock, no randomness.
+import { solveLinear } from "../../measure/vec";
 import type { Fused } from "./fused-trials";
 
 /** `s` is the tap uncertainty (one sd, source pixels) the point was placed
@@ -19,30 +20,8 @@ export type Mat3 = readonly [
   number,
 ];
 
-/** Solve A x = b by Gaussian elimination with partial pivoting. A is n x n
- * (row arrays), b has n entries. Null when the system is singular. */
-export function solveLinear(a: number[][], b: number[]): number[] | null {
-  const n = b.length,
-    m = a.map((row, i) => [...row, b[i]]);
-  for (let col = 0; col < n; col++) {
-    let best = col;
-    for (let r = col + 1; r < n; r++)
-      if (Math.abs(m[r][col]) > Math.abs(m[best][col])) best = r;
-    if (Math.abs(m[best][col]) < 1e-12) return null;
-    [m[col], m[best]] = [m[best], m[col]];
-    for (let r = col + 1; r < n; r++) {
-      const k = m[r][col] / m[col][col];
-      for (let c = col; c <= n; c++) m[r][c] -= k * m[col][c];
-    }
-  }
-  const x = new Array<number>(n).fill(0);
-  for (let r = n - 1; r >= 0; r--) {
-    let sum = m[r][n];
-    for (let c = r + 1; c < n; c++) sum -= m[r][c] * x[c];
-    x[r] = sum / m[r][r];
-  }
-  return x;
-}
+/** The pivot under which the plane solves call a system singular. */
+export const PIVOT_FLOOR = 1e-12;
 
 const mul = (p: Mat3, q: Mat3): Mat3 => {
   const out: number[] = [];
@@ -83,7 +62,7 @@ export function solveHomography(src: Pt[], dst: Pt[]): Mat3 | null {
     a.push([0, 0, 0, x, y, 1, -v * x, -v * y]);
     b.push(v);
   }
-  const h = solveLinear(a, b);
+  const h = solveLinear(a, b, PIVOT_FLOOR, false);
   if (!h) return null;
   const core: Mat3 = [h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7], 1];
   // Undo the normalization: plane = Td^-1 * core * Ts.
