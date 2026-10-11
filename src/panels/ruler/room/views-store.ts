@@ -26,6 +26,7 @@ import {
   snapshotKnown,
   type KnownSnapshot,
 } from "../store-known";
+import { dropView } from "./store";
 import {
   restoreWalls,
   snapshotWalls,
@@ -233,6 +234,7 @@ export async function removeView(id: number, load: Load) {
     wasCurrent = state.current === id,
     next = views[Math.min(at, views.length - 1)];
   emit({ ...state, views, current: wasCurrent ? null : state.current });
+  dropView(id);
   if (wasCurrent && next?.blob) await showView(next.id, load);
 }
 

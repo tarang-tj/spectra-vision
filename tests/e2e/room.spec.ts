@@ -1,10 +1,14 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { test, expect, type Page } from "@playwright/test";
 import {
+  AREA_MM2,
+  boardCentre,
   boardCorners,
   cameraFor,
+  CORNERS,
   drawRoomView,
   MARKS,
+  WALLS_MM,
   type P,
 } from "../fixtures/room-scene";
 
@@ -151,5 +155,140 @@ test("two pictures of one room: each keeps its own reference and span across swi
   await expect(page.getByTestId("room-strip").locator("li")).toHaveCount(1);
   await expect(thumb(page, 1)).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("ruler-result")).toHaveCount(2);
+  expect(errors).toEqual([]);
+});
+
+const shape = (page: Page, name: string) =>
+  group(page, "Shape").getByRole("button", { name, exact: true });
+const places = (page: Page) => page.getByTestId("room-places").locator("li");
+const roomStep = (page: Page) => page.getByTestId("room-step");
+async function areaOf(page: Page) {
+  const out = page.getByTestId("room-area");
+  await expect(out).toHaveText(/^[\d.]+ ± [\d.]+ m²$/);
+  return {
+    text: (await out.textContent())!,
+    mm2: Number(await out.getAttribute("data-mm2")),
+    bar: Number(await out.getAttribute("data-error-mm2")),
+  };
+}
+
+test("a room from two pictures: a refused and an accepted anchor, an outline from corners in both, area against truth", async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await open(page);
+  await openRuler(page);
+
+  // Picture 1 (camera 1 sees floor corners 3 and 4): reference, two corners
+  // of the outline, and one mark on the floor beside the board.
+  await addPicture(page, 0, 1);
+  await tapBoard(page, 0);
+  await shape(page, "Room").click();
+  await expect(roomStep(page)).toContainText("0 corners in the outline");
+  await expect(places(page)).toHaveCount(1);
+  await expect(places(page).nth(0)).toContainText("sets the plan's frame");
+  await tap(page, on(0, CORNERS[2]));
+  await tap(page, on(0, CORNERS[3]));
+  await expect(roomStep(page)).toContainText("2 corners in the outline");
+  await group(page, "Next tap adds")
+    .getByRole("button", { name: "Floor mark", exact: true })
+    .click();
+  await tap(page, on(0, MARKS[0]));
+  await expect(page.getByTestId("room-point")).toHaveCount(3);
+  await expect(page.getByTestId("room-point").nth(2)).toContainText(
+    "Room point 3: floor mark",
+  );
+  // A second mark, at the middle of the board: a poor anchor, on purpose.
+  await group(page, "Next tap adds")
+    .getByRole("button", { name: "Floor mark", exact: true })
+    .click();
+  await tap(page, on(0, boardCentre()));
+  await expect(page.getByTestId("room-point")).toHaveCount(4);
+
+  // Picture 2 (camera 3, the other side of the room). The Room tool stays
+  // chosen; the reference's corners come first.
+  await addPicture(page, 2, 2);
+  await expect(shape(page, "Room")).toHaveAttribute("aria-pressed", "true");
+  const [c0, c1, c2, c3] = boardCorners().map((c) => on(2, c));
+  for (const c of [c2, c0, c3, c1]) await tap(page, c);
+  await expect(places(page).nth(1)).toHaveAttribute("data-state", "unanchored");
+  await expect(places(page).nth(1)).toContainText("not on the plan yet");
+  // The one wall so far lies wholly in picture 1 and rests on it alone.
+  await expect(page.getByTestId("room-wall")).toHaveCount(1);
+  await expect(page.getByTestId("room-basis")).toContainText(
+    "Rests on 1 picture (picture 1).",
+  );
+
+  // A poor anchor first: the mark at the middle of the board cannot say
+  // which way round the sheet lies. Refused, in words.
+  const markButton = (n: number) =>
+    page.getByRole("button", { name: `Mark Room point ${n} in this picture` });
+  await markButton(4).click();
+  await expect(markButton(4)).toHaveAttribute("aria-pressed", "true");
+  await expect(roomStep(page)).toContainText(
+    "Tap Room point 4 in this picture",
+  );
+  await tap(page, on(2, boardCentre()));
+  await expect(places(page).nth(1)).toHaveAttribute("data-state", "refused");
+  await expect(places(page).nth(1)).toContainText(
+    "Room point 4 cannot tell which way round the sheet lies",
+  );
+  // A wrong anchor: point 3 marked on a different spot. Refused as apart.
+  await markButton(3).click();
+  await tap(page, on(2, MARKS[1]));
+  await expect(places(page).nth(1)).toHaveAttribute("data-state", "refused");
+  await expect(places(page).nth(1)).toContainText(
+    "The sheet may have moved between pictures, or these are different points.",
+  );
+  await expect(page.getByTestId("room-basis")).toContainText(
+    "Rests on 1 picture (picture 1).",
+  );
+  // The right spot: placed, half a turn from how its own corners read.
+  await page
+    .getByRole("button", {
+      name: "Take the mark of Room point 3 off this picture",
+    })
+    .click();
+  await markButton(3).click();
+  await tap(page, on(2, MARKS[0]));
+  await expect(places(page).nth(1)).toHaveAttribute("data-state", "placed");
+  await expect(places(page).nth(1)).toContainText(
+    "Picture 2 is on the plan, half way round",
+  );
+
+  // The other two corners, from this picture, and close.
+  await group(page, "Next tap adds")
+    .getByRole("button", { name: "Outline corner", exact: true })
+    .click();
+  await tap(page, on(2, CORNERS[0]));
+  await tap(page, on(2, CORNERS[1]));
+  await expect(roomStep(page)).toContainText("4 corners in the outline");
+  await page
+    .getByRole("button", { name: "Close outline", exact: true })
+    .click();
+  const area = await areaOf(page);
+  expect(Math.abs(area.mm2 - AREA_MM2)).toBeLessThanOrEqual(area.bar);
+  expect(Math.abs(area.mm2 - AREA_MM2) / AREA_MM2).toBeLessThan(0.05);
+  const walls = page.getByTestId("room-wall");
+  await expect(walls).toHaveCount(4);
+  const truth = [WALLS_MM[2], WALLS_MM[3], WALLS_MM[0], WALLS_MM[1]];
+  for (let i = 0; i < 4; i++) {
+    const mm = Number(await walls.nth(i).getAttribute("data-mm")),
+      bar = Number(await walls.nth(i).getAttribute("data-error-mm"));
+    expect(Math.abs(mm - truth[i]), `wall ${i + 1}`).toBeLessThanOrEqual(bar);
+  }
+  await expect(page.getByTestId("room-basis")).toContainText(
+    "Rests on 2 pictures (pictures 1 and 2).",
+  );
+  test.info().annotations.push({
+    type: "measured",
+    description: `floor area ${(area.mm2 / 1e6).toFixed(3)} +- ${(area.bar / 1e6).toFixed(3)} m2 (truth ${AREA_MM2 / 1e6}, off ${(((area.mm2 - AREA_MM2) / AREA_MM2) * 100).toFixed(2)}%)`,
+  });
+  // The numbers rest on the stored pictures: showing picture 1 changes none.
+  await thumb(page, 1).click();
+  await expect(thumb(page, 1)).toHaveAttribute("aria-pressed", "true");
+  expect(await areaOf(page)).toEqual(area);
   expect(errors).toEqual([]);
 });
