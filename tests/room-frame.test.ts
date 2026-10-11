@@ -8,13 +8,18 @@ import { dropFrames } from "../src/panels/ruler/room/view-frame";
 import {
   BOARD,
   boardCentre,
-  boardCorners,
   CORNERS,
   inBoardFrame,
   MARKS,
   type P,
 } from "./fixtures/room-scene";
-import { roomOf, snapOf, tapOn, type Nudge } from "./helpers/room-build";
+import {
+  baseCorner,
+  roomOf,
+  snapOf,
+  tapOn,
+  type Nudge,
+} from "./helpers/room-build";
 
 beforeEach(() => dropFrames());
 
@@ -26,25 +31,6 @@ const rect = (w: number, d: number) => [
 ];
 /** Floor points spread over the room, to compare a placed picture with truth. */
 const PROBES: P[] = [...CORNERS, ...MARKS, { x: 3300, y: 700 }];
-/** Which board corner the first picture's frame starts at: the one whose
- * hand-written frame agrees with where that picture's own map puts the
- * board's corners. `cam` is the camera that took the first picture. */
-function baseCorner(room: ReturnType<typeof roomOf>, cam: number): number {
-  const f = room.views[0].frame!,
-    miss = [0, 1, 2, 3].map((k) =>
-      Math.max(
-        ...boardCorners().map((c) => {
-          const want = inBoardFrame(c, k),
-            got = applyHomography(f.h, tapOn(cam, c))!;
-          return Math.hypot(want.x - got.x, want.y - got.y);
-        }),
-      ),
-    ),
-    k = miss.indexOf(Math.min(...miss));
-  // Noisy taps move the board's corners by millimetres, never by a side.
-  if (miss[k] > 100) throw new Error("the frame starts at no board corner");
-  return k;
-}
 /** The largest distance (mm) between where picture `n` (1-based) puts the
  * probes in the room's frame and where the hand-written truth has them. */
 function worstMiss(

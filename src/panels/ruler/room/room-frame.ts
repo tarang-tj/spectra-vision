@@ -76,9 +76,13 @@ export function symmetries(from: readonly Pt[], to: readonly Pt[]): Rigid[] {
 }
 
 /** How many standard deviations two positions on a floor may be apart and
- * still be one point: the 95% region of a spread in two directions. (For one
- * number that region is 2 sd; for a position on a floor it is 2.45.) */
-export const LIMIT = Math.sqrt(5.991);
+ * still be one point, when `anchors` such pairs are judged together: the
+ * region that holds all of them 95 times in 100 when they are the same
+ * points. (For one number that region is 2 sd; for one position on a floor
+ * it is 2.45, and it grows slowly with the number of pairs, so that marking
+ * more points does not by itself get a good picture refused.) */
+export const limitFor = (anchors: number): number =>
+  Math.sqrt(-2 * Math.log(0.05 / Math.max(1, anchors)));
 /** Positions cannot be told apart finer than this, whatever the bars say. */
 const FLOOR_MM2 = 1;
 
@@ -93,8 +97,8 @@ export function inBars(d: Pt, c: Cov): number {
   );
 }
 
-/** One point marked in this picture (`here`, its own frame) and in a picture
- * already on the plan (`there`, the room's frame). */
+/** One point marked in this picture (`here`, its own frame) and in pictures
+ * already on the plan (`there`, where they together put it, room frame). */
 export type Anchor = { name: string; here: Fix; there: Fix };
 export type AnchorCheck = {
   name: string;
@@ -109,10 +113,12 @@ export type AnchorCheck = {
   bars: Record<number, number>;
 };
 
-/** Try every candidate turn on one anchor. */
+/** Try every candidate turn on one anchor. `limit` is `limitFor` the number
+ * of anchors judged together. */
 export function checkAnchor(
   candidates: readonly Rigid[],
   a: Anchor,
+  limit: number,
 ): AnchorCheck {
   const tries = candidates.map((t) => {
       const at = applyRigid(t, a.here.at),
@@ -136,13 +142,13 @@ export function checkAnchor(
     name: a.name,
     turn: best.t.turn,
     gapMm: best.gap,
-    allowedMm: best.bars > 0 ? (best.gap * LIMIT) / best.bars : Infinity,
+    allowedMm: best.bars > 0 ? (best.gap * limit) / best.bars : Infinity,
     verdict:
-      least > LIMIT
+      least > limit
         ? "apart"
-        : rival < 2 * LIMIT
+        : rival < 2 * limit
           ? "undecided"
-          : best.bars <= LIMIT
+          : best.bars <= limit
             ? "agrees"
             : "apart",
     bars: Object.fromEntries(tries.map((c) => [c.t.turn, c.bars])),
@@ -189,7 +195,8 @@ export function placeView(
       checks: [],
       text: `${name} is not on the plan yet. Mark in it one point that is also marked in a picture already on the plan.`,
     };
-  const checks = anchors.map((a) => checkAnchor(candidates, a)),
+  const limit = limitFor(anchors.length),
+    checks = anchors.map((a) => checkAnchor(candidates, a, limit)),
     refuse = (
       reason: "apart" | "contradiction" | "undecided",
       text: string,
@@ -215,7 +222,7 @@ export function placeView(
     );
   const rigid = candidates.find((t) => t.turn === deciding[0].turn)!,
     // A point that could not decide must still fit the turn the others chose.
-    off = checks.find((c) => c.bars[rigid.turn] > LIMIT);
+    off = checks.find((c) => c.bars[rigid.turn] > limit);
   if (off)
     return moved(
       off,

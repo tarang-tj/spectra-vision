@@ -104,9 +104,10 @@ const mul2 = (p: M2, q: M2): M2 => [
 export function combine(
   seen: readonly { sample: Sample; cov: Cov }[],
 ): Sample | null {
+  if (!seen.length) return null;
   if (seen.length === 1) return seen[0].sample;
   const inv = seen.map((s) => inv2(s.cov));
-  if (!seen.length || inv.some((m) => !m)) return null;
+  if (inv.some((m) => !m)) return null;
   const sum = (inv as M2[]).reduce(
       (t, m) => [t[0] + m[0], t[1] + m[1], t[2] + m[2], t[3] + m[3]] as M2,
     ),

@@ -3,7 +3,7 @@
 // room (tests/fixtures/room-scene.ts), as the snapshots the room code reads.
 // The truth stays in the fixture; this file only plays the person.
 import { derive } from "../../src/panels/ruler/derive";
-import type { Pt } from "../../src/panels/ruler/homography";
+import { applyHomography, type Pt } from "../../src/panels/ruler/homography";
 import type { RoomInput } from "../../src/panels/ruler/room/room-solve";
 import { frameOf, stateOf } from "../../src/panels/ruler/room/view-frame";
 import type { ViewSnap } from "../../src/panels/ruler/room/views-store";
@@ -11,6 +11,7 @@ import {
   BOARD,
   boardCorners,
   cameraFor,
+  inBoardFrame,
   type Board,
   type P,
 } from "../fixtures/room-scene";
@@ -106,4 +107,28 @@ export function roomOf(
     outline,
     closed,
   };
+}
+
+/** Which board corner the first picture's frame starts at: the one whose
+ * hand-written frame (the fixture's `inBoardFrame`) agrees with where that
+ * picture's own map puts the board's corners. `cam` took the first picture. */
+export function baseCorner(
+  room: RoomInput,
+  cam: number,
+  board: Board = BOARD,
+): number {
+  const f = room.views[0].frame!,
+    miss = [0, 1, 2, 3].map((k) =>
+      Math.max(
+        ...boardCorners(board).map((c) => {
+          const want = inBoardFrame(c, k, board),
+            got = applyHomography(f.h, tapOn(cam, c))!;
+          return Math.hypot(want.x - got.x, want.y - got.y);
+        }),
+      ),
+    ),
+    k = miss.indexOf(Math.min(...miss));
+  // Noisy taps move the board's corners by millimetres, never by a side.
+  if (miss[k] > 100) throw new Error("the frame starts at no board corner");
+  return k;
 }

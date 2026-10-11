@@ -93,28 +93,32 @@ export function solveRoom(input: RoomInput): RoomSolution {
         return sample ? [{ sample, view: o.view, point: p.id }] : [];
       }),
     ),
+    // One anchor per point this picture shares with the plan: its own
+    // position against where the pictures already placed put it together.
     anchorsOf = (id: number, on: Map<number, Rigid>): Anchor[] =>
       own
         .filter((h) => h.view === id)
         .flatMap((h) => {
-          const here = covOf(h.sample);
-          if (!here) return [];
-          return own
-            .filter((t) => t.point === h.point && t.view !== id)
-            .flatMap((t) => {
-              const rigid = on.get(t.view),
-                there = rigid ? moved(t.sample, rigid) : null,
-                cov = there ? covOf(there) : null;
-              return there && cov
-                ? [
-                    {
-                      name: pointName(h.point),
-                      here: { at: h.sample.at, cov: here },
-                      there: { at: there.at, cov },
-                    },
-                  ]
-                : [];
-            });
+          const here = covOf(h.sample),
+            there = combine(
+              own
+                .filter((t) => t.point === h.point && on.has(t.view))
+                .flatMap((t) => {
+                  const sample = moved(t.sample, on.get(t.view)!),
+                    cov = covOf(sample);
+                  return cov ? [{ sample, cov }] : [];
+                }),
+            ),
+            cov = there ? covOf(there) : null;
+          return here && there && cov
+            ? [
+                {
+                  name: pointName(h.point),
+                  here: { at: h.sample.at, cov: here },
+                  there: { at: there.at, cov },
+                },
+              ]
+            : [];
         }),
     result = new Map<number, Placement>(),
     on = new Map<number, Rigid>();
