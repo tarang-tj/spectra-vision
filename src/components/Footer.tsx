@@ -1,6 +1,7 @@
-import { Fragment } from "react";
+import { Fragment, useSyncExternalStore } from "react";
 import { CircleHelp, Download, X } from "lucide-react";
 import { modes } from "../modes";
+import { onStillState, stillState, stillWords } from "../vision/still";
 import HelpPanel from "./HelpPanel";
 export default function Footer({
   latency,
@@ -17,6 +18,11 @@ export default function Footer({
   onHelp: () => void;
   help: boolean;
 }) {
+  // A still picture is not inferred at a steady rate (vision/still.ts): the
+  // readout then says so in words, never a rate nobody is measuring. A paused
+  // stage keeps its own reading.
+  const still = stillWords(useSyncExternalStore(onStillState, stillState)),
+    resting = fps !== 0 && !!still.value;
   return (
     <>
       <section className="metrics" aria-label="Measured session performance">
@@ -29,8 +35,17 @@ export default function Footer({
         <div className="stat">
           <span>Frame rate</span>
           <strong data-testid="fps">
-            {fps === null ? "—" : fps.toFixed(1)} <small>fps</small>
+            {resting ? (
+              still.value
+            ) : (
+              <>
+                {fps === null ? "—" : fps.toFixed(1)} <small>fps</small>
+              </>
+            )}
           </strong>
+          {fps !== 0 && still.note && (
+            <span data-testid="fps-note">{still.note}</span>
+          )}
         </div>
         <div className="stat">
           <span>Tracked</span>
