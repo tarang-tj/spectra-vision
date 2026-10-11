@@ -70,10 +70,14 @@ export default function RoomSection() {
       <p className="ruler-warn" data-testid="room-shared-warning">
         Choose shared points that cannot be mistaken: a door edge, a mark on the
         floor. Opposite corners of a room can look alike, and the wrong one fits
-        the sheet turned half way round. Two points catch one such mistake. What
-        cannot be caught: two shared points both mistaken for their look-alikes
-        on the other side of the sheet, in a room that looks the same from both
-        sides of it.
+        the sheet turned half way round. Two shared points catch one mistaken
+        mark in the picture being placed. Not caught: two mistaken marks that
+        mislead the same way, whether both are in this picture or one is here
+        and the other is an earlier picture's mark of a point that only these
+        two pictures share, which nothing else checks. A picture saved flipped
+        left to right (a mirror image) is not placed: it is refused, or held
+        until a shared point well off the lines through the middle of the sheet
+        rules the mirror image out.
       </p>
       {s.tool === "room" && (
         <p className="ruler-step" role="status" data-testid="room-step">
