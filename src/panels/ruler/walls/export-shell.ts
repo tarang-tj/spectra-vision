@@ -2,17 +2,12 @@
 // The Walls numbers as a CSV: every value with its bar, its unit and whether
 // it was measured or assumed, then the basis. Text only; nothing is uploaded.
 import type { Measured } from "../../../measure/noise";
+import { csvField } from "../export-plan";
 import type { Unit } from "../units";
 import type { Numbers, Q } from "./numbers";
 import { areaOf, lengthOf, volumeOf } from "./text";
 
 export const WALLS_CSV_HEADER = "quantity,value,error (2 sd),unit,status";
-const field = (v: string | number) =>
-  typeof v === "number"
-    ? String(v)
-    : /[",\n]/.test(v)
-      ? `"${v.replace(/"/g, '""')}"`
-      : v;
 
 export function wallsCsv(
   n: Numbers,
@@ -58,7 +53,8 @@ export function wallsCsv(
   put("Volume", n.volume, volumeOf, none);
   rows.push(["Basis", "", "", "", basis]);
   return (
-    [WALLS_CSV_HEADER, ...rows.map((r) => r.map(field).join(","))].join("\n") +
-    "\n"
+    [WALLS_CSV_HEADER, ...rows.map((r) => r.map(csvField).join(","))].join(
+      "\n",
+    ) + "\n"
   );
 }

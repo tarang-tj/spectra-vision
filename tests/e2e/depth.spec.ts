@@ -297,6 +297,78 @@ test("the 3D view draws the points, turns by button, key and drag, and gives its
   expect(errors).toEqual([]);
 });
 
+test("leaving Depth gives the 3D view back at once, and with the Ruler open a press on the picture is the Ruler's", async ({
+  page,
+  context,
+}) => {
+  test.setTimeout(240_000);
+  await open(page);
+  await openDepth(page);
+  const baseline = await glObjects(page),
+    canvas = page.locator(".camera-stage canvas");
+  await page.getByRole("button", { name: "3D view" }).click();
+  await expect.poll(() => cloudHeld(page)).toBe(true);
+  expect((await glObjects(page)) - baseline).toBe(4);
+  // The view's turn handler is the only one: the canvas takes presses.
+  await expect(canvas).toHaveAttribute("data-pointer", "on");
+
+  // Offline, the next mode's model can never load. The view must go anyway:
+  // it used to wait for that load, holding its WebGL objects and swallowing
+  // every press on the stage until then.
+  await context.setOffline(true);
+  await mode(page, "Hands").click();
+  await expect.poll(() => cloudHeld(page), { timeout: 5_000 }).toBe(false);
+  expect(await glObjects(page)).toBe(baseline);
+  await expect(canvas).not.toHaveAttribute("data-pointer");
+  expect(
+    await page.evaluate(
+      () =>
+        (window as { __spectraResults?: { last: { mode: string } | null } })
+          .__spectraResults!.last?.mode,
+    ),
+  ).not.toBe("hands");
+  await context.setOffline(false);
+
+  // Back in Depth. The demo picture may have failed to load while offline;
+  // the stage then offers it again.
+  await mode(page, "Depth").click();
+  const demo = page.getByRole("button", { name: "Try demo", exact: true });
+  await expect
+    .poll(
+      async () => {
+        if (await demo.isVisible()) await demo.click();
+        return cloudHeld(page);
+      },
+      { timeout: 90_000 },
+    )
+    .toBe(true);
+  // With the Ruler tab open, leave and come back: the view is made again, so
+  // its handler is registered after the Ruler's. The taps still place corners.
+  await panel(page, "Ruler").click();
+  await mode(page, "Objects").click();
+  await expect.poll(() => cloudHeld(page), { timeout: 5_000 }).toBe(false);
+  await expect(page.getByTestId("latency")).toHaveText(/^\d+ ms$/);
+  await mode(page, "Depth").click();
+  await expect.poll(() => cloudHeld(page), { timeout: 90_000 }).toBe(true);
+  expect((await glObjects(page)) - baseline).toBe(4);
+  await page.getByRole("button", { name: "Custom", exact: true }).click();
+  await page.getByLabel("Side 1 (mm)").fill("300");
+  await page.getByLabel("Side 2 (mm)").fill("200");
+  for (const [x, y] of [
+    [300, 900],
+    [420, 900],
+    [428, 932],
+    [292, 932],
+  ])
+    await tap(page, x, y);
+  await expect(page.getByTestId("ruler-step")).toContainText("Tap two points");
+  // None of those presses turned the view.
+  await panel(page, "Inspect").click();
+  await expect(page.getByTestId("depth-turn")).toContainText(
+    "Turned 0° sideways and 0°",
+  );
+});
+
 test("a Ruler reference on the floor puts the map in metres with stated bars, and too little floor is refused", async ({
   page,
 }) => {

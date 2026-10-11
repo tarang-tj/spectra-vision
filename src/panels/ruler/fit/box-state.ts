@@ -134,6 +134,14 @@ export const resetBox = () => {
   emit(initial());
 };
 
+/** The box as it stands on one picture, and putting one back (Undo starts
+ * afresh: its steps belonged to another picture). */
+export const snapshotBox = (): BoxState => state;
+export const restoreBox = (box: BoxState) => {
+  history = [];
+  emit(box);
+};
+
 // The box stands on one picture. When the Ruler drops its points (Clear, a
 // new picture, a video that moved on) the placement goes too. The typed
 // sizes are not points on the picture, so they stay.

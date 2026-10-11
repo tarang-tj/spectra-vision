@@ -3,6 +3,10 @@ import { useEffect, useState } from "react";
 import { defaultMode } from "../modes";
 import { useSource } from "../vision/useSource";
 
+/** Shown as the stage's notice when a chosen file is not a picture. */
+export const UNREADABLE_NOTICE =
+  "That file could not be read as a picture. The stage is unchanged.";
+
 /** The mode, the source and the three switches that belong to them (paused,
  * mirror, motion demo), with the rules that tie them together: a new source
  * or mode resumes detection, a camera starts mirrored, and a demo source
@@ -57,11 +61,33 @@ export function useSourceControls(notice: (text: string) => void) {
     setPaused(false);
     void input.camera(deviceId);
   };
-  const onUpload = (file: File) => {
-    setPaused(false);
-    setMotionDemo(false);
-    setMirror(false);
-    void input.upload(file);
+  /** Open a file, and say so when it could not be read: the stage keeps
+   * what it was showing, so without a word the press would look ignored.
+   * The switches are reset only when the file does take the stage. */
+  const open = async (file: File): Promise<number | null> => {
+    const opened = await input.upload(file, () => {
+      setPaused(false);
+      setMotionDemo(false);
+      setMirror(false);
+    });
+    if (opened.ok) return opened.generation;
+    notice(UNREADABLE_NOTICE);
+    return null;
+  };
+  const onUpload = (file: File) => void open(file);
+  /** Put a stored still picture on the stage through the upload path, and
+   * give the generation it became. Rejects when it could not be shown. */
+  const loadPicture = async (blob: Blob, label: string): Promise<number> => {
+    const file =
+        blob instanceof File
+          ? blob
+          : new File([blob], label, { type: blob.type }),
+      picture = blob.type.startsWith("image/"),
+      generation = picture ? await open(file) : null;
+    if (!picture) notice(UNREADABLE_NOTICE);
+    if (generation === null)
+      throw new Error("That picture could not be opened.");
+    return generation;
   };
   return {
     input,
@@ -78,5 +104,6 @@ export function useSourceControls(notice: (text: string) => void) {
     onCamera,
     openCamera,
     onUpload,
+    loadPicture,
   };
 }

@@ -1,8 +1,9 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { tasksOf } from "../modes";
 import type { ModeDef } from "../modes";
 import { exportedSize, frameLimit } from "../session-export";
+import { onStillState, stillState } from "./still";
 import { STEADY_TRACKER, Tracker } from "./tracker";
 import type { Source, Track, VisionResult } from "./types";
 
@@ -32,10 +33,22 @@ export function useSession(
     history = useRef<unknown[]>([]),
     counted = useRef(0),
     limit = useRef(1),
-    previous = useRef<number | null>(null);
+    previous = useRef<number | null>(null),
+    // The result time the next rate is counted from. Apart from `previous`
+    // so that a rate is never taken across a still picture's rest.
+    rateFrom = useRef<number | null>(null),
+    pacing = useSyncExternalStore(onStillState, stillState).state;
+  // A still picture is inferred in runs with rests between (still.ts). The
+  // rate starts again with each change of pace, so a rest is never averaged
+  // into it; while the picture rests the readout says so instead of a rate.
+  useEffect(() => {
+    rateFrom.current = null;
+    setLive((old) => (old.fps === null ? old : { ...old, fps: null }));
+  }, [pacing]);
   useEffect(() => {
     tracker.current.reset();
     previous.current = null;
+    rateFrom.current = null;
     history.current = [];
     counted.current = 0;
     setLive({ key, tracks: NO_TRACKS, fps: null });
@@ -45,14 +58,13 @@ export function useSession(
     // In a multi-task mode a secondary model can answer first. The flat keys
     // of a frame belong to the primary one, so nothing is counted before it.
     if (!r || !r.tasks[tasksOf(mode)[0].kind]) return;
-    let instant: number | null = null;
-    if (previous.current !== null) {
-      // In a multi-task mode a secondary task reports under the primary
-      // frame's time: that is not a new frame, so nothing is counted twice.
-      if (r.time <= previous.current) return;
-      instant = 1000 / (r.time - previous.current);
-    }
-    previous.current = r.time;
+    // In a multi-task mode a secondary task reports under the primary
+    // frame's time, and a mode can be handed its latest result again: that
+    // is not a new frame, so nothing is counted twice.
+    if (previous.current !== null && r.time <= previous.current) return;
+    const instant =
+      rateFrom.current === null ? null : 1000 / (r.time - rateFrom.current);
+    previous.current = rateFrom.current = r.time;
     // Only a mode whose detections are separate objects gets track ids.
     const tracks = mode.tracked
       ? tracker.current.update(r.detections, r.time)

@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Plane geometry for the Ruler, in source pixels (never normalized units, so
 // the aspect ratio is right). Pure: no DOM, no clock, no randomness.
+import { solveLinear } from "../../measure/vec";
 import type { Fused } from "./fused-trials";
 
 /** `s` is the tap uncertainty (one sd, source pixels) the point was placed
@@ -19,30 +20,8 @@ export type Mat3 = readonly [
   number,
 ];
 
-/** Solve A x = b by Gaussian elimination with partial pivoting. A is n x n
- * (row arrays), b has n entries. Null when the system is singular. */
-export function solveLinear(a: number[][], b: number[]): number[] | null {
-  const n = b.length,
-    m = a.map((row, i) => [...row, b[i]]);
-  for (let col = 0; col < n; col++) {
-    let best = col;
-    for (let r = col + 1; r < n; r++)
-      if (Math.abs(m[r][col]) > Math.abs(m[best][col])) best = r;
-    if (Math.abs(m[best][col]) < 1e-12) return null;
-    [m[col], m[best]] = [m[best], m[col]];
-    for (let r = col + 1; r < n; r++) {
-      const k = m[r][col] / m[col][col];
-      for (let c = col; c <= n; c++) m[r][c] -= k * m[col][c];
-    }
-  }
-  const x = new Array<number>(n).fill(0);
-  for (let r = n - 1; r >= 0; r--) {
-    let sum = m[r][n];
-    for (let c = r + 1; c < n; c++) sum -= m[r][c] * x[c];
-    x[r] = sum / m[r][r];
-  }
-  return x;
-}
+/** The pivot under which the plane solves call a system singular. */
+export const PIVOT_FLOOR = 1e-12;
 
 const mul = (p: Mat3, q: Mat3): Mat3 => {
   const out: number[] = [];
@@ -83,7 +62,7 @@ export function solveHomography(src: Pt[], dst: Pt[]): Mat3 | null {
     a.push([0, 0, 0, x, y, 1, -v * x, -v * y]);
     b.push(v);
   }
-  const h = solveLinear(a, b);
+  const h = solveLinear(a, b, PIVOT_FLOOR, false);
   if (!h) return null;
   const core: Mat3 = [h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7], 1];
   // Undo the normalization: plane = Td^-1 * core * Ts.
@@ -214,22 +193,30 @@ export type Sheet = {
   fused?: Fused;
 };
 
-/** Assign the reference's long side by the longer-looking pair of opposite
- * sides in the image (`swap` flips it), then solve image pixels to plane mm.
- * `long` and `short` are the reference's sides in mm. */
+/** True when corner 0 to corner 1 (with its opposite side) looks at least as
+ * long on screen as corner 1 to corner 2. Only a guess at which side is the
+ * long one: perspective can reverse it (see long-side.ts). */
+export function looksLong(ordered: Pt[]): boolean {
+  if (ordered.length !== 4) return true;
+  return (
+    dist(ordered[0], ordered[1]) + dist(ordered[3], ordered[2]) >=
+    dist(ordered[1], ordered[2]) + dist(ordered[0], ordered[3])
+  );
+}
+
+/** Solve image pixels to plane mm for a reference `long` by `short` mm. The
+ * caller says which side is the long one with `forceFirstIsLong` (derive.ts
+ * asks long-side.ts, or holds the side during a drag). Without it the long
+ * side is the longer-looking pair of opposite sides, and `swap` flips that. */
 export function solveSheet(
   ordered: Pt[],
   long: number,
   short: number,
   swap: boolean,
-  /** Fixes which side is long (during a drag), overriding the guess. */
   forceFirstIsLong?: boolean,
 ): Sheet | null {
   if (ordered.length !== 4 || degenerateReason(ordered)) return null;
-  const first =
-      (dist(ordered[0], ordered[1]) + dist(ordered[3], ordered[2])) / 2,
-    second = (dist(ordered[1], ordered[2]) + dist(ordered[0], ordered[3])) / 2,
-    firstIsLong = forceFirstIsLong ?? first >= second !== swap,
+  const firstIsLong = forceFirstIsLong ?? looksLong(ordered) !== swap,
     w = firstIsLong ? long : short,
     d = firstIsLong ? short : long,
     plane = [

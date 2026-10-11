@@ -131,11 +131,3 @@ export function clearance(foot: readonly P[], outline: readonly P[]): number {
     }
   return out ? 0 - over : gap;
 }
-
-/** Sample standard deviation; NaN with fewer than two values. */
-export function sampleSd(values: readonly number[]): number {
-  const n = values.length;
-  if (n < 2) return NaN;
-  const mean = values.reduce((t, v) => t + v, 0) / n;
-  return Math.sqrt(values.reduce((t, v) => t + (v - mean) ** 2, 0) / (n - 1));
-}

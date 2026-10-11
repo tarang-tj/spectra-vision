@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { defaultMode, getMode } from "../modes";
 import type { Mode, Source } from "./types";
+
+/** What became of a file given to `upload`. `generation` is the one a picture
+ * was committed as; null for a video, and for a picture that a newer source
+ * overtook while it decoded. Not `ok`: the file could not be read as a
+ * picture or a video, and the stage was left exactly as it was. */
+export type Opened = { ok: true; generation: number | null } | { ok: false };
+const UNREADABLE: Opened = { ok: false };
+
 export function useSource() {
   const [source, setSource] = useState<Source | null>(null),
     [error, setError] = useState(""),
@@ -8,7 +16,9 @@ export function useSource() {
     [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const generation = useRef(0),
     current = useRef<Source | null>(null),
-    url = useRef<string | null>(null);
+    url = useRef<string | null>(null),
+    // Counts uploads, so a picture still decoding knows a later one came.
+    attempt = useRef(0);
   const dispose = useCallback(() => {
     const element = current.current?.element;
     if (element instanceof HTMLVideoElement) {
@@ -177,33 +187,58 @@ export function useSource() {
     [begin, commit, dispose, fail],
   );
   const upload = useCallback(
-    async (file: File) => {
-      const token = begin();
-      try {
-        if (!file.type.startsWith("image/") && !file.type.startsWith("video/"))
-          throw new Error("Choose an image or video file.");
-        const objectUrl = URL.createObjectURL(file);
-        url.current = objectUrl;
-        if (file.type.startsWith("image/")) {
-          const image = new Image();
+    async (file: File, onTake?: () => void): Promise<Opened> => {
+      // `onTake` runs just before the file takes the stage, in the same tick
+      // as the stage's own change, and not at all for an unreadable file.
+      const isImage = file.type.startsWith("image/");
+      if (!isImage && !file.type.startsWith("video/")) return UNREADABLE;
+      if (isImage) {
+        // A picture is decoded before anything on the stage is touched: a
+        // damaged file then leaves what was showing exactly as it was.
+        const mine = ++attempt.current,
+          was = generation.current,
+          objectUrl = URL.createObjectURL(file),
+          image = new Image();
+        let readable = true;
+        try {
           image.src = objectUrl;
           await image.decode();
-          commit(image, "image", file.name, token);
-        } else {
-          const video = document.createElement("video");
-          video.muted = true;
-          video.loop = true;
-          video.playsInline = true;
-          video.src = objectUrl;
-          current.current = {
-            element: video,
-            kind: "video",
-            label: file.name,
-            generation: token,
-          };
-          await video.play();
-          commit(video, "video", file.name, token);
+        } catch {
+          readable = false;
         }
+        // A camera, a demo or another file was chosen while this one decoded:
+        // that choice stands, and this file is dropped without a word.
+        const overtaken =
+          mine !== attempt.current || was !== generation.current;
+        if (!readable || overtaken) {
+          URL.revokeObjectURL(objectUrl);
+          return overtaken ? { ok: true, generation: null } : UNREADABLE;
+        }
+        onTake?.();
+        const token = begin();
+        url.current = objectUrl;
+        commit(image, "image", file.name, token);
+        return { ok: true, generation: token };
+      }
+      attempt.current++;
+      onTake?.();
+      const token = begin();
+      try {
+        const objectUrl = URL.createObjectURL(file);
+        url.current = objectUrl;
+        const video = document.createElement("video");
+        video.muted = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.src = objectUrl;
+        current.current = {
+          element: video,
+          kind: "video",
+          label: file.name,
+          generation: token,
+        };
+        await video.play();
+        commit(video, "video", file.name, token);
       } catch {
         fail(
           new Error(
@@ -212,6 +247,7 @@ export function useSource() {
           token,
         );
       }
+      return { ok: true, generation: null };
     },
     [begin, commit, fail],
   );

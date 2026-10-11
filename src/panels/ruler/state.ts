@@ -28,10 +28,11 @@ export type ExtraRef = {
  * an edge that is straight in reality (for the lens correction). */
 export type Tool = "span" | "path" | "area" | "edge" | ExtensionTool;
 /** Tools that live in their own folder and plug in through extensions.ts: a
- * box of real size stood on the surface, and the walls of a room. */
-export type ExtensionTool = "box" | "wall";
+ * box of real size stood on the surface, the walls of a room, and a room's
+ * floor from several pictures. */
+export type ExtensionTool = "box" | "wall" | "room";
 export const isExtensionTool = (t: Tool): t is ExtensionTool =>
-  t === "box" || t === "wall";
+  t === "box" || t === "wall" || t === "room";
 export type ShapeKind = "path" | "area" | "edge";
 export type Shape = { kind: ShapeKind; pts: Pt[]; done: boolean };
 /** Fewest points that make a finished shape of each kind. */
@@ -70,6 +71,9 @@ export type RulerState = {
   scale: number;
   /** While a handle is dragged: the long edge (tap indices) to hold fixed. */
   lock: [number, number] | null;
+  /** The handle the last press took hold of in place of placing a point, and
+   * whether that press is still down. The step line says so. */
+  grab: { handle: Handle; held: boolean } | null;
 };
 
 const UNIT_KEY = "spectra.ruler.unit.v1";
@@ -100,12 +104,21 @@ const initial = (): RulerState => ({
   source: null,
   scale: 1,
   lock: null,
+  grab: null,
 });
 
 let state = initial();
 const listeners = new Set<() => void>();
+const POINTS = ["corners", "extraRefs", "measures", "shapes", "tool"] as const;
 export const set = (patch: Partial<RulerState>) => {
-  state = { ...state, ...patch };
+  // The note about a press that grabbed and moved nothing lasts until the
+  // points or the tool change. A press still down keeps its own note.
+  const stale =
+    !!state.grab &&
+    !state.grab.held &&
+    !("grab" in patch) &&
+    POINTS.some((k) => k in patch);
+  state = { ...state, ...patch, ...(stale ? { grab: null } : {}) };
   listeners.forEach((l) => l());
 };
 
@@ -155,7 +168,9 @@ export const isEmpty = (s: RulerState) =>
 
 /** Called with each frame the overlay draws. Points belong to one source: a
  * new source (another photo, a camera restart) clears them, because they
- * would sit on the wrong picture. */
+ * would sit on the wrong picture. The reference goes with them, so the tool
+ * goes back to Span: the next taps are the reference corners, and the step
+ * line must not ask for an outline that has no reference under it. */
 export function bindSource(
   generation: number,
   w: number,
@@ -172,6 +187,8 @@ export function bindSource(
       measures: [],
       shapes: [],
       swap: false,
+      tool: "span",
+      grab: null,
     });
     pointsCleared();
   } else if (
@@ -197,4 +214,39 @@ export function bindStillness(isVideo: boolean, still: boolean) {
     });
     pointsCleared();
   }
+}
+
+/** What the Ruler holds for one picture, without what belongs to the session
+ * (the unit, the chosen tool), to the press in progress, or to the known
+ * sizes (store-known.ts keeps that pair). Built by leaving fields out, so a
+ * field added to the state later is part of it without an edit here. */
+export type RulerSnapshot = Omit<
+  RulerState,
+  "generation" | "tool" | "unit" | "lock" | "grab" | "extraRefs" | "tapeSd"
+>;
+export function snapshot(s: RulerState = state): RulerSnapshot {
+  const { generation, tool, unit, lock, grab, extraRefs, tapeSd, ...rest } = s;
+  void [generation, tool, unit, lock, grab, extraRefs, tapeSd];
+  return rest;
+}
+/** Put a picture's points back, bound to the source `generation` it is now
+ * shown as. Everything on the picture before is dropped first, and the other
+ * tools told, exactly as on a new picture. */
+export function restore(
+  snap: RulerSnapshot,
+  generation: number,
+  tool: Tool = "span",
+) {
+  pointsCleared();
+  set({
+    ...snap,
+    extraRefs: [],
+    generation,
+    // Without its reference a picture takes corner taps first, so a shape
+    // tool goes back to Span as on any new picture. The Room tool stays: it
+    // is worked across pictures, and it waits for the corners by itself.
+    tool: snap.corners.length === 4 || tool === "room" ? tool : "span",
+    lock: null,
+    grab: null,
+  });
 }

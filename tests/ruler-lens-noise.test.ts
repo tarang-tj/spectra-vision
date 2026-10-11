@@ -5,6 +5,7 @@
 import { describe, it, expect } from "vitest";
 import type { Pt } from "../src/panels/ruler/homography";
 import { fitRadial, K_MIN } from "../src/panels/ruler/lens";
+import { lcgNormal } from "./helpers/seeded";
 
 const W = 1280,
   H = 720,
@@ -20,14 +21,7 @@ const distort = (p: Pt, a: number): Pt => {
     f = 1 + (a * (dx * dx + dy * dy)) / (norm * norm);
   return { x: cx + dx * f, y: cy + dy * f };
 };
-function rng(seed: number) {
-  let s = seed >>> 0;
-  const u = () => {
-    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-    return s / 4294967296;
-  };
-  return () => Math.sqrt(-2 * Math.log(1 - u())) * Math.cos(2 * Math.PI * u());
-}
+const rng = lcgNormal;
 const LINES: [Pt, Pt][] = [
   [
     { x: 90, y: 70 },

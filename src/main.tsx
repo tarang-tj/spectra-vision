@@ -6,7 +6,11 @@ import App from "./App";
 import { exposeTestProbes } from "./test-hooks";
 
 exposeTestProbes();
-createRoot(document.getElementById("root")!).render(
+// An error a boundary catches is logged once, by that boundary, with the name
+// of what failed (components/ErrorBoundary.tsx), so React's own log is off.
+createRoot(document.getElementById("root")!, {
+  onCaughtError: () => {},
+}).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,

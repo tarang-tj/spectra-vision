@@ -20,6 +20,17 @@ const EMPTY: SeriesStats = {
   max: NaN,
 };
 
+/** Sample standard deviation (n - 1) of the values as given, by the plain
+ * two-pass sum; NaN with fewer than two values. The trial spreads use this
+ * one, so their bars keep the exact arithmetic they were measured with;
+ * `describe` below skips non-finite values and sums in a different order. */
+export function sampleSd(values: readonly number[]): number {
+  const n = values.length;
+  if (n < 2) return NaN;
+  const mean = values.reduce((t, v) => t + v, 0) / n;
+  return Math.sqrt(values.reduce((t, v) => t + (v - mean) ** 2, 0) / (n - 1));
+}
+
 /** Count, mean, sample standard deviation, minimum and maximum, by Welford's
  * method. Non-finite values are skipped, so one bad sample cannot poison the
  * result. No data is reported as NaN, never as zero. */

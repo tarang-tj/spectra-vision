@@ -11,10 +11,11 @@
 // rectangle, where it lies on the surface (two offsets and a turn). The work
 // is done in centred, scaled coordinates so the numbers are all of order one.
 // Pure: no DOM, no randomness.
+import { solveLinear } from "../../measure/vec";
 import {
   applyHomography,
+  PIVOT_FLOOR,
   solveHomography,
-  solveLinear,
   type Mat3,
   type Pt,
 } from "./homography";
@@ -271,7 +272,7 @@ export function solveFused(
       const damped = a.map((row, i) =>
           row.map((v, k) => (i === k ? v * (1 + lambda) + 1e-14 : v)),
         ),
-        step = solveLinear(damped, grad);
+        step = solveLinear(damped, grad, PIVOT_FLOOR, false);
       if (step && step.every((v) => Math.abs(v) < tolerance)) {
         done = true;
         break;

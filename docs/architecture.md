@@ -1,4 +1,4 @@
-# SPECTRA architecture (v2)
+# SPECTRA architecture
 
 SPECTRA is built from three registries. Each one is a folder that is scanned at build time with `import.meta.glob`, so **adding one file adds one entry**. Nothing else needs editing: no list, no switch, no shared stylesheet.
 
@@ -36,6 +36,8 @@ pnpm run test
 PAGES_BUILD=1 pnpm run build
 SPECTRA_TEST_PRODUCTION=1 pnpm run test:e2e
 ```
+
+`pnpm run test:fast` is the unit suite without the six simulation files (`ruler-coverage`, `walls-fused`, `walls-numbers`, `fit-fused`, `ruler-fused`, `fit-scene`), which are most of its run time. It is for the edit loop and is not part of the gate: `pnpm run test` and CI run everything.
 
 ## How registries discover files
 
@@ -113,6 +115,8 @@ type ModeDef = {
   count?(frame: FrameData): number; // the "Tracked" metric; defaults to the row count
   tracked?: boolean; // give detections track ids and trails (Objects only)
   exportFrame?(result: VisionResult): Record<string, unknown>; // extra keys for the session export
+  controls?: ComponentType; // extra settings, rendered by the Inspect panel
+  leave?(): void; // another mode took the stage, or the stage went away
 };
 type InspectorRow = {
   key: number;
@@ -157,6 +161,7 @@ The model file must be listed in `scripts/models.json` with its SHA-256, and the
 - **`tracked`.** Only Objects sets it. Its detections go through the tracker (`src/vision/tracker.ts`) and come back as `frame.tracks` with ids and trails, which the motion map draws. Gestures and Segment also report detections (a hand box, a class box), but those are not separate objects, so they get no track ids and no trails.
 - **`exportFrame`.** Each processed frame is stored for the session export with the five v1 keys (`elapsedMs`, `latencyMs`, `detections`, `landmarks`, `handedness`). A mode may add optional keys; it cannot replace a v1 key. Face adds `face` (blendshapes, head pose), Gestures `gestures`, Segment `segmentation` (class shares), Fusion `tasks` (each model's own result). The README documents the fields.
 - **Demo.** A mode with no `demo.motion` clip gets no motion demo button.
+- **`leave`.** The stage calls it once on the first frame after another mode is chosen, and when the stage unmounts. A mode that holds something between frames gives it back there: Depth releases its 3D renderer and that view's pointer handler. It does not wait for the next mode's model to load. A `leave` that throws is logged and the stage goes on.
 
 ## Vision tasks and the worker protocol
 
@@ -176,7 +181,10 @@ type TaskSpec = {
   model: string;
   preciseModel?: string; // loaded instead of `model` while Precision is "Precise"
   options: Record<string, unknown>;
-  delegate: "CPU" | "GPU";
+  delegate: "CPU" | "GPU" | "AUTO"; // AUTO is resolved before the worker starts
+  holdFrame?: boolean; // keep the frame each result was made from: see "Still pictures and held frames"
+  still?: "once"; // on a still picture one result is enough until something changes
+  restate?: (listener: () => void) => () => void; // the mode's readout changed: hand it the latest result again
 };
 type TaskResult = {
   kind: TaskKind;
@@ -189,6 +197,7 @@ type TaskResult = {
   landmarks: Point[][];
   handedness: string[];
   extra?: Record<string, unknown>; // kind-specific payload
+  frame?: HeldFrame; // only for a task that sets holdFrame, on a video or camera; set by the page, never exported
 };
 type VisionResult = {
   mode: string;
@@ -218,15 +227,25 @@ One worker runs one task. The six MediaPipe kinds run in `public/vision-worker.j
 
 - **The six MediaPipe kinds are implemented** in the single `handlerFor(kind)` switch in `vision-worker.js`. That switch is the one place to add a kind: return `create`, `run`, `confidence` and `read`. `face` puts blendshapes and matrices in `extra`, `gesture` the top gesture of each hand, `segment` two 256 x 256 byte masks and per-class measurements (typed as `FaceExtra`, `GestureExtra`, `SegmentExtra`; read them with the helpers in `src/modes/lib/task-extras.ts`).
 - The `ready` message also lists the files the worker fetched from the site (runtime, wasm, model). The page passes them to the service worker; see "Offline".
-- **Depth.** `depth-worker.js` loads ONNX Runtime Web from `runtime/ort-<version>/` and one model, Depth Anything V2 Small. `"CPU"` is the WebAssembly execution provider and `"GPU"` the WebGPU one. It resizes the bitmap by the model's own preprocessing rule (each side a multiple of the 14 pixel patch, the longer side capped at twice the target) and puts the output in `extra` as `DepthExtra`: `width`, `height`, `values` (a `Float32Array`, row by row), `min`, `max`. The values are relative inverse depth, larger for nearer, with unknown scale and zero; nothing in the worker turns them into a length. A `progress` message from a task that is not ready yet calls `RunnerEvents.onRestart`, which restarts the page's 45 s load timeout, so a slow download of the 99 MB model is not treated as a failure. A GPU start that fails is not retried in the worker: the runner restarts it on CPU under the delegate rules below. A lost WebGPU device is posted as an error.
+- **Depth.** `depth-worker.js` loads ONNX Runtime Web from `runtime/ort-<version>/` and one model, Depth Anything V2 Small. `"CPU"` is the WebAssembly execution provider and `"GPU"` the WebGPU one. It resizes the bitmap by the model's own preprocessing rule (each side a multiple of the 14 pixel patch, the longer side capped at twice the target) and puts the output in `extra` as `DepthExtra`: `width`, `height`, `values` (a `Float32Array`, row by row), `min`, `max`, and `content` (a `MapRect` of map cells) only when the frame carries dark bars round the picture. The model reads a bar as a near, flat surface, so nothing outside `content` is drawn or measured as depth, and `min` and `max` are then taken inside it. The values are relative inverse depth, larger for nearer, with unknown scale and zero; nothing in the worker turns them into a length. A `progress` message from a task that is not ready yet calls `RunnerEvents.onRestart`, which restarts the page's 45 s load timeout, so a slow download of the 99 MB model is not treated as a failure. A GPU start that fails is not retried in the worker: the runner restarts it on CPU under the delegate rules below. A lost WebGPU device is posted as an error.
 - **Fusion.** A mode with several tasks gets one worker per task, each fed its own bitmap. `mergeResults` (`src/vision/merge.ts`) keeps the latest result of every task under `result.tasks`, drops results from an older source generation, takes the flat fields and `time` from the primary (first) task, and reports `latency` as the slowest task. The app counts a frame (FPS, tracker, session history) only when the primary task's time advances.
 - **Status.** `useVision` reads its status from the runners: it is "Ready" only while every task of the mode is loaded. A runner that starts again (a delegate switch, a GPU to CPU fallback) reports it through `RunnerEvents.onRestart`, and the stage shows "Loading model" until it is ready again.
+
+### Still pictures and held frames
+
+`src/vision/still.ts`, `src/vision/still-holds.ts`, `src/vision/held-frame.ts`.
+
+- **The still rule.** A picture that does not change gives the same answer every time, so `useVision`'s frame tick paces a still source through a `StillGate`. After a wake (a new picture, mode, confidence, live option, delegate restart or resume) every task runs at its full rate for `SETTLE_RESULTS` (4) results, because the gesture count wants three results in a row and a track two. After that each task is sent one frame every `STILL_GAP_MS` (1,000 ms), and a task whose spec says `still: "once"` (Depth) is sent none. A video or a camera is never paced.
+- **Holds.** `addInferenceHold(check)` registers a cheap check that returns who needs the full rate on a still right now, or null; it returns the function that removes it. `still-holds.ts` registers two: the Lab (while anything listens to the `inference` event) and a Presence session (while its store's phase is calibrating or measuring; the store is read there, not changed). While a hold answers, the still is not paced.
+- **Readout.** `stillState()` is `live`, `settling`, `still` (with `perSecond`) or `held` (with `by`), and `stillWords` turns it into what the footer's frame-rate readout shows: "still picture" with "checked once a second" or "inferred once", or a rate with "kept running for the Lab". `useSession` starts its rate again at each change of pace, so a rest is never averaged into a frame rate.
+- **`restate`.** A mode that shows more than the result itself (Depth's metres follow the Ruler) gives a subscribe function. When its listener is called, the page hands the mode its latest result again as a new object, without running the model. The function is never sent to the worker.
+- **`holdFrame`.** For a model slow enough that a moving picture moves on before it answers. The page copies each frame it sends (two canvases used in turn, the longer side at most `MAX_SIDE`, 1,280 pixels) and puts the copy on the result as `TaskResult.frame`: `{ image, capturedAt }`, where `capturedAt` is on the same clock as `Frame.time`. Only the latest result's frame is valid. A still picture is not held, and a restarted worker drops the pending copy. Depth sets it: `depthSync` (`src/modes/lib/depth-sync.ts`) draws a map only over the frame it was made from, which is the live picture on a still or when the map is at most `FRESH_MS` (100 ms) old, the held frame otherwise, and nothing when neither is to hand. It also gives the lag the legend states.
 
 ### Delegates
 
 `src/vision/delegate.ts`, `src/vision/task-runner.ts`, `src/vision/webgl-probe.ts`.
 
-A task asks for `"CPU"` or `"GPU"` in its `TaskSpec`. The three v1 modes, Face, Gestures and Fusion ask for CPU. Segment asks for GPU, where its model is several times faster. Depth asks for `"AUTO"`; for that kind GPU means WebGPU, and a browser without it falls back to CPU with the reason shown.
+A task asks for `"CPU"`, `"GPU"` or `"AUTO"` in its `TaskSpec`. Objects, Body, Hands, Gestures, Segment and Depth ask for `"AUTO"`, and so do Fusion's body and hand tasks. Face, and Fusion's face task, ask for CPU. `"AUTO"` becomes GPU only where the page has a hardware renderer (see "Added in 2.2"), so a machine without one, CI included, runs everything on CPU. For Depth, GPU means WebGPU, and a browser without it falls back to CPU with the reason shown.
 
 - **Choice store.** The Lab's CPU or GPU switch calls `chooseDelegate(kind, delegate)`. The choice is kept per task kind for the page's lifetime, `requestedDelegate(spec)` returns the choice or else the mode's own delegate, and every runner of that kind restarts on it (`onDelegateChoice`). `chooseDelegate(kind, null)` gives the decision back to the mode.
 - **Software-renderer refusal.** Before a GPU task starts, `gpuUnavailable()` asks the page's one WebGL probe for the renderer name. With no WebGL2, or with a software renderer (SwiftShader, llvmpipe, lavapipe, WARP, Mesa OffScreen, Generic Renderer, Basic Render Driver), GPU is refused up front and the task runs on CPU with the reason recorded. `"AUTO"` uses the same name check, so those renderers resolve to CPU there too. A software renderer can run the GPU path, but an abandoned start there was measured to keep the browser's GPU process busy for 16 seconds to minutes. The worker refuses a software renderer for `segment` on its own as well.
@@ -345,10 +364,11 @@ type Studio = {
   openPanel(id: string): void;
   immersive: boolean; // stage-only view
   stage: StageHooks; // draw on the stage, read pointer input: see "Measurement layer"
+  loadPicture(blob: Blob, label: string): Promise<number>; // put a still picture the caller holds on the stage; resolves with its source generation, rejects when it cannot be read
 };
 ```
 
-Five panels ship: Inspect (`src/panels/inspect.tsx`), which is the v1 rail content, Lab (`src/panels/lab.tsx` with its parts in `src/panels/lab/`), and Library, Ruler and Presence, each a `.tsx` file with its parts in a folder of the same name. The last two are measuring panels built on the measurement layer below. With one visible panel there is no tab bar. With more, `src/components/Inspector.tsx` shows a tab bar (`.panel-tabs`) and the chosen panel. Beside the stage the rail takes the stage's height and the panel scrolls inside it.
+Five panels ship: Inspect (`src/panels/inspect.tsx`), which is the v1 rail content, Lab (`src/panels/lab.tsx` with its parts in `src/panels/lab/`), and Library, Ruler and Presence, each a `.tsx` file with its parts in a folder of the same name. The last two are measuring panels built on the measurement layer below. Each panel is rendered inside an `ErrorBoundary` (`src/components/ErrorBoundary.tsx`), and so is a mode's `controls` component in the Inspect panel: a throw while one of them renders shows a plain message in its place with a "Try again" button, is logged once with the name of what failed, and leaves the stage and the rest of the rail working. With one visible panel there is no tab bar. With more, `src/components/Inspector.tsx` shows a tab bar (`.panel-tabs`) and the chosen panel; the tabs wrap onto a second row inside the rail when they do not fit on one. Beside the stage the rail takes the stage's height and the panel scrolls inside it; between 761 and 1,100 px wide the rail also runs down beside the effects tray and the result card, which take the stage's column there. Inspect lists every row with no scroll box of its own, and draws the Confidence slider and the motion map only where `locatesThings(mode)` is true: a mode with at least one task that is not `depth`.
 
 The Lab subscribes to the telemetry bus only while it is open, keeps fixed-size rings of samples (`lab-store.ts`), computes percentiles with `src/telemetry/stats.ts`, and runs the benchmark protocol in `benchmark.ts` (20 s measured after a 2 s warm-up per mode and delegate, exported as JSON or Markdown by `benchmark-report.ts`). It owns no timer while merely open: it is driven by the stage's `frame` events.
 
@@ -419,7 +439,7 @@ Rules for a measured number: it is a `Measured`, it carries an error that someth
 
 ### Ruler tools: `src/panels/ruler/`
 
-The Ruler solves one plane map from the tapped reference (`derive(state)` gives `Derived`, whose `sheet.h` maps picture pixels to plane mm). A tool that needs more than spans, paths and areas lives in its own folder and plugs in through `extension-types.ts`. Box (`fit/`) and Walls (`walls/`) are built this way.
+The Ruler solves one plane map from the tapped reference (`derive(state)` gives `Derived`, whose `sheet.h` maps picture pixels to plane mm). A tool that needs more than spans, paths and areas lives in its own folder and plugs in through `extension-types.ts`. Box (`fit/`), Walls (`walls/`) and Room (`room/`) are built this way.
 
 ```ts
 type ExtensionEnv = {
@@ -435,7 +455,7 @@ type DrawEnv = ExtensionEnv & {
   toCanvas(flat: Pt): { x: number; y: number };
 };
 type RulerExtension = {
-  tool: ExtensionTool; // "box" | "wall", declared in state.ts
+  tool: ExtensionTool; // "box" | "wall" | "room", declared in state.ts
   label: string; // tool button text
   hint: string; // its tooltip
   step(env: ExtensionEnv): string; // the one-line instruction while the tool is chosen
@@ -452,6 +472,18 @@ type RulerExtension = {
 - The Ruler works `step` out only when its own state changes. A tool whose instruction follows its own state shows it in its `Section` (Walls does, in a `role="status"` line).
 - A tool keeps its own module-level store and clears what it placed through `onPointsCleared` (`state.ts`), which fires when the Ruler's points are cleared.
 
+**Presses on the Ruler's own handles** (`pointer.ts`, `grab.ts`, `tap.ts`).
+
+- While something is part built, every press places its next point and none grabs a handle. `building(s)` is true for a first reference with fewer than four corners, a further reference being tapped, an open outline, path or edge of the chosen tool, and a span with one end. A reference that is small on screen can then be tapped corner by corner.
+- Otherwise a press grabs the nearest handle within reach (`hit`), or places a point. Reach is `HIT_MOUSE` (12) or `HIT_TOUCH` (24) canvas CSS pixels, cut to `SPACING_SHARE` (0.4) of the distance to the nearest other handle so two grab discs never overlap, and never under `FLOOR_MOUSE` (5) or `FLOOR_TOUCH` (8): `grabRadius`.
+- A press that grabbed a handle moves it only after `TAP_TRAVEL` (4 CSS pixels), so a tap on a handle moves nothing. A point the same press placed follows from the first pixel.
+- With Path or Area chosen and no shape of it open, a press that took hold of a handle and lifts without travelling is the shape's first point, placed where the press was (`startsShape` in `pointer.ts`). Nothing is part built before a shape's first point, so without this rule an outline started right beside a handle lost its first tap and closed one corner short. A press that travels still moves the handle, a cancelled press places nothing, and Span is unchanged: a tap on a handle places nothing and the step line says so.
+- `state.grab` holds the grabbed handle for the step line, which names it with `handleName` while it is held and after a tap that moved nothing. It goes when the points or the tool change.
+- `bindSource` sets the tool back to Span on a new picture, since the reference never survives one. The Room tool is the exception: it stays chosen when another of the room's pictures is opened.
+- With an extension tool chosen a press never places a Ruler point but may still grab one. Box and Walls hit-test their own handles with the plain `hitRadius`, without the spacing cut or the travel rule.
+
+**The reference's long side** (`long-side.ts`, `Derived.longSide`). How long a side looks on screen does not say which pair of sides is the long one: a sheet seen along its long side shows that side shorter. `chooseLongSide` lays the reference each way round, solves a plane map for each and fits a camera to each with `fitCamera`. Each fit's miss is its squared miss over the four corners divided by the squared tap uncertainty. The picture decides only when the two misses differ by more than `CLEAR_GAP` (16) and the smaller is under `FIT_LIMIT` (9); `how` is then `"picture"`. Otherwise the side that looks longer on screen stands (`looksLong` in `homography.ts`) and `how` is `"guessed"`; a square reference is `"square"`. Four taps give eight numbers and the camera has seven, so one is left to judge by, and for many pictures both ways round fit: guessed is the common case. `derive` passes `side.firstIsLong !== s.swap` to `solveSheet`, so Swap sides flips whatever was chosen, and a drag holds the side it started with. `longSideNote(side, swap)` is the panel's sentence: that the side was guessed and the edge labels should be checked; that the picture overrules the look; or, with Swap on against a clear picture, that the picture disagrees and the choice is kept. It is null when the picture agrees with the look and nothing was swapped. The choice is remembered by content in a 32-entry cache, so only a moved corner refits. The copied results text (`results-text.ts`) says when the sides were swapped by hand and carries the same long-side note.
+
 **Adding a tool.**
 
 1. Add its id to `ExtensionTool` in `state.ts`.
@@ -463,7 +495,7 @@ type RulerExtension = {
 
 **Plumb edges** (`plumbs.ts`). An edge that is plumb in reality (a wall corner, a door frame) steadies the focal length and so every height. Any tool contributes some under its own name with `setPlumbs(owner, lines)`, where a line is two taps in source pixels; `allPlumbs()` returns every tool's, `plumbVersion()` goes up by one on each change (a memo key), and `subscribePlumbs(listener)` is for a component that must redraw when another tool's edge changes the camera. Walls publishes each floor corner and its ceiling point as one. They are dropped when the Ruler's points are cleared.
 
-**A size too uncertain to state** (`reading.ts`). A length, height, area, volume or clearance whose bar is as large as the size itself says nothing as "value ± bar". `tooUncertain(m)` is true when `m.error >= |m.value|`, judged on the numbers as measured, not as rounded. `readingText(m)` then gives "too uncertain to state (bar ± ...)" followed by what narrows it, and `formatMeasured(m)` otherwise; `shortReading(text)` is the form for a stage label or a table cell. This is display text only: stored state, `data-` attributes, CSV and OBJ keep the numbers. It is the same line the Box verdict draws between "fits" and "too close to call". It is not part of the shared formatter, because elsewhere a true value of zero with a bar (an angle, a share) is a real reading.
+**A size too uncertain to state** (`reading.ts`). A length, height, area, volume or clearance whose bar is as large as the size itself says nothing as "value ± bar". `tooUncertain(m)` is true when `m.error >= |m.value|`, judged on the numbers as measured, not as rounded. `readingText(m)` then gives "too uncertain to state (bar ± ...)" followed by what narrows it, and `formatMeasured(m)` otherwise; `shortReading(text)` is the form for a stage label or a table cell. This is display text only: stored state, `data-` attributes and CSV keep the numbers. The OBJ does not: `roomObj` (`walls/save-obj.ts`) writes what the 3D view draws, so when the mean height is too uncertain to draw, or no height was measured, the file holds the floor alone and its header says why. It is the same line the Box verdict draws between "fits" and "too close to call". It is not part of the shared formatter, because elsewhere a true value of zero with a bar (an angle, a share) is a real reading.
 
 **Fused known sizes** (`fuse-inputs.ts`, `fused.ts`, `fused-trials.ts`). With further references or known spans, `fuseSheet` replaces `sheet.h` with one least-squares plane map over every usable known size and sets `sheet.fused`; with none, the sheet is the first reference's own solve, unchanged. Each residual is a miss divided by its own standard deviation (a corner's reprojection over the tap uncertainty; a span's length error over the tap uncertainty of both ends combined with the tape uncertainty), so nothing has a hand-set weight. `fusedRuns` holds the seeded retakes of that solve, made once per set of known sizes and shared by spans, paths, areas and `cameraTrials`. `basisFor(lens, sheet.fused)` (`monte-carlo.ts`) is the one sentence saying what a bar covers; Box and Walls quote it inside their own.
 
@@ -474,7 +506,7 @@ import { onVisionResult } from "../vision/result-feed";
 const off = onVisionResult((result: VisionResult, generation: number) => {});
 ```
 
-A panel is unmounted while another tab is on show, so reading `useStudio().frame` misses frames. `onVisionResult` is a module-level subscription on the telemetry bus (event `result`): subscribe from a module-level store and measuring continues in the background. The result is the raw model output, the same object the stage and the session export receive; never mutate it. Nothing arrives while the stage is paused or the tab is hidden. `result.generation` changes with the source and the mode changes `result.mode`: reset a session when either changes.
+A panel is unmounted while another tab is on show, so reading `useStudio().frame` misses frames. `onVisionResult` is a module-level subscription on the telemetry bus (event `result`): subscribe from a module-level store and measuring continues in the background. The result is the raw model output, the same object the stage and the session export receive; never mutate it. Nothing arrives while the stage is paused or the tab is hidden. On a still picture results arrive in a run of 4 and then once a second, or never again for Depth, until something wakes the run (see "Still pictures and held frames"). A store that measures over time on a still registers a hold with `addInferenceHold`. `result.generation` changes with the source and the mode changes `result.mode`: reset a session when either changes.
 
 ### Stage hooks: `useStudio().stage`, `setPaused`
 
@@ -501,7 +533,8 @@ type StagePointerEvent = {
 ```
 
 - **Overlay.** Drawn last, after the mode, the effects and the GL layer, on the one stage canvas in CSS pixels, so Record and Screenshot capture it. It is also drawn while paused (the stage keeps redrawing the held frame). Context state is saved and restored around it. An overlay that throws is logged once and skipped. Remove it in the effect cleanup.
-- **Pointer.** Events from the stage canvas; the newest handler sees an event first and returns `true` to consume it (later handlers do not see it, the browser default is prevented, and on a consumed `down` the canvas captures the pointer so a drag continues outside it). While any handler is registered the canvas sets `touch-action: none` and a crosshair cursor (`canvas[data-pointer="on"]`). With none registered the canvas behaves as before. To drag a handle, remember the pointer id on `down` and return `true` for its `move` and `up`.
+- **Pointer.** `onPointer(handler, { yields: true })` registers a handler that sees an event only after every other handler has declined it, whenever it was registered. It is for a handler that would take any press on the picture: Depth's 3D view turns on a drag this way, so with the Ruler open a press the Ruler uses is the Ruler's. Otherwise: events from the stage canvas; the newest handler sees an event first and returns `true` to consume it (later handlers do not see it, the browser default is prevented, and on a consumed `down` the canvas captures the pointer so a drag continues outside it). While any handler is registered the canvas sets `touch-action: none` and a crosshair cursor (`canvas[data-pointer="on"]`). With none registered the canvas behaves as before. To drag a handle, remember the pointer id on `down` and return `true` for its `move` and `up`.
+- **The canvas's own click listener.** While any pointer handler is registered, `CameraStage` adds an empty `click` listener to the canvas itself. Chrome's touch adjustment retargets a whole touch to the nearest element that answers a click unless the element under the finger answers clicks itself, and it counts only listeners on the element, which React's (on the root) are not. Without it a touch a few pixels above a stage button pressed the button. `.stage-tools` takes no pointer events itself, only its buttons, so its padding is picture too.
 - **Pause.** `setPaused(true)` stops detection and holds the last frame (a video source pauses too); an uploaded photo is already still. Whoever pauses resumes.
 - `unproject(point, rect, mirror)` in `src/vision/geometry.ts` is the pure inverse of `project`.
 
@@ -515,7 +548,7 @@ The `pose` and `hand` tasks put MediaPipe's `worldLandmarks` in `extra.world` (t
 
 ### Precision (setting, Fast by default)
 
-A `TaskSpec` may declare `preciseModel`. With Precision on "Precise" (`usePrecision()`, `getPrecision()`, `modelOf(spec)`), the task runner loads it instead of `model` and restarts on a fresh worker when the setting changes; the delegate rules are unchanged. Body and Fusion declare `pose_landmarker_full.task` (9,398,198 bytes, Apache-2.0, in `scripts/models.json` with its SHA-256). `TaskResult.model` and the Lab (model cards, load times, benchmark) report the file actually in use. Models are still fetched on demand only, and the service worker caches the full model on its first real use with the other `models/` files (no list to edit). Remembered in `localStorage` (`spectra.precision.v1`). Defaults stay Lite on CPU because CI has no GPU.
+A `TaskSpec` may declare `preciseModel`. With Precision on "Precise" (`usePrecision()`, `getPrecision()`, `modelOf(spec)`), the task runner loads it instead of `model` and restarts on a fresh worker when the setting changes; the delegate rules are unchanged. Body and Fusion declare `pose_landmarker_full.task` (9,398,198 bytes, Apache-2.0, in `scripts/models.json` with its SHA-256) and Objects declares `efficientdet_lite2.tflite`. `TaskResult.model` and the Lab (model cards, load times, benchmark) report the file actually in use. Models are still fetched on demand only, and the service worker caches the full model on its first real use with the other `models/` files (no list to edit). Remembered in `localStorage` (`spectra.precision.v1`). The default is the smaller model. The delegate does not depend on this setting: it follows the rules under "Delegates".
 
 ### A measuring panel in ten lines (sketch: `store` is the panel's own module)
 
@@ -549,7 +582,7 @@ function Sway() {
 
 ## Added in 2.3
 
-- **Depth mode**: `src/modes/depth.ts`, an eighth mode on a new task kind, `depth`, with its own worker (`public/depth-worker.js`) on ONNX Runtime Web and a `progress` message for long downloads. The pure parts are in `src/vision/depth/` (`colormap.ts`, `affine-fit.ts`, `unproject.ts`, `orbit.ts`) and the drawing, the 3D point view and the readout in `src/modes/lib/depth-*`. The 3D view is WebGL2 on an off-page canvas copied onto the stage; it owns no loop or timer and releases its GL objects when the view or the mode goes away. The session export gains an optional `depth` key (a summary of the map, never the map).
+- **Depth mode**: `src/modes/depth.ts`, an eighth mode on a new task kind, `depth`, with its own worker (`public/depth-worker.js`) on ONNX Runtime Web and a `progress` message for long downloads. The pure parts are in `src/vision/depth/` (`colormap.ts`, `affine-fit.ts`, `unproject.ts`, `orbit.ts`) and the drawing, the 3D point view and the readout in `src/modes/lib/depth-*`. The 3D view is WebGL2 on an off-page canvas copied onto the stage; it owns no loop or timer and releases its GL objects when the view goes away or the mode is left (the mode's `leave`), and also when its own start fails part way. The worker reads the model into one buffer of the size the manifest gives (`options.bytes`), so the 99 MB file is held once while it arrives. The session export gains an optional `depth` key (a summary of the map, never the map).
 - **Metric depth from the Ruler**: `depth-metric.ts` reads the Ruler's state and never changes it. On a photo with a solved reference and a resolved focal length, the map cells inside the reference, further references and finished Area outlines are fitted as `1 / depth = a * output + b` (`fitDepth`), and the fit is refused with a reason when the marked floor's far edge is under 1.3 times as far as its near edge, when fewer than 30 points are usable, or when it leaves more than 25% scatter. A depth is a `Measured`: 2 standard deviations over the `cameraTrials` refits combined with twice the fit's scatter, and "not measured" when that bar exceeds half the depth (`depth-measured.ts`). The refits wait until the same scale has been asked for on 8 drawn frames, so dragging a Ruler handle does not trigger them per move.
 - **Camera model**: `src/measure/camera.ts` with `camera-fit.ts` and `vec.ts`, described under "Pure helpers".
 - **Ruler tool contract**: `extension-types.ts`, `extensions.ts`, `camera-of.ts`, `plumbs.ts`, described under "Ruler tools".
@@ -558,6 +591,27 @@ function Sway() {
 - **More known sizes and the tape test**: `fuse-inputs.ts`, `fused.ts`, `fused-maths.ts`, `fused-trials.ts`, `derive-known.ts`, `store-known.ts`, `known-sizes.tsx`, `tape-entry.tsx`, `tape-test.tsx`. Further references and tape-measured spans go into one solve of the surface; a tape reading typed beside a span is only compared with it unless it is used as a known span. `SECOND_SHEET_COVERAGE` (`results.tsx`) and `COVERAGE_NOTE` (`monte-carlo.ts`) hold the measured coverage the panel prints, enforced by `tests/ruler-coverage.test.ts`.
 - **Display of sizes**: `roundError` keeps two figures of an error that starts with 1 or 2, and `reading.ts` words a size whose bar is as large as itself. Stage labels are queued and placed together at the end of the frame (`overlay-labels.ts`).
 - **Shell**: number keys reach eight modes (`MAX_MODE_KEYS` in `src/shell/shortcuts.ts`).
+
+## Added in 2.4: several pictures of one room
+
+`src/panels/ruler/room/`. A room is an ordered list of views. A view is one still picture, held in memory and never uploaded, with everything the Ruler, its known sizes, Box and Walls hold for it.
+
+- **Views** (`views-store.ts`, `view-snap.ts`, `view-strip.tsx`, `picture.ts`). Each store has a snapshot and restore pair beside it (`snapshot`/`restore` in `state.ts`, `snapshotKnown`/`restoreKnown` in `store-known.ts`, `snapshotBox`/`restoreBox`, `snapshotWalls`/`restoreWalls`); nothing reaches into a store. The view on the stage is saved whenever one of those stores changes. Entering a view calls `useStudio().loadPicture`, which goes through the upload path and gives the new source generation, then restores the state bound to that generation, so the Ruler's `bindSource` does not clear it. When the stage moves on to a picture that is not one of the room's, the views store lets go of it. A video or camera frame becomes a view through "Keep this frame as a picture".
+- **One frame** (`floor-maths.ts`, `room-frame.ts`, `room-solve.ts`, `room-status.ts`). The first view's plane frame is the room's. A later view's frame differs from it by one of the reference's turns onto itself (`symmetries`: two for a rectangle, four for a square). Room points marked both in that view and in views already on the plan choose the turn (`placeView`), and the view is placed only when two of them, further apart than their spreads could put one point, choose the same turn. With one such point, or several too close together, the view is `provisional`: listed with the turn they suggest, and contributing nothing. One point is never enough because a spot mistaken for its mirror image through the sheet's middle (the opposite corner of a room) fits the wrong turn exactly. The view is refused, in words, when no such point decides (it is too near the sheet's middle for its bar), when the best turn still leaves the two positions further apart than their combined spread allows (`limitFor`: the region that holds all of a view's shared points 95 times in 100), when two points choose different turns, or when its reference is another size. A view that is not on the plan contributes no point, no line and no pixel anywhere. A later view is checked against every view placed before it, and a refusal names every view the disputed points are marked in, since the wrong mark may be in an earlier one. In a view that is not a mirror image, one mistaken mark among its shared points is caught. Not caught: two mistaken marks that mislead the same way (each the look-alike of the true spot on the other side of the sheet), whether both are in the picture being placed or one is there and the other is an earlier picture's mark of a point that only those two pictures share, which nothing else checks. Mirror images: `reflections` gives the reference's reflections onto itself (two for a rectangle, four for a square). They are never a placement, only rivals: a view whose shared points do not tell its turn from a reflection (every point on one line through the sheet's middle) is `provisional` with reason `line`, and a view whose points fit a reflection and no turn is refused with reason `mirror`. "Tell apart" is judged on where the two readings would put a point, not on whether the reflection passes the agreement test, because noise fails a true fit 1 time in 20. The two readings count as told apart only when they would put some shared point `MIRROR_MARGIN` (4) agreement radii apart: at 2, noisy marks 0 to 15 mm off the long centre line placed 21 of 200,000 flipped pictures; at 4, 0 of 400,000. A flipped picture was refused or held in every case tested except two. First, marks close to a line through the sheet's middle: with the margin now used, none of 400,000 noisy flipped pictures with marks within 120 mm of a centre line was placed (two sweeps of 200,000; before the margin 21 of 200,000 were), which is a measured count, not a proof. Second, a flipped picture whose shared marks lie on two different lines through the sheet's middle with one of them mistaken for its look-alike is placed mirrored (148 of 3,275 such pictures in the verifier's run): two marks on two centre lines give the same data as an honest picture, so two marks cannot catch it.
+- **Numbers** (`view-frame.ts`, `room-merge.ts`, `text.ts`). Each view has 200 seeded retakes of its own plane map from its own random stream, kept with the view (`frameOf`), independent of which picture is on the stage. A tapped point is a cloud over its view's retakes; a point marked in several views is the clouds weighted by the inverse of their spreads (`combine`); walls, perimeter and floor area are worked out again per retake (`outlineNumbers`) and shown only when 80% of the retakes could produce them. Every number is a `Measured` whose basis says how many pictures it rests on (`roomBasis`). Coverage is tested from both sides in `tests/room-merge.test.ts`.
+- **The Room tool** (`index.tsx`, `store.ts`, `pointer.ts`, `overlay.ts`, `room-section.tsx`, `room-points.tsx`, `room-results.tsx`, `picks.ts`, `current.ts`). A `RulerExtension` with tool id `"room"`. A room mark is grabbed by the Ruler's rule (`grabRadius`, with the Ruler's handles counted as neighbours), and a tap that only took hold leaves a note for the step line. Undo takes back a tapped change only while its picture is on the stage. `nextStep` in `guide.ts` is the one line under the thumbnails. Anything that discards a room's work goes through `confirm-button.tsx` (Remove, Start a new room, and Clear on a room picture through `clear-button.tsx`): the first press arms it, a press elsewhere, Escape or blur puts it back; no dialog and no timer. Room points and the outline's order live in `store.ts`; taps are in the source pixels of the picture they were made in. `currentRoom` (`current.ts`) is the solver's answer for the two stores, worked out once per change and not per drawn frame. `picks.ts` offers points the other tools already placed by name; one that is taken is copied, not linked. Room points are not cleared with the Ruler's points.
+- **Room plan** (`room-plan.ts`, `room-scene.ts`, `room-plan-draw.ts`, `room-export.ts`, `room-plan-panel.tsx`, `rasters.ts`). Shown from two views up; each picture is decoded once, at most 1,200 pixels on a side. The plan is drawn at the width it is shown (`thinFor` drops the smaller labels under 400 px and wall lengths under 300, `keepInside` moves every label inside the canvas) and saved at 480 px with all of them. `mergeTopDown` lays every placed view's floor in the room's frame with topdown.ts's rules per picture; where views overlap the one with the fewest floor millimetres per pixel wins. Heights stay with the picture they were tapped in: the plan only marks where one was measured.
+- **Room file** (`room-file.ts`, `room-file-parse.ts`, `room-file-check.ts`, `room-io.ts`, `room-file-bar.tsx`). One JSON document, schema version 1: per view its snapshot, the room's points and outline, the numbers with their bars, and each picture as a data URL only when the box is ticked. Opening parses JSON only, checks and copies every field by name, refuses another version, a damaged file, one over 60 MB or a picture that is not a JPEG or PNG, and compares every number worked out again from the taps with the saved one (`numbersThatDiffer`). A refused file changes nothing. A view opened without its picture has no bytes to put on the stage, so it can be read and exported but not tapped.
+
+## Added in 2.4: stage, panels and presses
+
+- **Still pictures and held frames**: `still.ts`, `still-holds.ts`, `held-frame.ts`, with `TaskSpec.holdFrame`, `still` and `restate`, `TaskResult.frame` and `DepthExtra.content`, described under "Vision tasks and the worker protocol". The footer's frame-rate readout reads the still state.
+- **Download messages**: `download-failure.ts` words a model that could not be fetched (offline with nothing stored, or online with the reason), so a failed fetch is not taken for a GPU failure and does not leave the page on CPU. `first-download.ts` gives the loading line for a task that states its model's size in `options.bytes` and whose model is not yet stored: the size, that it is a one-time download, and that it is kept afterwards only where a service worker is registered. Depth is the one task that states a size.
+- **Error boundary**: `src/components/ErrorBoundary.tsx`, described under "Panels".
+- **Mode `leave`** and **`onPointer(handler, { yields: true })`**, described under "Modes" and "Stage hooks".
+- **Ruler presses**: `grab.ts` and the constants in `tap.ts`, described under "Ruler tools".
+- **Save OBJ**: `walls/save-obj.ts` writes the floor alone when the 3D view draws the floor alone.
+- **Layout**: wrapping tabs (`panel-tabs.css`), the rail's height between 761 and 1,100 px and the Inspect list without its own scroll box (`inspector.css`), and the Library's one full-width column on a phone (`src/panels/library/library.css`).
 
 ## Telemetry bus
 
@@ -584,7 +638,7 @@ telemetry.on("result", (e) => {}); // { result, generation }  one per merged vis
 - **Command palette** (`commands.ts`, `palette-commands.ts`, `CommandPalette`): built from the registries only while it is open.
 - **Immersive view** (`ImmersiveDock`, `immersive.css`): the stage fixed to the viewport, nothing scroll-locked.
 - **Recorder and result card** (`use-clip-recorder.ts`, `ShareCard`): the one recorder implementation. A finished clip is downloaded and also shown in the card from an object URL that is revoked when the card is dismissed. Nothing is uploaded.
-- **Source controls** (`use-source-controls.ts`): mode, source, pause, mirror and motion demo, with the rules that tie them together.
+- **Source controls** (`use-source-controls.ts`): mode, source, pause, mirror and motion demo, with the rules that tie them together. `useSource().upload(file, onTake)` resolves with `Opened`: `{ ok: true, generation }` (the generation is null for a video, and for a picture a newer source overtook while it decoded) or `{ ok: false }`. A picture is decoded before the source on the stage is released, so a damaged image or a file that is neither an image nor a video leaves the stage, its taps and the switches as they were; `onTake` (which resets pause, mirror and the motion demo) does not run, and the stage's notice says the file could not be read. A damaged video still replaces the stage.
 
 ## Offline
 
@@ -608,7 +662,7 @@ The service worker is registered in production builds only, after `load`, as `<b
 
 ## Styles
 
-`src/styles/index.css` imports `base.css`, `shell.css`, `stage.css` and `inspector.css`. `panel-tabs.css`, `deck.css`, `palette.css`, `coach.css`, `share.css` and `immersive.css` are imported by the component that uses them, and `src/panels/lab/lab.css` by the Lab. Plugins bring their own CSS file next to their module.
+`src/styles/index.css` imports `base.css`, `shell.css`, `stage.css`, `inspector.css` and `deck.css`. `panel-tabs.css`, `palette.css`, `coach.css`, `share.css`, `immersive.css` and `measure-settings.css` are imported by the component that uses them, and `src/panels/lab/lab.css` by the Lab and Presence. Plugins bring their own CSS file next to their module.
 
 ## File map
 
@@ -627,27 +681,42 @@ src/panels/                 types.ts, index.ts, inspect.tsx, lab.tsx, lab/, libr
 src/panels/ruler/           the plane solve (homography.ts, derive.ts, monte-carlo.ts), shapes, plan and
                             lens; fused known sizes (fuse-inputs.ts, fused*.ts, known-sizes.tsx,
                             tape-test.tsx); the tool contract (extension-types.ts, extensions.ts,
-                            camera-of.ts, plumbs.ts, reading.ts); fit/ (Box) and walls/ (Walls)
+                            camera-of.ts, plumbs.ts, reading.ts); tap.ts (grab radius, press to
+                            pixel, clamp to the picture); grab.ts (which handle a press takes, and
+                            when a press places instead); long-side.ts (which way round the
+                            reference lies); fit/ (Box), walls/ (Walls) and room/
+                            (several pictures of one room, the Room tool, the room plan and file)
 src/studio-context.ts       Studio type and useStudio()
 src/session-export.ts       the JSON download
+src/download.ts             save a blob or text as a local file (every export goes through it)
+src/test-hooks.ts           what a page opened with ?spectra-test exposes to the browser tests
 src/stage/                  renderer.ts, effect-host.ts, gl-layer.ts, use-stage-loop.ts, stage-hooks.ts
 src/gl/                     WebGL2 kit for effects
 src/vision/                 types.ts, frame.ts, draw.ts, geometry.ts, tracker.ts, merge.ts,
                             delegate.ts, webgl-probe.ts, task-runner.ts, useVision.ts, useSource.ts,
-                            useSession.ts, settings.ts, smooth-result.ts, result-feed.ts
+                            useSession.ts, settings.ts, smooth-result.ts, result-feed.ts,
+                            tracker-cost.ts, still.ts, still-holds.ts, held-frame.ts,
+                            download-failure.ts, first-download.ts
 src/vision/depth/           colormap.ts, affine-fit.ts, unproject.ts, orbit.ts (pure)
 src/measure/                one-euro.ts, series.ts, noise.ts, format.ts, angles.ts, camera.ts,
-                            camera-fit.ts, vec.ts (pure)
+                            camera-fit.ts, vec.ts (pure; vec.ts is the one home of solveLinear
+                            and invert3, the Ruler's plane solves included)
 src/telemetry/              bus.ts, stats.ts, task-status.ts
 src/shell/                  shortcuts, palette, layout, recorder, service worker registration
 src/components/             Header, ModeSwitch, CameraStage, StageMessage, CameraPicker, Inspector,
                             StudioDeck, EffectsPicker, EffectIntensity, ShareCard, CoachMarks,
-                            CommandPalette, ImmersiveDock, HelpPanel, Footer
+                            CommandPalette, ImmersiveDock, HelpPanel, Footer, MeasureSettings,
+                            ErrorBoundary
 src/styles/                 index.css, base.css, shell.css, stage.css, inspector.css, panel-tabs.css,
-                            deck.css, palette.css, coach.css, share.css, immersive.css
+                            deck.css, palette.css, coach.css, share.css, immersive.css,
+                            measure-settings.css
 tests/                      unit: tracker, registry (with fixtures), vision, telemetry, modes, effects, lab,
                             shell, measure-*, stage-hooks, vision-smoothing, vision-settings, ruler-*,
-                            fit-*, walls-*, depth-*;
+                            fit-*, walls-*, room-*, depth-*, library-*, presence-*, session-export,
+                            licence-notices, inspect-controls; helpers/ (seeded noise, the worker
+                            harness, room builders);
                             e2e: studio, modes, effects, lab, shell, mode-switch, no-webgl, measure,
-                            ruler*, fit, walls, depth
+                            ruler*, fit, walls, room, depth, demo-page, detection-models,
+                            detection-stability, library, presence, error-boundary,
+                            still-picture, panel-layout, unreadable-file
 ```

@@ -47,8 +47,14 @@ export type StageHooks = {
   addOverlay(draw: StageOverlay): () => void;
   /** Receive pointer down, move and up over the stage. While at least one
    * handler is registered the canvas stops the browser from scrolling on touch
-   * (`touch-action: none`). With none registered, the stage behaves as before. */
-  onPointer(handler: StagePointerHandler): () => void;
+   * (`touch-action: none`). With none registered, the stage behaves as before.
+   * `yields` is for a handler that would take any press on the picture (the
+   * Depth 3D view's turn): whenever it is registered, it sees an event only
+   * after every other handler has declined it. */
+  onPointer(
+    handler: StagePointerHandler,
+    options?: { yields?: boolean },
+  ): () => void;
 };
 
 export type StageHooksCore = StageHooks & {
@@ -84,8 +90,10 @@ export function createStageHooks(): StageHooksCore {
         overlays.delete(draw);
       };
     },
-    onPointer(handler) {
-      handlers.push(handler);
+    onPointer(handler, options) {
+      // Dispatch runs from the end of the list, so the front is seen last.
+      if (options?.yields) handlers.unshift(handler);
+      else handlers.push(handler);
       if (handlers.length === 1) announce();
       return () => {
         const at = handlers.indexOf(handler);

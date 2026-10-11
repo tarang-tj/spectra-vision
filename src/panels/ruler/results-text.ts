@@ -1,4 +1,5 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+import { longSideNote } from "./long-side";
 import type { Derived } from "./derive";
 import type { RulerState } from "./state";
 
@@ -26,5 +27,9 @@ export function resultsText(s: RulerState, d: Derived): string {
   if (d.known?.summary) lines.push(d.known.summary);
   lines.push(`Error bar: 2 standard deviations. ${d.basis}`);
   if (s.swap) lines.push("Reference sides were swapped by hand.");
+  // A copied result must carry the same caveat the panel shows beside the
+  // reference: a guessed long side changes every length here if it is wrong.
+  const side = longSideNote(d.longSide, s.swap);
+  if (side) lines.push(side);
   return lines.join("\n");
 }

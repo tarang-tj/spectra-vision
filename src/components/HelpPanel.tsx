@@ -22,33 +22,46 @@ export default function HelpPanel() {
         time you open it. Objects detects common COCO categories; Body tracks
         one person by default, or up to four with its People setting; Hands
         tracks up to two hands; Face follows one face and does not identify it;
-        Segment labels each pixel as background, hair, skin, clothes or
-        accessories; Gestures recognizes seven hand gestures; Fusion runs the
-        body, hand and face models together; Depth maps relative depth from one
-        camera, with a 3D view, and its first load is over 100 MB. Depth gives
-        no lengths unless a floor marked in the Ruler on a still photo lets it
-        be scaled. Pinching is a geometric thumb–index distance heuristic.
-        Motion map shows image position, not physical distance. Confidence is a
-        model threshold, not a guarantee of accuracy. The Ruler tab measures one
-        flat surface in a frozen picture from a reference of known size, with an
-        error bar on every number. Its Box tool stands a box of real size on the
-        floor and says whether it fits, does not fit or is too close to call;
-        its Walls tool turns floor corners and ceiling points into wall lengths,
-        heights, areas and a volume, with a 3D preview and OBJ and CSV files;
-        More known sizes adds further references and tape-measured spans, and
-        the tape test checks a reading against a tape. The bars cover tap
-        placement, not lens distortion, and none of it has been checked against
-        a tape measure in a real room.
+        Segment labels each pixel as background, hair, body skin, face skin,
+        clothes or accessories; Gestures recognizes seven hand gestures; Fusion
+        runs the body, hand and face models together; Depth maps relative depth
+        from one camera, with a 3D view, and its first load is over 100 MB.
+        Depth gives no lengths unless a floor marked in the Ruler on a still
+        photo lets it be scaled. Pinching is a geometric thumb–index distance
+        heuristic. Motion map shows image position, not physical distance.
+        Confidence is a model threshold, not a guarantee of accuracy; both are
+        shown only in modes that find things at places in the picture. The Ruler
+        tab measures one flat surface in a frozen picture from a reference of
+        known size, with an error bar on every number. Its Box tool stands a box
+        of real size on the floor and says whether it fits, does not fit or is
+        too close to call; its Walls tool turns floor corners and ceiling points
+        into wall lengths, heights, areas and a volume, with a 3D preview and
+        OBJ and CSV files; More known sizes adds further references and
+        tape-measured spans, and the tape test checks a reading against a tape.
+        The Ruler can also hold several still pictures of one room: each keeps
+        its own taps, a later picture joins the plan only when two points marked
+        in it and in pictures already on the plan agree, and it is refused in
+        words when the pictures disagree. Where a picture does not settle which
+        side of the reference is the long one, a note says it was guessed. Its
+        Room tool outlines the room from corners seen in different pictures,
+        with wall lengths, perimeter and floor area, a merged plan to save as
+        SVG and CSV, and a room file to save and open again. The bars cover tap
+        placement, not lens distortion. Several pictures of one room have been
+        checked on synthetic pictures only, and none of the Ruler has been
+        checked against a tape measure in a real room.
       </p>
       <p>
         Use HTTPS or localhost for camera access. Start with good light; keep
         your full body visible in Body mode and your fingers unobstructed in
         Hands. Video uploads loop and are muted. Pause stops inference; Stop
         camera releases the camera. Demo images are still photos with real model
-        inference. Motion demos pan those photos; Constellation isolates the
-        tracking geometry. Record saves up to 30 seconds of canvas video locally
-        and stops when source or mode changes. For best results use a current
-        Chrome or Edge browser.
+        inference. A still picture is not inferred continuously: it is checked
+        about once a second, and once in Depth, and the frame-rate readout says
+        so. Motion demos pan those photos; Constellation isolates the tracking
+        geometry. Record saves up to 30 seconds of canvas video locally and
+        stops when source or mode changes. For best results use a current Chrome
+        or Edge browser. If a panel stops on an error, it shows a message and a
+        Try again button while the stage and the rest of the app keep working.
       </p>
       <h3>Keyboard</h3>
       <dl className="shortcut-list">

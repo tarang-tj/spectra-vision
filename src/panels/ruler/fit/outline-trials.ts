@@ -2,12 +2,13 @@
 // The bar on a clearance: the outline's taps moved through every simulated
 // retake of the reference (camera-of.ts), the clearance taken again each
 // time, and 2 standard deviations of those as the bar.
+import { sampleSd } from "../../../measure/series";
 import { cameraTrials, tapSigma, type Trial } from "../camera-of";
 import type { Derived } from "../derive";
 import { applyHomography, type Pt } from "../homography";
 import { gaussian, makeJitter, seededRandom } from "../monte-carlo";
 import type { RulerState, Shape } from "../state";
-import { clearance, sampleSd, type P } from "./geometry";
+import { clearance, type P } from "./geometry";
 
 // The outline's corners on the plane in every trial. Kept per shape, so
 // moving the box does not redo them.

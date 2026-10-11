@@ -10,10 +10,11 @@ import type { ExtensionEnv, RulerExtension } from "./extension-types";
 import fit from "./fit";
 import type { Pt } from "./homography";
 import { applyLens, invertLens } from "./lens";
+import room from "./room";
 import { getState, type RulerState, type Tool } from "./state";
 import walls from "./walls";
 
-export const EXTENSIONS: readonly RulerExtension[] = [fit, walls].filter(
+export const EXTENSIONS: readonly RulerExtension[] = [fit, walls, room].filter(
   (e) => !e.stub,
 );
 

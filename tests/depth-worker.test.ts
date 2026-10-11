@@ -3,12 +3,13 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { DepthExtra, TaskResult } from "../src/vision/types";
+import { runWorker, workerSource } from "./helpers/worker-harness";
 
 // Runs the real Depth worker script against a stand-in for ONNX Runtime Web,
 // as tests/modes-worker.test.ts does for the MediaPipe worker: how it loads,
 // what it feeds the model and how it reads the answer. The model itself is
 // exercised in tests/e2e/depth.spec.ts.
-const source = readFileSync(resolve("public/depth-worker.js"), "utf8"),
+const source = workerSource("depth-worker.js"),
   manifest = JSON.parse(readFileSync(resolve("package.json"), "utf8"));
 
 type Message = Record<string, unknown>;
@@ -26,6 +27,11 @@ type Internals = {
     finite: boolean;
   };
   DEFAULT_SIZE: { CPU: number; GPU: number };
+  contentRect(
+    rgba: ArrayLike<number>,
+    w: number,
+    h: number,
+  ): { x: number; y: number; width: number; height: number } | null;
 };
 type Fed = { name: string; dims: number[]; data: Float32Array };
 
@@ -35,6 +41,8 @@ function startWorker(
     /** The output for an input of these dims; default is a ramp. */
     output?: (dims: number[]) => { dims: number[]; data: Float32Array };
     fail?: string;
+    /** The RGBA bytes the canvas gives back for a w x h read; default grey. */
+    pixels?: (w: number, h: number) => Uint8ClampedArray;
   } = {},
 ) {
   const posted: Posted[] = [],
@@ -44,19 +52,6 @@ function startWorker(
     fed: Fed[] = [],
     drawn: number[][] = [],
     env = { wasm: {} as Message, logLevel: "" };
-  const self: {
-    onmessage: ((event: { data: unknown }) => Promise<void>) | null;
-    postMessage(message: Message, transfer?: unknown[]): void;
-    depthInternals?: Internals;
-    ort?: unknown;
-    navigator: unknown;
-    location: { href: string };
-  } = {
-    onmessage: null,
-    postMessage: (message, transfer = []) => posted.push({ message, transfer }),
-    navigator: options.gpu ? { gpu: { requestAdapter: async () => ({}) } } : {},
-    location: { href: "https://site.test/app/depth-worker.js" },
-  };
   class Tensor {
     constructor(
       public type: string,
@@ -104,26 +99,41 @@ function startWorker(
           drawn.push([x, y, w, h]),
         // Mid grey with a little red, everywhere.
         getImageData: (_x: number, _y: number, w: number, h: number) => ({
-          data: Uint8ClampedArray.from({ length: w * h * 4 }, (_, i) =>
-            i % 4 === 0 ? 255 : i % 4 === 3 ? 255 : 128,
-          ),
+          data:
+            options.pixels?.(w, h) ??
+            Uint8ClampedArray.from({ length: w * h * 4 }, (_, i) =>
+              i % 4 === 0 ? 255 : i % 4 === 3 ? 255 : 128,
+            ),
         }),
       };
     }
   }
-  new Function("self", "importScripts", "OffscreenCanvas", "fetch", source)(
-    self,
-    (url: string) => {
-      imported.push(url);
-      self.ort = ort;
+  const { self, send } = runWorker<{
+    depthInternals?: Internals;
+    ort?: unknown;
+    navigator: unknown;
+    location: { href: string };
+  }>(
+    source,
+    {
+      importScripts: (url: string) => {
+        imported.push(url);
+        self.ort = ort;
+      },
+      OffscreenCanvas: Canvas,
+      fetch: async (url: string) => {
+        fetched.push(url);
+        return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
+      },
     },
-    Canvas,
-    async (url: string) => {
-      fetched.push(url);
-      return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) };
+    (message, transfer) => posted.push({ message, transfer }),
+    {
+      navigator: options.gpu
+        ? { gpu: { requestAdapter: async () => ({}) } }
+        : {},
+      location: { href: "https://site.test/app/depth-worker.js" },
     },
   );
-  const send = (data: unknown) => self.onmessage!({ data });
   return {
     posted,
     imported,
@@ -223,6 +233,95 @@ describe("the depth worker's preprocessing", () => {
     expect(rangeOf([]).finite).toBe(false);
   });
 });
+
+/** Runs of equal bytes, as [value, length]: chunk k arrives filled with k + 1. */
+function runs(bytes: Uint8Array): [number, number][] {
+  const out: [number, number][] = [];
+  for (const b of bytes) {
+    const last = out[out.length - 1];
+    if (last && last[0] === b) last[1]++;
+    else out.push([b, 1]);
+  }
+  return out;
+}
+
+/** Starts the worker on a fetch whose model body arrives in chunks of these
+ * sizes. `bytes` is the size the page states for the model (none when left
+ * out); `slow` moves the clock on six seconds before the third chunk.
+ * `events` lists, in order, each read of the model's body and each buffer of
+ * 100 bytes or more that the worker itself makes. */
+async function streamed(
+  sizes: number[],
+  options: { bytes?: number; slow?: boolean } = {},
+) {
+  const clock = { now: 0 },
+    posted: Message[] = [],
+    events: string[] = [],
+    buffers: Uint8Array[] = [],
+    seen: number[] = [];
+  let model: Uint8Array | null = null;
+  // The worker's own `new Uint8Array(n)`; the chunks below are made outside it.
+  class Counted extends Uint8Array {
+    constructor(a?: unknown, b?: unknown, c?: unknown) {
+      super(a as ArrayBuffer, b as number, c as number);
+      if (typeof a === "number" && a >= 100) {
+        events.push(`buffer ${a}`);
+        buffers.push(this);
+      }
+    }
+  }
+  const body = (parts: number[], watched: boolean) => {
+    let i = 0;
+    return {
+      getReader: () => ({
+        read: async () => {
+          if (watched) events.push(`read ${i}`);
+          if (options.slow && i === 2) clock.now += 6000;
+          return i < parts.length
+            ? { done: false, value: new Uint8Array(parts[i++]).fill(i) }
+            : { done: true, value: undefined };
+        },
+      }),
+    };
+  };
+  const { self, send } = runWorker<{
+    ort?: unknown;
+    navigator: unknown;
+    location: { href: string };
+  }>(
+    source,
+    {
+      importScripts: () => {
+        self.ort = {
+          env: { wasm: {} },
+          InferenceSession: {
+            create: async (bytes: Uint8Array) => {
+              model = bytes;
+              seen.push(bytes.length, bytes[0], bytes[bytes.length - 1]);
+              return { inputNames: ["in"], outputNames: ["out"] };
+            },
+          },
+        };
+      },
+      OffscreenCanvas: class {
+        getContext() {
+          return {};
+        }
+      },
+      fetch: async (url: string) => ({
+        ok: true,
+        headers: { get: () => "600" },
+        body: /\.onnx$/.test(url) ? body(sizes, true) : body([8], false),
+      }),
+      performance: { now: () => clock.now },
+      Uint8Array: Counted,
+    },
+    (message) => posted.push(message),
+    { navigator: {}, location: { href: "https://site.test/depth-worker.js" } },
+  );
+  await send(init("CPU", options.bytes ? { bytes: options.bytes } : {}));
+  return { posted, events, buffers, seen, model: model as Uint8Array | null };
+}
 
 describe("the depth worker's messages", () => {
   it("names the runtime folder after the installed runtime version", () => {
@@ -386,62 +485,7 @@ describe("the depth worker's messages", () => {
   it("reads a streamed download in full and reports progress while it is slow", async () => {
     // A fetch whose body arrives in three chunks, with the clock moved on six
     // seconds before the third: one progress report is due.
-    const clock = { now: 0 },
-      posted: Message[] = [],
-      self = {
-        onmessage: null as ((event: { data: unknown }) => Promise<void>) | null,
-        postMessage: (message: Message) => posted.push(message),
-        navigator: {},
-        location: { href: "https://site.test/depth-worker.js" },
-        ort: undefined as unknown,
-      },
-      seen: number[] = [];
-    const body = (sizes: number[]) => {
-      let i = 0;
-      return {
-        getReader: () => ({
-          read: async () => {
-            if (i === 2) clock.now += 6000;
-            return i < sizes.length
-              ? { done: false, value: new Uint8Array(sizes[i++]).fill(i) }
-              : { done: true, value: undefined };
-          },
-        }),
-      };
-    };
-    new Function(
-      "self",
-      "importScripts",
-      "OffscreenCanvas",
-      "fetch",
-      "performance",
-      source,
-    )(
-      self,
-      () => {
-        self.ort = {
-          env: { wasm: {} },
-          InferenceSession: {
-            create: async (bytes: Uint8Array) => {
-              seen.push(bytes.length, bytes[0], bytes[bytes.length - 1]);
-              return { inputNames: ["in"], outputNames: ["out"] };
-            },
-          },
-        };
-      },
-      class {
-        getContext() {
-          return {};
-        }
-      },
-      async (url: string) => ({
-        ok: true,
-        headers: { get: () => "600" },
-        body: /\.onnx$/.test(url) ? body([100, 200, 300]) : body([8]),
-      }),
-      { now: () => clock.now },
-    );
-    await self.onmessage!({ data: init("CPU") });
+    const { posted, seen } = await streamed([100, 200, 300], { slow: true });
     expect(posted.map((m) => m.type)).toEqual([
       "progress",
       "downloaded",
@@ -452,11 +496,181 @@ describe("the depth worker's messages", () => {
     expect(seen).toEqual([600, 1, 3]);
   });
 
+  it("reads a model of known size straight into one buffer of that size", async () => {
+    const { events, buffers, model } = await streamed([100, 200, 300], {
+      bytes: 600,
+    });
+    // The buffer exists before the first chunk is read, nothing else of the
+    // model's size is made afterwards, and it is what the runtime is handed.
+    expect(events).toEqual([
+      "buffer 600",
+      "read 0",
+      "read 1",
+      "read 2",
+      "read 3",
+    ]);
+    expect(model).toBe(buffers[0]);
+    expect(runs(model!)).toEqual([
+      [1, 100],
+      [2, 200],
+      [3, 300],
+    ]);
+  });
+
+  it("joins the chunks afterwards when the size is not known", async () => {
+    const { events, model } = await streamed([100, 200, 300]);
+    expect(events).toEqual([
+      "read 0",
+      "read 1",
+      "read 2",
+      "read 3",
+      "buffer 600",
+    ]);
+    expect(runs(model!)).toEqual([
+      [1, 100],
+      [2, 200],
+      [3, 300],
+    ]);
+  });
+
+  it("loses no byte when the body is longer or shorter than the stated size", async () => {
+    const longer = await streamed([100, 200, 300], { bytes: 250 });
+    expect(runs(longer.model!)).toEqual([
+      [1, 100],
+      [2, 200],
+      [3, 300],
+    ]);
+    const shorter = await streamed([100, 200, 300], { bytes: 700 });
+    expect(shorter.model!.length).toBe(600);
+    expect(runs(shorter.model!)).toEqual([
+      [1, 100],
+      [2, 200],
+      [3, 300],
+    ]);
+  });
+
   it("drops a frame that arrives before the model is loaded, closing its bitmap", async () => {
     const worker = startWorker(),
       bitmap = bitmapOf(640, 480);
     await worker.send(frame(bitmap));
     expect(worker.posted).toEqual([]);
     expect(bitmap.closed).toBe(1);
+  });
+});
+
+/** A w x h frame of mid-grey picture with bars of one colour and the given
+ * thickness on each side, as RGBA bytes. `noise` is added to the bars'
+ * channels, the way a compressed video leaves them not quite flat. Built
+ * here, without the worker's own code. */
+function barred(
+  w: number,
+  h: number,
+  bars: { top?: number; bottom?: number; left?: number; right?: number },
+  colour: [number, number, number] = [0, 0, 0],
+  noise = 0,
+) {
+  const { top = 0, bottom = 0, left = 0, right = 0 } = bars,
+    rgba = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const bar = y < top || y >= h - bottom || x < left || x >= w - right,
+        i = 4 * (y * w + x),
+        // The picture has dark specks too: darkness alone is not a bar.
+        picture = x % 7 === 0 && y % 5 === 0 ? 4 : 120 + ((x + y) % 60),
+        jitter = noise ? ((x * 31 + y * 17) % (noise + 1)) - noise / 2 : 0;
+      for (let c = 0; c < 3; c++)
+        rgba[i + c] = bar ? colour[c] + jitter : picture;
+      rgba[i + 3] = 255;
+    }
+  return rgba;
+}
+// The colour the motion demo's own bars have (read from the clip's pixels).
+const PAGE_DARK: [number, number, number] = [15, 24, 28];
+
+describe("dark bars round the picture", () => {
+  const { contentRect } = startWorker().internals;
+
+  it("finds the picture inside bars, one cell in from each cut side", () => {
+    // 42 x 28 with bars of 6 (left), 4 (right), 3 (top), 5 (bottom): the
+    // picture is columns 6..37 and rows 3..22; one cell in gives 7..36, 4..21.
+    const rect = contentRect(
+      barred(42, 28, { left: 6, right: 4, top: 3, bottom: 5 }),
+      42,
+      28,
+    );
+    expect(rect).toEqual({ x: 7, y: 4, width: 30, height: 18 });
+  });
+  it("takes bars in a dark colour that compression left not quite flat", () => {
+    expect(
+      contentRect(barred(42, 28, { left: 6, right: 6 }, PAGE_DARK, 6), 42, 28),
+    ).toEqual({ x: 7, y: 0, width: 28, height: 28 });
+  });
+  it("leaves a picture without bars whole", () => {
+    expect(contentRect(barred(42, 28, {}), 42, 28)).toBeNull();
+  });
+  it("does not take one dark line for a bar", () => {
+    expect(contentRect(barred(42, 28, { top: 1, left: 1 }), 42, 28)).toBeNull();
+  });
+  it("does not take a flat band that is not dark for a bar", () => {
+    // A dim wall or a white backdrop along an edge is picture.
+    for (const level of [70, 255])
+      expect(
+        contentRect(
+          barred(42, 28, { left: 6, top: 4 }, [level, level, level]),
+          42,
+          28,
+        ),
+        String(level),
+      ).toBeNull();
+  });
+  it("does not take a dark band that is not flat for a bar", () => {
+    // Dark but varying by 30 levels along the edge: a shadow, not a bar.
+    expect(
+      contentRect(barred(42, 28, { left: 6 }, [16, 16, 16], 30), 42, 28),
+    ).toBeNull();
+  });
+  it("has no picture rectangle for a frame that is one dark colour all over", () => {
+    expect(contentRect(new Uint8ClampedArray(42 * 28 * 4), 42, 28)).toBeNull();
+    expect(
+      contentRect(barred(42, 28, { left: 42 }, PAGE_DARK), 42, 28),
+    ).toBeNull();
+  });
+
+  it("a result names the picture's cells and takes its range from them alone", async () => {
+    // The model answers 9 (very near) on the bars and a ramp of 1 to 2 on
+    // the picture, as the real one does on a padded video.
+    const bars = { left: 28, right: 14, top: 0, bottom: 0 };
+    const w = startWorker({
+      pixels: (width, height) => barred(width, height, bars, PAGE_DARK, 4),
+      output: ([, , h, width]) => ({
+        dims: [1, h, width],
+        data: Float32Array.from({ length: h * width }, (_, i) => {
+          const x = i % width;
+          return x < 28 || x >= width - 14 ? 9 : 1 + x / width;
+        }),
+      }),
+    });
+    await w.send(init("CPU"));
+    // 1586 x 992 at the CPU size is 308 x 196 (see the sizing test above).
+    await w.send(frame(bitmapOf(1586, 992)));
+    const result = w.posted.find((p) => p.message.type === "result")!.message
+        .result as TaskResult,
+      extra = result.extra as DepthExtra;
+    expect(extra.content).toEqual({ x: 29, y: 0, width: 264, height: 196 });
+    // The picture's own range: 1 + 29 / 308 to 1 + 292 / 308, never the 9.
+    expect(extra.min).toBeCloseTo(1 + 29 / 308, 5);
+    expect(extra.max).toBeCloseTo(1 + 292 / 308, 5);
+    expect(extra.values).toHaveLength(308 * 196);
+  });
+  it("a result for a picture without bars carries no rectangle", async () => {
+    const w = startWorker();
+    await w.send(init("CPU"));
+    await w.send(frame(bitmapOf(1586, 992)));
+    const extra = (
+      w.posted.find((p) => p.message.type === "result")!.message
+        .result as TaskResult
+    ).extra as DepthExtra;
+    expect("content" in extra).toBe(false);
+    expect(extra.min).toBe(0);
   });
 });

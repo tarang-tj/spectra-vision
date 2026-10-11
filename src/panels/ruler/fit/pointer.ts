@@ -9,6 +9,7 @@ import type { ExtensionEnv } from "../extension-types";
 import { applyHomography } from "../homography";
 import { onPointsCleared } from "../state";
 import { hit } from "../store";
+import { hitRadius, tapPixel } from "../tap";
 import { cancelEdit, getBox, sealEdit, setBox, wrapDegrees } from "./box-state";
 import { TURN_CORNER } from "./draw";
 import { containsPoint, footprintCorners, type P } from "./geometry";
@@ -24,21 +25,12 @@ export const endBoxDrag = () => {
 };
 onPointsCleared(endBoxDrag);
 
-// The same reach as the Ruler's own handles, canvas CSS pixels.
-const HIT_MOUSE = 12;
-const HIT_TOUCH = 24;
 const TAG = "drag";
 
 /** Where the pointer is on the plane, mm; null at or beyond the horizon. */
 function onPlane(e: StagePointerEvent, env: ExtensionEnv): P | null {
   if (!env.d.sheet) return null;
-  return applyHomography(
-    env.d.sheet.h,
-    env.flat({
-      x: e.point.x * e.source.width,
-      y: e.point.y * e.source.height,
-    }),
-  );
+  return applyHomography(env.d.sheet.h, env.flat(tapPixel(e)));
 }
 
 const angleFrom = (c: P, p: P) =>
@@ -46,8 +38,9 @@ const angleFrom = (c: P, p: P) =>
 
 function press(e: StagePointerEvent, env: ExtensionEnv): boolean {
   if (!e.inside || !env.d.sheet) return false;
-  const tap = { x: e.point.x * e.source.width, y: e.point.y * e.source.height },
-    reach = (e.pointerType === "mouse" ? HIT_MOUSE : HIT_TOUCH) / e.scale,
+  // The same reach as the Ruler's own handles.
+  const tap = tapPixel(e),
+    reach = hitRadius(e),
     box = getBox(),
     at = box.at,
     plane = onPlane(e, env);

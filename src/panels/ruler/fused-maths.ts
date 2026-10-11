@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Small 3x3 helpers for the fused solve. Pure.
+import { invert3 as invertM3 } from "../../measure/vec";
 import type { Mat3, Pt } from "./homography";
 
 /** Centre and spread of a point set: coordinates become (v - c) / s. */
@@ -15,24 +16,10 @@ export function normOf(pts: Pt[]): Norm | null {
   return s > 0 && Number.isFinite(s) ? { cx, cy, s } : null;
 }
 
-export function invert3(m: Mat3): Mat3 | null {
-  const a = m[4] * m[8] - m[5] * m[7],
-    b = m[5] * m[6] - m[3] * m[8],
-    c = m[3] * m[7] - m[4] * m[6],
-    det = m[0] * a + m[1] * b + m[2] * c;
-  if (!Number.isFinite(det) || Math.abs(det) < 1e-300) return null;
-  return [
-    a / det,
-    (m[2] * m[7] - m[1] * m[8]) / det,
-    (m[1] * m[5] - m[2] * m[4]) / det,
-    b / det,
-    (m[0] * m[8] - m[2] * m[6]) / det,
-    (m[2] * m[3] - m[0] * m[5]) / det,
-    c / det,
-    (m[1] * m[6] - m[0] * m[7]) / det,
-    (m[0] * m[4] - m[1] * m[3]) / det,
-  ];
-}
+/** Inverse of a plane map, or null when it is singular (measure/vec.ts,
+ * without the finite check on the result, as before). */
+export const invert3 = (m: Mat3): Mat3 | null =>
+  invertM3(m, false) as Mat3 | null;
 
 /** A plane point to the picture through `g`, the inverse of `h`. Null when
  * the point is at or beyond the horizon (`h` gives it no positive w). */

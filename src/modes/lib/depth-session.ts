@@ -1,9 +1,9 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-// The 3D view on the stage: keeps one WebGL renderer while the view is on show, and gives it back when
-// the view or the mode goes away. It owns no loop and no timer: everything
-// here runs inside the stage's own draw call or a pointer event.
+// The 3D view on the stage: keeps one WebGL renderer while the view is on
+// show, and gives it back when the view goes away or another mode takes the
+// stage (the mode's `leave`). It owns no loop and no timer: everything here
+// runs inside the stage's own draw call or a pointer event.
 import { stageHooks, type StagePointerEvent } from "../../stage/stage-hooks";
-import { telemetry } from "../../telemetry/bus";
 import { orbitMatrix } from "../../vision/depth/orbit";
 import type { Frame } from "../../vision/frame";
 import type { DepthExtra } from "../../vision/types";
@@ -85,23 +85,22 @@ function ensure(): CloudRenderer | null {
     problem = "The 3D view needs WebGL2, which this browser did not give.";
     return null;
   }
-  cleanups = [
-    stageHooks.onPointer(onPointer),
-    // A model of another kind has loaded: another mode is on the stage now.
-    telemetry.on("model", (event) => {
-      if (event.kind !== "depth") releaseCloud();
-    }),
-  ];
+  // The turn takes any press on the picture, so it yields to every other
+  // handler: with the Ruler open, a press the Ruler uses is the Ruler's.
+  cleanups = [stageHooks.onPointer(onPointer, { yields: true })];
   return renderer;
 }
 
 /** Draw the 3D view over the picture's rectangle. Returns the number of
- * points drawn (0 when there is no view to draw). */
+ * points drawn (0 when there is no view to draw). The points are built once
+ * per result, so `picture` is read only when a new map arrives. */
 export function drawCloud(
   ctx: CanvasRenderingContext2D,
   frame: Frame,
   extra: DepthExtra,
   scale: DepthScale,
+  // What the points take their colours from: the frame the map was made from.
+  picture: CanvasImageSource,
 ): number {
   const { rect } = frame,
     target = ensure();
@@ -116,7 +115,7 @@ export function drawCloud(
     return 0;
   }
   if (!loaded || loaded.values !== extra.values || loaded.scale !== scale) {
-    const points = buildPoints(frame, extra, scale);
+    const points = buildPoints(picture, extra, scale);
     target.setPoints(points.positions, points.colors, points.count);
     loaded = {
       values: extra.values,

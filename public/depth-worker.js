@@ -86,8 +86,85 @@ function rangeOf(values) {
   return { min, max, finite: finite && values.length > 0 };
 }
 
+// A bar is one flat, dark colour: black, or the dark page colour a padded
+// clip was rendered on. Every channel of every pixel of a bar's row or column
+// is no brighter than BAR_LEVEL (of 255) and within BAR_SPREAD of the first
+// pixel of that row or column (video compression leaves a little noise).
+const BAR_LEVEL = 48;
+const BAR_SPREAD = 8;
+// A bar is at least this many map cells thick: one dark line is not a bar.
+const BAR_MIN = 2;
+
+/** The part of the model's input that is picture, when the frame carries
+ * dark bars round it (a padded or letterboxed video): { x, y, width, height }
+ * in cells, or null when there are no bars or the frame is one flat colour.
+ * The model reads a bar as a near, flat surface, so the page must not paint
+ * it as depth and the map's range must not count it. Each cut side is moved
+ * one cell further in, because the resize blends a bar's edge into the
+ * picture. A dark, perfectly flat band at the edge of a real photo (a clipped
+ * night sky) is taken for a bar too: it is left unpainted, which is the
+ * smaller error. */
+function contentRect(rgba, width, height) {
+  // Whether the `count` pixels from (x, y), stepping by (dx, dy), are a bar.
+  const flat = (x, y, dx, dy, count) => {
+    const first = 4 * (y * width + x),
+      step = 4 * (dy * width + dx);
+    for (let c = 0; c < 3; c++) if (rgba[first + c] > BAR_LEVEL) return false;
+    for (let n = 1, i = first + step; n < count; n++, i += step)
+      for (let c = 0; c < 3; c++) {
+        const d = rgba[i + c] - rgba[first + c];
+        if (d > BAR_SPREAD || d < -BAR_SPREAD) return false;
+      }
+    return true;
+  };
+  let top = 0,
+    bottom = height,
+    left = 0,
+    right = width;
+  while (top < height && flat(0, top, 1, 0, width)) top++;
+  if (top === height) return null;
+  while (flat(0, bottom - 1, 1, 0, width)) bottom--;
+  while (left < width && flat(left, top, 0, 1, bottom - top)) left++;
+  if (left === width) return null;
+  while (flat(right - 1, top, 0, 1, bottom - top)) right--;
+  if (top < BAR_MIN) top = 0;
+  else top++;
+  if (height - bottom < BAR_MIN) bottom = height;
+  else bottom--;
+  if (left < BAR_MIN) left = 0;
+  else left++;
+  if (width - right < BAR_MIN) right = width;
+  else right--;
+  if (!top && !left && bottom === height && right === width) return null;
+  if (bottom - top < 1 || right - left < 1) return null;
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+/** rangeOf over the cells of `rect` only (the whole map when it is null).
+ * `finite` still answers for every value of the map. */
+function rangeIn(values, width, rect) {
+  const all = rangeOf(values);
+  if (!rect || !all.finite) return all;
+  let min = Infinity,
+    max = -Infinity;
+  for (let y = rect.y; y < rect.y + rect.height; y++)
+    for (let x = rect.x; x < rect.x + rect.width; x++) {
+      const v = values[y * width + x];
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+  return { min, max, finite: true };
+}
+
 // Read by the unit tests (tests/depth-worker.test.ts); nothing else uses it.
-self.depthInternals = { inputSize, toTensorData, rangeOf, DEFAULT_SIZE };
+self.depthInternals = {
+  inputSize,
+  toTensorData,
+  rangeOf,
+  contentRect,
+  rangeIn,
+  DEFAULT_SIZE,
+};
 
 // How often a download in progress is reported to the page.
 const PROGRESS_EVERY_MS = 5000;
@@ -95,7 +172,12 @@ const PROGRESS_EVERY_MS = 5000;
 // while it arrives the page is told every few seconds that the load is alive
 // ({ type: "progress", loaded, total }); it would otherwise give up on a slow
 // connection after its fixed load timeout.
-async function download(url) {
+// `expected` is the file's size in bytes when the page knows it (the model's,
+// from scripts/models.json): the body is then read straight into one buffer
+// of that size, so the model is held once while it arrives and not twice
+// (every chunk, then a copy of them all). With no known size, or a body that
+// turns out longer than stated, the chunks are kept and joined as before.
+async function download(url, expected = 0) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
   files.push(url);
@@ -105,18 +187,26 @@ async function download(url) {
   // compressed size, so it is reported but never used to size anything.
   const total = Number(response.headers?.get("content-length")) || 0,
     chunks = [];
-  let loaded = 0,
+  let whole = expected > 0 ? new Uint8Array(expected) : null,
+    loaded = 0,
     told = performance.now();
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    chunks.push(value);
+    if (whole && loaded + value.length > whole.length) {
+      chunks.push(whole.subarray(0, loaded));
+      whole = null;
+    }
+    if (whole) whole.set(value, loaded);
+    else chunks.push(value);
     loaded += value.length;
     if (performance.now() - told >= PROGRESS_EVERY_MS) {
       told = performance.now();
       self.postMessage({ type: "progress", loaded, total });
     }
   }
+  // A body shorter than stated is handed on as it came, as it always was.
+  if (whole) return loaded === whole.length ? whole : whole.slice(0, loaded);
   const bytes = new Uint8Array(loaded);
   let at = 0;
   for (const chunk of chunks) {
@@ -159,7 +249,7 @@ async function start(base) {
   runtime.env.wasm.wasmPaths = folder;
   runtime.env.wasm.numThreads = 1;
   const [model, wasm] = await Promise.all([
-    download(`${base}models/${spec.model}`),
+    download(`${base}models/${spec.model}`, Number(spec.options?.bytes) || 0),
     download(`${folder}${stem}.wasm`),
   ]);
   runtime.env.wasm.wasmBinary = wasm;
@@ -219,9 +309,17 @@ async function run(data) {
     // [1, height, width]: the last two are the map's size.
     height = output.dims[output.dims.length - 2],
     width = output.dims[output.dims.length - 1],
-    values = new Float32Array(await output.getData()),
-    range = rangeOf(values);
-  if (!range.finite || values.length !== width * height)
+    values = new Float32Array(await output.getData());
+  if (values.length !== width * height)
+    throw new Error("the depth model returned values that are not numbers");
+  // The map has the input's size, so the bars found in the input are the
+  // bars of the map. A map of another size is taken whole.
+  const content =
+      width === size.width && height === size.height
+        ? contentRect(rgba, width, height)
+        : null,
+    range = rangeIn(values, width, content);
+  if (!range.finite)
     throw new Error("the depth model returned values that are not numbers");
   self.postMessage(
     {
@@ -235,7 +333,14 @@ async function run(data) {
         detections: [],
         landmarks: [],
         handedness: [],
-        extra: { width, height, values, min: range.min, max: range.max },
+        extra: {
+          width,
+          height,
+          values,
+          min: range.min,
+          max: range.max,
+          ...(content ? { content } : {}),
+        },
       },
     },
     [values.buffer],

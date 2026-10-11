@@ -13,13 +13,10 @@ import {
   type ShapeKind,
   type Tool,
 } from "./state";
-import {
-  moveRefCorner,
-  placeRefCorner,
-  refCorners,
-  undoRefCorner,
-} from "./store-known";
+import { moveRefCorner, placeRefCorner, undoRefCorner } from "./store-known";
+import { onPicture } from "./tap";
 
+export * from "./grab";
 export * from "./state";
 export * from "./store-known";
 
@@ -28,12 +25,7 @@ export * from "./store-known";
  * the error bar of a point that has not moved. */
 const clamp = (p: Pt, sigma?: number): Pt => {
   const s = getState().source,
-    at = s
-      ? {
-          x: Math.min(s.w, Math.max(0, p.x)),
-          y: Math.min(s.h, Math.max(0, p.y)),
-        }
-      : { x: p.x, y: p.y };
+    at = s ? onPicture(p, s) : { x: p.x, y: p.y };
   const sd = sigma ?? p.s;
   return sd === undefined ? at : { ...at, s: sd };
 };
@@ -108,32 +100,6 @@ export function move(handle: Handle, p: Pt, sigma?: number) {
   const measures = state.measures.slice();
   measures[handle.m] = { ...m, [handle.end]: at };
   set({ measures });
-}
-
-/** Distance in canvas CSS pixels is the caller's business; this finds the
- * nearest handle within `radiusSrc` source pixels. */
-export function hit(p: Pt, radiusSrc: number): Handle | null {
-  const state = getState();
-  let best: Handle | null = null,
-    bestD = radiusSrc;
-  const test = (q: Pt | null, h: Handle) => {
-    if (!q) return;
-    const d = Math.hypot(q.x - p.x, q.y - p.y);
-    if (d <= bestD) {
-      bestD = d;
-      best = h;
-    }
-  };
-  state.corners.forEach((c, i) => test(c, { kind: "corner", i }));
-  refCorners(state).forEach(({ p: c, r, i }) => test(c, { kind: "ref", r, i }));
-  state.measures.forEach((m, i) => {
-    test(m.a, { kind: "end", m: i, end: "a" });
-    test(m.b, { kind: "end", m: i, end: "b" });
-  });
-  state.shapes.forEach((sh, s) =>
-    sh.pts.forEach((q, i) => test(q, { kind: "vertex", s, i })),
-  );
-  return best;
 }
 
 /** Remove the most recently placed point of the chosen tool; an outline that

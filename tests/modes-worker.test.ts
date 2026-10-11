@@ -1,7 +1,5 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import type {
   FaceExtra,
   GestureExtra,
@@ -10,48 +8,24 @@ import type {
   TaskResult,
   WorldExtra,
 } from "../src/vision/types";
+import {
+  runWorker,
+  visionGlobals,
+  workerSource,
+} from "./helpers/worker-harness";
 
 // Runs the real worker script against stand-ins for the MediaPipe tasks, to
 // check how each new kind is created and how its raw output is normalized.
 // The models themselves are exercised in tests/e2e/modes.spec.ts.
-const source = readFileSync(resolve("public/vision-worker.js"), "utf8");
+const source = workerSource("vision-worker.js");
 
 type Posted = { message: Record<string, unknown>; transfer: unknown[] };
 type Raw = Record<string, unknown>;
 function startWorker(vision: Record<string, unknown>) {
-  const posted: Posted[] = [];
-  const self: {
-    onmessage: ((event: { data: unknown }) => Promise<void>) | null;
-    postMessage(message: Record<string, unknown>, transfer?: unknown[]): void;
-  } = {
-    onmessage: null,
-    postMessage: (message, transfer = []) => posted.push({ message, transfer }),
-  };
-  class Canvas {
-    getContext(kind: string) {
-      return kind === "2d" ? { drawImage() {} } : null;
-    }
-  }
-  // The worker downloads the model itself: hand it four bytes.
-  const fetched = async () => ({
-    ok: true,
-    arrayBuffer: async () => new ArrayBuffer(4),
-  });
-  new Function(
-    "self",
-    "importScripts",
-    "Vision",
-    "OffscreenCanvas",
-    "fetch",
-    source,
-  )(
-    self,
-    () => {},
-    { FilesetResolver: { forVisionTasks: async () => ({}) }, ...vision },
-    Canvas,
-    fetched,
-  );
-  const send = (data: unknown) => self.onmessage!({ data });
+  const posted: Posted[] = [],
+    { send } = runWorker(source, visionGlobals(vision), (message, transfer) =>
+      posted.push({ message, transfer }),
+    );
   return { posted, send };
 }
 // A stand-in task that records how it was created and returns `output`.

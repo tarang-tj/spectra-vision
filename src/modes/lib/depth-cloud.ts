@@ -10,7 +10,7 @@ import {
   deleteVertexArray,
   exposeGlStats,
 } from "../../gl/resources";
-import { createProgram } from "../../gl/shader";
+import { createProgram, type Program } from "../../gl/shader";
 
 const VERTEX = `#version 300 es
 in vec3 aPosition;
@@ -66,10 +66,41 @@ export function createCloudRenderer(): CloudRenderer | null {
     gone = true;
   };
   canvas.addEventListener("webglcontextlost", onLost);
-  const program = createProgram(gl, "depth cloud", VERTEX, FRAGMENT),
-    array = createVertexArray(gl),
-    positionBuffer = createBuffer(gl),
-    colorBuffer = createBuffer(gl),
+  let made: Program | null = null,
+    madeArray: WebGLVertexArrayObject | null = null,
+    madePositions: WebGLBuffer | null = null,
+    madeColors: WebGLBuffer | null = null;
+  /** Everything made so far, and the context itself. */
+  const release = () => {
+    canvas.removeEventListener("webglcontextlost", onLost);
+    deleteVertexArray(gl, madeArray);
+    deleteBuffer(gl, madePositions);
+    deleteBuffer(gl, madeColors);
+    made?.dispose();
+    // Shrink the buffer and drop the context now instead of waiting for GC.
+    canvas.width = 1;
+    canvas.height = 1;
+    try {
+      gl.getExtension("WEBGL_lose_context")?.loseContext();
+    } catch {
+      /* The context is already gone. */
+    }
+  };
+  try {
+    made = createProgram(gl, "depth cloud", VERTEX, FRAGMENT);
+    madeArray = createVertexArray(gl);
+    madePositions = createBuffer(gl);
+    madeColors = createBuffer(gl);
+  } catch (error) {
+    // A program that does not compile, or an object the context refuses:
+    // without this the context and its listener stayed for every attempt.
+    release();
+    throw error;
+  }
+  const program = made,
+    array = madeArray,
+    positionBuffer = madePositions,
+    colorBuffer = madeColors,
     aPosition = gl.getAttribLocation(program.handle, "aPosition"),
     aColor = gl.getAttribLocation(program.handle, "aColor");
   gl.bindVertexArray(array);
@@ -111,20 +142,6 @@ export function createCloudRenderer(): CloudRenderer | null {
       gl.drawArrays(gl.POINTS, 0, count);
       gl.bindVertexArray(null);
     },
-    dispose() {
-      canvas.removeEventListener("webglcontextlost", onLost);
-      deleteVertexArray(gl, array);
-      deleteBuffer(gl, positionBuffer);
-      deleteBuffer(gl, colorBuffer);
-      program.dispose();
-      // Shrink the buffer and drop the context now instead of waiting for GC.
-      canvas.width = 1;
-      canvas.height = 1;
-      try {
-        gl.getExtension("WEBGL_lose_context")?.loseContext();
-      } catch {
-        /* The context is already gone. */
-      }
-    },
+    dispose: release,
   };
 }

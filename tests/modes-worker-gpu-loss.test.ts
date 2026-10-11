@@ -1,20 +1,19 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import {
+  runWorker,
+  visionGlobals,
+  workerSource,
+} from "./helpers/worker-harness";
 
 // The real worker script with a stand-in GPU: when the browser's graphics
 // process ends, MediaPipe does not throw, it returns empty results. The worker
 // must say so, so that the page restarts the task on CPU.
-const source = readFileSync(resolve("public/vision-worker.js"), "utf8");
+const source = workerSource("vision-worker.js");
 type Posted = Record<string, unknown>;
 
 function startWorker(gpu: { lost: boolean }) {
-  const posted: Posted[] = [],
-    self: {
-      onmessage: ((e: { data: unknown }) => Promise<void>) | null;
-      postMessage(m: Posted): void;
-    } = { onmessage: null, postMessage: (m) => posted.push(m) };
+  const posted: Posted[] = [];
   class Canvas {
     getContext(kind: string) {
       if (kind !== "webgl2") return { drawImage() {} };
@@ -32,26 +31,15 @@ function startWorker(gpu: { lost: boolean }) {
       detectForVideo: () => ({ detections: [] }),
     }),
   };
-  new Function(
-    "self",
-    "importScripts",
-    "Vision",
-    "OffscreenCanvas",
-    "fetch",
-    "performance",
+  const { send } = runWorker(
     source,
-  )(
-    self,
-    () => {},
     {
-      FilesetResolver: { forVisionTasks: async () => ({}) },
-      ObjectDetector: Detector,
+      ...visionGlobals({ ObjectDetector: Detector }, Canvas),
+      performance: { now: () => 0 },
     },
-    Canvas,
-    async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(4) }),
-    { now: () => 0 },
+    (message) => posted.push(message),
   );
-  return { posted, send: (data: unknown) => self.onmessage!({ data }) };
+  return { posted, send };
 }
 const frame = (time: number) => ({
   type: "frame",

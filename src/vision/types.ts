@@ -1,3 +1,5 @@
+import type { HeldFrame } from "./held-frame";
+
 /** A mode id. Modes are discovered at build time from src/modes, so this is a
  * string checked against the registry rather than a hardcoded union. */
 export type Mode = string;
@@ -49,6 +51,19 @@ export type TaskSpec = {
   /** Options that win over `options` and can change while the task runs. */
   live?: LiveOptions;
   delegate: DelegateRequest;
+  /** Keep the frame each result was computed from, for a moving source, and
+   * hand it over as `TaskResult.frame` (vision/held-frame.ts). For a model
+   * slow enough that the picture moves on before it answers. */
+  holdFrame?: boolean;
+  /** "once": on a still picture one result is all this task is asked for,
+   * until something changes (vision/still.ts). For a task whose results
+   * nothing counts or compares. Others are checked once a second. */
+  still?: "once";
+  /** For a mode that shows more than the result itself (Depth's metres follow
+   * the Ruler): call the listener when that changes, and the page hands the
+   * mode its latest result again without running the model. Returns the
+   * unsubscribe function. */
+  restate?: (listener: () => void) => () => void;
 };
 /** Normalized output of one task for one frame. `delegate` is the one that
  * actually ran, which differs from the requested one after a GPU fallback. */
@@ -65,6 +80,10 @@ export type TaskResult = {
   handedness: string[];
   /** Kind-specific payload (blendshapes, masks, gesture names) added by later kinds. */
   extra?: Record<string, unknown>;
+  /** The frame this result was computed from: only for a task that sets
+   * `holdFrame`, on a video or camera source. Set by the page, never by a
+   * worker, and never exported. */
+  frame?: HeldFrame;
 };
 /** `extra.finer` of an "object" result while Finer names is on. `floor` is the
  * lowest classifier score that is ever shown; `classified` is how many crops
@@ -123,15 +142,23 @@ export type SegmentExtra = {
  * model's output, `width * height` numbers row by row from the top left, in
  * image space (not mirrored). It is affine-invariant inverse depth: a larger
  * value is nearer, and neither the scale nor the zero is known, so a value is
- * not a length. `min` and `max` are the smallest and largest value. The map's
- * size is also the size the picture was resized to for the model. */
+ * not a length. The map's size is also the size the picture was resized to
+ * for the model.
+ * `content` is present only when the frame carries black bars round the
+ * picture (a padded or letterboxed video): the cells that are picture. The
+ * model reads a bar as a near, flat surface, so nothing outside `content` is
+ * drawn or measured as depth, and `min` and `max` are the smallest and
+ * largest value inside it (of the whole map when there are no bars). */
 export type DepthExtra = {
   width: number;
   height: number;
   values: Float32Array;
   min: number;
   max: number;
+  content?: MapRect;
 };
+/** A rectangle of depth-map cells. */
+export type MapRect = { x: number; y: number; width: number; height: number };
 /** Latest results of every task of the current mode. The flat fields mirror the
  * mode's first (primary) task so v1 drawing, exports and tests keep working. */
 export type VisionResult = {

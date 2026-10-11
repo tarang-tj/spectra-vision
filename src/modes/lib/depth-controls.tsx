@@ -15,6 +15,7 @@ import {
   TURN_STEP,
   turnView,
 } from "./depth-store";
+import { isMoving } from "./depth-sync";
 import "./depth-controls.css";
 
 const TURNS: { label: string; key: string; yaw: number; pitch: number }[] = [
@@ -118,6 +119,14 @@ export default function DepthControls() {
           ? `Nearest point: ${depthText(scale, extra.max)}. Farthest point: ${depthText(scale, extra.min)}.`
           : "The values are relative: they order the scene but are not lengths."}
       </p>
+      {isMoving(frame) && (
+        <p data-testid="depth-held">
+          A map takes a moment to make, so on a moving picture the stage shows
+          the frame each map was made from, never a map beside what it
+          describes. The legend on the picture says how far behind live that is.
+          Black bars round a picture are not painted or measured.
+        </p>
+      )}
       {scale && (
         <div data-testid="depth-scale" data-metric={scale.metric}>
           {scale.metric ? (

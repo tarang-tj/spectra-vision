@@ -5,7 +5,10 @@
 // A depth's bar is 2 standard deviations over those fits, combined with twice
 // the scatter the fit leaves on the marked floor.
 import { combineErrors, measured, type Measured } from "../../measure/noise";
+import { sampleSd } from "../../measure/series";
 import { cameraTrials } from "../../panels/ruler/camera-of";
+import { subscribePlumbs } from "../../panels/ruler/plumbs";
+import { subscribe } from "../../panels/ruler/state";
 import { depthAt, fitDepth } from "../../vision/depth/affine-fit";
 import { samplesFor } from "./depth-floor";
 import type { MetricScale } from "./depth-metric";
@@ -21,6 +24,21 @@ const SETTLE_ASKS = 8;
 type Retake = { a: number; b: number; near: number; far: number };
 type Retakes = { asks: number; fits: Retake[] | null };
 const store = new WeakMap<MetricScale, Retakes>();
+
+// Told when a scale's retakes have just been worked out: what was "pending"
+// can now be read, without waiting for another depth map (on a still picture
+// there is none).
+const settled = new Set<() => void>();
+/** Called when what Depth shows for a map may have changed without a new
+ * map: the Ruler's points or plumb lines moved, or the retakes settled. */
+export function onDepthReadout(listener: () => void): () => void {
+  settled.add(listener);
+  const offs = [subscribe(listener), subscribePlumbs(listener)];
+  return () => {
+    settled.delete(listener);
+    offs.forEach((off) => off());
+  };
+}
 
 function refit(scale: MetricScale): Retake[] {
   const step = Math.max(1, Math.ceil(scale.cells.length / MAX_RETAKE_CELLS)),
@@ -41,18 +59,12 @@ function retakesOf(scale: MetricScale): Retake[] | null {
   if (!entry.fits) {
     if (++entry.asks < SETTLE_ASKS) return null;
     entry.fits = refit(scale);
+    // After this call returns, so no listener runs inside a draw.
+    queueMicrotask(() => settled.forEach((listener) => listener()));
   }
   return entry.fits;
 }
 
-/** Sample standard deviation, NaN with fewer than two values. */
-function spread(values: number[]): number {
-  const n = values.length,
-    mean = values.reduce((sum, v) => sum + v, 0) / n;
-  return Math.sqrt(
-    values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / (n - 1),
-  );
-}
 /** A depth whose bar is wider than this share of it is not shown. */
 export const MAX_RELATIVE_BAR = 0.5;
 /** Fewest retakes that must have given a fit for a bar to be stated. */
@@ -69,7 +81,7 @@ export function floorSpan(
   if (fits.length < MIN_RETAKES) return null;
   const basis = `From the Ruler's plane and camera. The bar is 2 standard deviations over ${fits.length} simulated retakes of the Ruler's taps; it leaves out lens distortion that was not corrected.`,
     one = (value: number, values: number[]) =>
-      measured(value / 1000, (2 * spread(values)) / 1000, "m", basis);
+      measured(value / 1000, (2 * sampleSd(values)) / 1000, "m", basis);
   return {
     near: one(
       scale.fit.near,
@@ -105,7 +117,7 @@ export function measuredDepth(
   // A depth most retakes cannot place has no bar worth stating.
   if (depths.length < 0.8 * fits.length) return null;
   const error = combineErrors(
-    2 * spread(depths),
+    2 * sampleSd(depths),
     2 * scale.fit.residual * value,
   );
   // Far past the marked floor the fitted inverse depth nears zero and the

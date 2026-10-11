@@ -61,11 +61,13 @@
   align-items: center;
   gap: 12px;
   /* The strip spans the stage: only the controls inside it take pointer
-     events, so taps in the gaps reach the picture (the Ruler needs them). */
+     events, so taps in the gaps reach the picture (the Ruler needs them).
+     The tools row's own padding and the gaps between its buttons are gaps
+     too: a press there is on the picture, not on a dead band. */
   pointer-events: none;
 }
 .playback > *,
-.stage-tools {
+.stage-tools > * {
   pointer-events: auto;
 }
 .playback {

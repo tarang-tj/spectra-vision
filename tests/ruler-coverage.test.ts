@@ -109,8 +109,14 @@ describe("coverage of the 2 sd bar over 300 simulated rooms", () => {
         expect(share, `${name}, ${b}`).toBeGreaterThanOrEqual(floor);
         // The panel prints a range for a second sheet (results.tsx), and
         // this holds it to that range. Observed 2026-10-10, near, middle,
-        // far: 96.0%, 96.7%, 97.0% with a second sheet; 97.0%, 95.0%, 95.0%
-        // with a second sheet and a known span.
+        // far: 96.0%, 96.7%, 97.0% with a second sheet (288, 290 and 291 of
+        // 300); 97.0%, 95.0%, 95.0% with a second sheet and a known span
+        // (291, 285 and 285 of 300). Both ends of the range are touched and
+        // there is no margin on purpose: the rooms are seeded, so the same
+        // code gives the same counts on every run, and a count that leaves
+        // the range means the arithmetic changed, not that chance did. A
+        // change made on purpose moves SECOND_SHEET_COVERAGE, and with it
+        // the sentence the panel prints, to what is then observed.
         if (use.second) {
           const times = Math.round(100 * share);
           expect(times, `${name}, ${b}`).toBeGreaterThanOrEqual(

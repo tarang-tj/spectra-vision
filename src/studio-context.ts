@@ -34,6 +34,10 @@ export type Studio = {
   immersive: boolean;
   /** Draw on the stage canvas and read pointer input there. See stage-hooks.ts. */
   stage: StageHooks;
+  /** Put a still picture the caller holds on the stage, as an upload would.
+   * Resolves with the new source generation; rejects when it cannot be
+   * opened. Nothing leaves the browser. */
+  loadPicture(blob: Blob, label: string): Promise<number>;
 };
 
 export const StudioContext = createContext<Studio | null>(null);

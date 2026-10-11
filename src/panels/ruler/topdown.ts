@@ -4,6 +4,7 @@
 // (nearest pixel). Where the picture cannot say what is there, the pixel is
 // left transparent instead of being smeared: beyond the horizon, outside the
 // photo, or too far away for the photo's pixels to resolve at this scale.
+import { invert3 } from "./fused-maths";
 import type { Mat3, Pt } from "./homography";
 import { invertLens, type Lens } from "./lens";
 
@@ -47,28 +48,6 @@ export function fitBox(
     height,
     ppm,
   };
-}
-
-const det3 = (m: Mat3) =>
-  m[0] * (m[4] * m[8] - m[5] * m[7]) -
-  m[1] * (m[3] * m[8] - m[5] * m[6]) +
-  m[2] * (m[3] * m[7] - m[4] * m[6]);
-
-/** Inverse of a 3x3 matrix, or null when singular. */
-export function invert3(m: Mat3): Mat3 | null {
-  const d = det3(m);
-  if (!Number.isFinite(d) || Math.abs(d) < 1e-300) return null;
-  return [
-    (m[4] * m[8] - m[5] * m[7]) / d,
-    (m[2] * m[7] - m[1] * m[8]) / d,
-    (m[1] * m[5] - m[2] * m[4]) / d,
-    (m[5] * m[6] - m[3] * m[8]) / d,
-    (m[0] * m[8] - m[2] * m[6]) / d,
-    (m[2] * m[3] - m[0] * m[5]) / d,
-    (m[3] * m[7] - m[4] * m[6]) / d,
-    (m[1] * m[6] - m[0] * m[7]) / d,
-    (m[0] * m[4] - m[1] * m[3]) / d,
-  ] as const;
 }
 
 /** Largest singular value of the Jacobian of `h` at a picture point whose

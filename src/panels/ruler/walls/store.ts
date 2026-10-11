@@ -7,6 +7,7 @@ import { useSyncExternalStore } from "react";
 import type { Pt } from "../homography";
 import { setPlumbs, type PlumbLine } from "../plumbs";
 import { getState, onPointsCleared } from "../state";
+import { onPicture } from "../tap";
 
 export type Corner = { base: Pt; top: Pt | null };
 export type WallsState = {
@@ -54,13 +55,7 @@ function commit(next: WallsState, remember: boolean) {
 
 const clamp = (p: Pt): Pt => {
   const s = getState().source;
-  return s
-    ? {
-        ...p,
-        x: Math.min(s.w, Math.max(0, p.x)),
-        y: Math.min(s.h, Math.max(0, p.y)),
-      }
-    : p;
+  return s ? { ...p, ...onPicture(p, s) } : p;
 };
 const firstWithoutTop = (corners: readonly Corner[], from = 0) => {
   for (let k = 0; k < corners.length; k++) {
@@ -129,6 +124,14 @@ export function undoWalls() {
   if (!back) return;
   history = history.slice(0, -1);
   commit(back, false);
+}
+
+/** What Walls holds for one picture, and putting it back (its plumb edges
+ * are published again; Undo starts afresh). */
+export const snapshotWalls = (): WallsState => state;
+export function restoreWalls(walls: WallsState) {
+  history = [];
+  commit(walls, false);
 }
 
 function reset() {

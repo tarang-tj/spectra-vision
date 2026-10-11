@@ -1,10 +1,13 @@
 import { panels } from "../panels";
 import { useStudio } from "../studio-context";
+import ErrorBoundary from "./ErrorBoundary";
 import "../styles/panel-tabs.css";
 
 /** The right-hand rail. It shows the registered panels as tabs; with a single
  * panel there is no tab bar. The rail is as tall as the stage and the chosen
- * panel scrolls inside it, so a long panel never stretches the stage. */
+ * panel scrolls inside it, so a long panel never stretches the stage. A panel
+ * that throws while rendering shows a message in its own place and takes
+ * nothing else down. */
 export default function Inspector() {
   const studio = useStudio(),
     visible = panels.filter((panel) => panel.visible?.(studio) ?? true),
@@ -25,7 +28,11 @@ export default function Inspector() {
         </nav>
       )}
       <div className="panel-body" data-panel={current?.id}>
-        {current && <current.Component />}
+        {current && (
+          <ErrorBoundary key={current.id} name={`The ${current.label} panel`}>
+            <current.Component />
+          </ErrorBoundary>
+        )}
       </div>
     </aside>
   );

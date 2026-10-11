@@ -8,6 +8,7 @@ import type { ExtensionEnv } from "../extension-types";
 import type { Pt } from "../homography";
 import { TAP_SIGMA_SCREEN_PX } from "../monte-carlo";
 import { hit, onPointsCleared } from "../store";
+import { hitRadius, tapPixel } from "../tap";
 import {
   addCorner,
   closeRoom,
@@ -34,10 +35,8 @@ export const dropGrab = () => {
 // a grab left behind would swallow every press from another pointer.
 onPointsCleared(dropGrab);
 
-const HIT_MOUSE = 12,
-  HIT_TOUCH = 24,
-  /** A press that moves less than this (canvas px) is a tap, not a drag. */
-  SLOP = 4;
+/** A press that moves less than this (canvas px) is a tap, not a drag. */
+const SLOP = 4;
 
 function nearest(at: Pt, radius: number): Pick<Grab, "kind" | "i"> | null {
   let best: Pick<Grab, "kind" | "i"> | null = null,
@@ -58,19 +57,14 @@ function nearest(at: Pt, radius: number): Pick<Grab, "kind" | "i"> | null {
 
 export function wallsPointer(e: StagePointerEvent, env: ExtensionEnv): boolean {
   const sigma = TAP_SIGMA_SCREEN_PX / e.scale,
-    at: Pt = {
-      x: e.point.x * e.source.width,
-      y: e.point.y * e.source.height,
-      s: sigma,
-    };
+    at: Pt = { ...tapPixel(e), s: sigma };
   if (e.type === "down") {
     // A second finger does not replace the point the first one holds.
     if (grab && grab.id !== e.pointerId) return true;
     // The same pointer pressing again: its last release never arrived.
     grab = null;
     if (!e.inside || !env.d.sheet) return false;
-    const radius =
-        (e.pointerType === "mouse" ? HIT_MOUSE : HIT_TOUCH) / e.scale,
+    const radius = hitRadius(e),
       own = nearest(at, radius),
       start = { id: e.pointerId, from: e.canvas };
     if (own) {

@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStudio } from "../../studio-context";
 import type { Derived } from "./derive";
-import { download, planCsv, planSvg } from "./export-plan";
+import { downloadText } from "../../download";
+import { planCsv, planSvg } from "./export-plan";
 import { view } from "./overlay";
 import { drawPrims } from "./plan-draw";
 import { LEGEND, layoutScene, type Prim } from "./plan-layout";
@@ -97,9 +98,10 @@ export default function PlanPanel({
           out.prims,
           photo ? out.floor.toDataURL("image/png") : null,
         );
-      download(`spectra-plan-${stamp}.svg`, svg, "image/svg+xml");
+      downloadText(`spectra-plan-${stamp}.svg`, svg, "image/svg+xml");
       setTimeout(
-        () => download(`spectra-plan-${stamp}.csv`, planCsv(s, d), "text/csv"),
+        () =>
+          downloadText(`spectra-plan-${stamp}.csv`, planCsv(s, d), "text/csv"),
         150,
       );
       notice("Plan saved to your downloads.");

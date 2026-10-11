@@ -151,8 +151,13 @@ test("placing, dragging and the loupe work with a finger", async ({ page }) => {
   });
   await touch(cdp, "touchEnd");
   await expect(page.getByTestId("ruler-result")).toHaveCount(1);
-  // No half-placed span is waiting for its other end.
-  await expect(step).toContainText("Tap two points");
+  // No half-placed span is waiting for its other end. The first finger came
+  // down on the span's own end and lifted without moving, so the step line
+  // says that it took hold of that end and moved nothing.
+  await expect(step).toContainText(
+    "took hold of an end of span 1 and moved nothing",
+  );
+  await expect(step).not.toContainText("other end");
   expect(await out.getAttribute("data-mm")).toBe(settled);
 });
 
