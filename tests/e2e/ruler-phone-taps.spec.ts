@@ -118,3 +118,51 @@ test("an outline whose first corner is 7 px from a reference corner keeps all fo
   );
   expect(Math.abs(mm - 800) / 800).toBeLessThan(0.02);
 });
+
+test("a touch just above the stage buttons reaches the picture, and a touch on a button reaches the button", async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
+  await open(page);
+  await page.evaluate(() => scrollTo(0, 0));
+  const step = page.getByTestId("ruler-step"),
+    mirror = page.getByLabel("Mirror"),
+    box = async (name: string) => {
+      const b = (await page.getByLabel(name, { exact: true }).boundingBox())!;
+      return { x: b.x + b.width / 2, top: b.y };
+    };
+  await expect(step).toContainText("Tap corner 1 of 4");
+  await expect(mirror).toHaveAttribute("aria-pressed", "false");
+
+  // 4 px above the Mirror button the finger is on the picture. A phone
+  // browser used to hand this touch to the button (touch adjustment).
+  const m = await box("Mirror");
+  expect(
+    await page.evaluate(
+      ([x, y]) => document.elementFromPoint(x, y)?.tagName,
+      [m.x, m.top - 4],
+    ),
+  ).toBe("CANVAS");
+  await page.touchscreen.tap(m.x, m.top - 4);
+  await expect(step).toContainText("Tap corner 2 of 4");
+  await expect(mirror).toHaveAttribute("aria-pressed", "false");
+
+  // No dead band below that: 2 px above another button is the picture too
+  // (the tools row's own padding).
+  const s = await box("Screenshot");
+  await page.touchscreen.tap(s.x, s.top - 2);
+  await expect(step).toContainText("Tap corner 3 of 4");
+  // And further up, as before.
+  const f = await box("Fullscreen");
+  await page.touchscreen.tap(f.x, f.top - 9);
+  await expect(step).toContainText("Tap corner 4 of 4");
+  await expect(mirror).toHaveAttribute("aria-pressed", "false");
+
+  // On the button the touch is the button's: Mirror toggles, no point.
+  await page.touchscreen.tap(m.x, m.top + 12);
+  await expect(mirror).toHaveAttribute("aria-pressed", "true");
+  await expect(step).toContainText("Tap corner 4 of 4");
+  await page.touchscreen.tap(m.x, m.top + 12);
+  await expect(mirror).toHaveAttribute("aria-pressed", "false");
+  await expect(step).toContainText("Tap corner 4 of 4");
+});

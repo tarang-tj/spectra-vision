@@ -56,6 +56,21 @@ export default function CameraStage(props: {
     stageHooks.subscribe,
     stageHooks.hasPointerHandlers,
   );
+  // A phone browser moves a touch that lands near a button onto the button
+  // (Chrome's touch adjustment: within about 8 px it retargets the whole
+  // touch, pointerdown included, to the nearest element that answers a
+  // click). It leaves a touch alone when the element under the finger answers
+  // clicks itself, and it only counts listeners on the element, which React's
+  // do not have. So while a panel takes presses on the picture the canvas
+  // gets a click listener of its own, and a press on the picture stays on it
+  // right down to the edge of the stage buttons.
+  useEffect(() => {
+    const element = canvas.current;
+    if (!measuring || !element) return;
+    const answersClicks = () => {};
+    element.addEventListener("click", answersClicks);
+    return () => element.removeEventListener("click", answersClicks);
+  }, [measuring]);
   const capture = useClipRecorder(
     canvas,
     `${mode.id}:${source?.generation ?? 0}`,
