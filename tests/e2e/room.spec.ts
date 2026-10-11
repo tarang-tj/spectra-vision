@@ -107,13 +107,28 @@ test("two pictures of one room: each keeps its own reference and span across swi
   page.on("pageerror", (e) => errors.push(e.message));
   await open(page);
   await openRuler(page);
-  await expect(page.getByTestId("room-status")).toHaveText(
+  await expect(page.getByTestId("room-status")).toContainText(
     "No pictures in this room yet.",
   );
 
+  // The demo picture is on the stage: it is named, and never offered.
+  await expect(page.getByTestId("room-stage-says")).toContainText(
+    "The stage shows the demo picture",
+  );
+  await expect(page.getByRole("button", { name: /^Keep this/ })).toHaveCount(0);
+  await expect(page.getByTestId("room-next")).toContainText(
+    "press Add picture for the first photo",
+  );
   await addPicture(page, 0, 1);
+  await expect(page.getByTestId("room-stage-says")).toHaveCount(0);
+  await expect(page.getByTestId("room-next")).toContainText(
+    "tap the four corners of the reference",
+  );
   await expect(page.locator(".hud-badge").first()).toHaveText("LOCAL IMAGE");
   await tapBoard(page, 0);
+  await expect(page.getByTestId("room-next")).toContainText(
+    "choose Room under What to measure",
+  );
   for (const m of MARKS) await tap(page, on(0, m));
   const first = await reading(page);
   expect(Math.abs(first.mm - SPAN_MM)).toBeLessThanOrEqual(first.bar);
@@ -158,7 +173,7 @@ test("two pictures of one room: each keeps its own reference and span across swi
   // anywhere else, or Escape, puts it back.
   const remove = page.getByRole("button", { name: /^Remove picture 1,/ }),
     armed = page.getByRole("button", {
-      name: "Press again to remove picture 1 and its taps",
+      name: "Press again to remove picture 1, its taps",
     });
   await remove.click();
   await expect(armed).toBeVisible();
@@ -176,6 +191,40 @@ test("two pictures of one room: each keeps its own reference and span across swi
   await page.keyboard.press("Enter");
   await page.keyboard.press("Enter");
   await expect(page.getByTestId("room-strip").locator("li")).toHaveCount(1);
+  await expect(thumb(page, 1)).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("ruler-result")).toHaveCount(2);
+
+  // A photo uploaded the ordinary way and tapped on is not in the room. A
+  // thumbnail says its taps will go before it takes the stage.
+  const corners = boardCorners(),
+    png = await page.evaluate(drawRoomView, {
+      ...IMAGE,
+      floor: cams[1].floorSeen(),
+      board: corners.map((c) => on(1, c)),
+      marks: MARKS.map((m) => on(1, m)),
+      tick: on(1, corners[0]),
+      name: "stray",
+    });
+  await page.getByLabel("Upload image or video").setInputFiles({
+    name: "stray.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(png, "base64"),
+  });
+  await expect(page.getByTestId("room-stage-says")).toContainText(
+    "an uploaded picture that is not in this room",
+  );
+  await tap(page, on(1, corners[0]));
+  await tap(page, on(1, corners[2]));
+  await thumb(page, 1).click();
+  await expect(page.getByTestId("room-status")).toContainText(
+    "Pressing the thumbnail again shows the room's picture and loses them.",
+  );
+  await expect(page.getByTestId("room-stage-says")).toBeVisible();
+  await page
+    .getByRole("button", {
+      name: "Press again to show picture 1 and lose the taps on the stage's picture",
+    })
+    .click();
   await expect(thumb(page, 1)).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("ruler-result")).toHaveCount(2);
   expect(errors).toEqual([]);
@@ -451,7 +500,7 @@ test("a room from two pictures: refused and accepted anchors, an outline from co
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByTestId("latency")).toHaveText(/^\d+ ms$/);
   await page.getByRole("button", { name: "Ruler", exact: true }).click();
-  await expect(page.getByTestId("room-status")).toHaveText(
+  await expect(page.getByTestId("room-status")).toContainText(
     "No pictures in this room yet.",
   );
   await expect(page.getByTestId("room-area")).toHaveCount(0);
@@ -656,7 +705,7 @@ test("a photo already on the stage joins the room with its taps, and a frozen ca
   await tapBoard(page, 0);
   for (const m of MARKS) await tap(page, on(0, m));
   const first = await reading(page);
-  await expect(page.getByTestId("room-status")).toHaveText(
+  await expect(page.getByTestId("room-status")).toContainText(
     "No pictures in this room yet.",
   );
   await expect(
@@ -672,7 +721,7 @@ test("a photo already on the stage joins the room with its taps, and a frozen ca
 
   // A new room, and the same photo kept by its own button.
   await startNew(page);
-  await expect(page.getByTestId("room-status")).toHaveText(
+  await expect(page.getByTestId("room-status")).toContainText(
     "No pictures in this room yet.",
   );
   await page
@@ -687,9 +736,9 @@ test("a photo already on the stage joins the room with its taps, and a frozen ca
   await startNew(page);
   await page.getByRole("button", { name: "Start camera" }).click();
   await expect(page.getByRole("button", { name: "Stop camera" })).toBeVisible();
-  await expect(
-    page.getByText("A moving picture cannot be one of the room's pictures."),
-  ).toBeVisible();
+  await expect(page.getByTestId("room-stage-says")).toContainText(
+    "a moving camera picture, which cannot be one of the room's pictures",
+  );
   await expect(page.getByRole("button", { name: /^Keep this/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Freeze frame", exact: true }).click();
   const keep = page.getByRole("button", {
