@@ -8,6 +8,7 @@ import { extensionFor, extensionPointer } from "./extensions";
 import { TAP_SIGMA_SCREEN_PX } from "./monte-carlo";
 import { view } from "./overlay";
 import { getState, hit, move, place, setLock, type Handle } from "./store";
+import { hitRadius, tapPixel } from "./tap";
 
 type Drag = { id: number; handle: Handle };
 let drag: Drag | null = null;
@@ -17,11 +18,8 @@ export const endDrag = () => {
   if (getState().lock) setLock(null);
 };
 
-const HIT_MOUSE = 12;
-const HIT_TOUCH = 24;
-
 export function onRulerPointer(e: StagePointerEvent): boolean {
-  const at = { x: e.point.x * e.source.width, y: e.point.y * e.source.height };
+  const at = tapPixel(e);
   // One tap uncertainty, in source pixels, stored with every point it places.
   const sigma = TAP_SIGMA_SCREEN_PX / e.scale;
   // A tool from its own folder sees the event first, unless one of the
@@ -45,8 +43,7 @@ export function onRulerPointer(e: StagePointerEvent): boolean {
     // A moving picture cannot be measured; the panel stops listening for
     // taps then, and this guards the frame between the two.
     if (!view.still) return false;
-    const radius =
-      (e.pointerType === "mouse" ? HIT_MOUSE : HIT_TOUCH) / e.scale;
+    const radius = hitRadius(e);
     // With such a tool chosen a press never places a Ruler point, but it may
     // still grab one, so the reference stays adjustable.
     const handle = hit(at, radius) ?? (ext ? null : place(at, sigma));

@@ -80,7 +80,6 @@ export type Signals = {
 /** One new result of a task: `s` is null when the task ran and saw nothing. */
 export type Stamped<T> = { t: number; s: T | null };
 export type TaskName = "face" | "pose" | "hand";
-export const TASKS: TaskName[] = ["face", "pose", "hand"];
 
 /** Everything recorded while measuring. */
 export type Recording = {

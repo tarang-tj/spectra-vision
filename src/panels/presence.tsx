@@ -1,7 +1,8 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useEffect, useSyncExternalStore } from "react";
 import { useStudio } from "../studio-context";
-import { describeDevice, downloadText } from "./lab/environment";
+import { downloadText } from "../download";
+import { describeDevice } from "./lab/environment";
 import { drawHeadMarks } from "./presence/overlay";
 import { presenceStore } from "./presence/presence-store";
 import ResultsTable from "./presence/results-table";
@@ -94,10 +95,10 @@ function Presence() {
       });
       downloadText(
         `spectra-presence.${extension}`,
-        extension === "json" ? "application/json" : "text/markdown",
         extension === "json"
           ? toJson(summary)
           : toMarkdown(summary, state.rows),
+        extension === "json" ? "application/json" : "text/markdown",
       );
       studio.notice("Presence summary exported.");
     };

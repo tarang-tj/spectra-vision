@@ -8,9 +8,6 @@
   border-color: var(--accent);
   color: var(--accent);
 }
-.controls .switch-row + .switch-row {
-  margin-top: 14px;
-}
 .inspector {
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -171,12 +168,6 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 50%;
   background: white;
 }
-.switch-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 14px;
-}
 .switch {
   width: 45px;
   height: 28px;
@@ -314,9 +305,6 @@ input[type="range"]::-moz-range-thumb {
   }
   input[type="range"] {
     margin-bottom: 4px;
-  }
-  .switch-row {
-    font-size: 12px;
   }
   .mode-tip {
     grid-column: 1/3;

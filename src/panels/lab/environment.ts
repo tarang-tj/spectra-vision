@@ -118,14 +118,3 @@ export function stageCanvasSize(): BenchReport["canvas"] {
     dpr: Math.round((canvas.width / canvas.clientWidth) * 100) / 100,
   };
 }
-
-/** Save text as a file. Built in memory and saved by the browser: nothing is
- * uploaded. */
-export function downloadText(name: string, type: string, body: string) {
-  const url = URL.createObjectURL(new Blob([body], { type })),
-    a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}

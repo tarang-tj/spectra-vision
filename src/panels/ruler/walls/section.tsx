@@ -4,7 +4,7 @@ import { useStudio } from "../../../studio-context";
 import BasisDetails from "../basis-details";
 import { DEFAULT_TRIALS } from "../camera-of";
 import { derive } from "../derive";
-import { download } from "../export-plan";
+import { downloadText } from "../../../download";
 import { plumbVersion, subscribePlumbs } from "../plumbs";
 import { useRuler } from "../state";
 import { currentWalls } from "./current";
@@ -52,7 +52,7 @@ export default function WallsSection({ show }: { show: boolean }) {
     try {
       const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
       if (kind === "obj")
-        download(
+        downloadText(
           `spectra-room-${stamp}.obj`,
           meshObj(
             mesh,
@@ -61,7 +61,7 @@ export default function WallsSection({ show }: { show: boolean }) {
           "text/plain",
         );
       else
-        download(
+        downloadText(
           `spectra-room-${stamp}.csv`,
           wallsCsv(n, s.unit, why, cur.basis),
           "text/csv",

@@ -25,20 +25,17 @@ const detector = new Map<string, Seen>(),
   listeners = new Set<() => void>();
 let classifier: Classifier | null = null,
   version = 0,
-  notified = 0,
-  dirty = false;
+  notified = 0;
 
 const bump = (map: Map<string, Seen>, label: string, now: number) => {
   const old = map.get(label);
   map.set(label, { count: (old?.count ?? 0) + 1, last: now });
 };
 function notify(now: number, force = false) {
-  dirty = true;
   // At most four redraws a second, without a timer: a result that arrives
   // inside the gap leaves the change pending for the next one.
   if (!force && now - notified < 250) return;
   notified = now;
-  dirty = false;
   version++;
   for (const listener of [...listeners]) listener();
 }
@@ -84,7 +81,6 @@ export const seenFiner = (label: string): Seen | undefined => finer.get(label);
 /** The classifier's state in the latest Objects result, or null while Finer names is off. */
 export const classifierState = (): Classifier | null => classifier;
 export const seenVersion = () => version;
-export const hasPending = () => dirty;
 export function onSeenChange(listener: () => void) {
   listeners.add(listener);
   return () => {

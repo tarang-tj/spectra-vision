@@ -81,7 +81,8 @@ export function planSvg(
   return out.join("\n");
 }
 
-const field = (v: string | number) => {
+/** One CSV field: quoted when it holds a comma, a quote or a line break. */
+export const csvField = (v: string | number) => {
   const t = String(v);
   return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
 };
@@ -210,16 +211,7 @@ export function planCsv(s: RulerState, d: Derived): string {
     });
   }
   return (
-    [CSV_HEADER, ...rows.map((r) => r.map(field).join(","))].join("\n") + "\n"
+    [CSV_HEADER, ...rows.map((r) => r.map(csvField).join(","))].join("\n") +
+    "\n"
   );
-}
-
-/** Hand text to the browser as a local file download. */
-export function download(name: string, text: string, type: string) {
-  const url = URL.createObjectURL(new Blob([text], { type })),
-    a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

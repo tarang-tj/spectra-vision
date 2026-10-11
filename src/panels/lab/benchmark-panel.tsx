@@ -7,7 +7,8 @@ import type { Delegate } from "../../vision/types";
 import { MEASURE_MS, WARMUP_MS, runBenchmark } from "./benchmark";
 import { toJson, toMarkdown } from "./benchmark-report";
 import type { BenchReport } from "./benchmark-report";
-import { describeDevice, downloadText, stageCanvasSize } from "./environment";
+import { downloadText } from "../../download";
+import { describeDevice, stageCanvasSize } from "./environment";
 import { figure } from "./live-charts";
 import { testHooksEnabled } from "../../test-hooks";
 
@@ -105,8 +106,8 @@ export default function BenchmarkPanel() {
     if (!report) return;
     downloadText(
       `spectra-benchmark.${extension}`,
-      extension === "json" ? "application/json" : "text/markdown",
       extension === "json" ? toJson(report) : toMarkdown(report),
+      extension === "json" ? "application/json" : "text/markdown",
     );
     studio.notice("Benchmark exported.");
   };

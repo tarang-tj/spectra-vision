@@ -1,3 +1,5 @@
+import { downloadText } from "./download";
+
 /** Limits of one exported session. A Face or Fusion frame is tens of
  * kilobytes, so the frame count alone does not bound the file. */
 export const EXPORT_FRAME_LIMIT = 1000;
@@ -49,14 +51,9 @@ export function downloadSession(
     notes: `Latest processed frames of this source and mode: at most ${EXPORT_FRAME_LIMIT}, fewer when they would pass about ${EXPORT_BYTE_LIMIT / 1_000_000} MB. Image-normalized coordinates, rounded to ${EXPORT_PRECISION} decimal places; no media included. Timestamps are monotonic page time.`,
     frames,
   };
-  const url = URL.createObjectURL(
-      new Blob([JSON.stringify(payload, exportNumber)], {
-        type: "application/json",
-      }),
-    ),
-    a = document.createElement("a");
-  a.href = url;
-  a.download = `spectra-${mode}-session.json`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  downloadText(
+    `spectra-${mode}-session.json`,
+    JSON.stringify(payload, exportNumber),
+    "application/json",
+  );
 }

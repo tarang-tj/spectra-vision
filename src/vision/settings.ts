@@ -60,7 +60,6 @@ const smoothing = createSetting("spectra.smooth.v1", "on", ["off", "on"]),
 
 export const smoothingOn = (): boolean => smoothing.get() === "on";
 export const setSmoothing = (on: boolean) => smoothing.set(on ? "on" : "off");
-export const onSmoothingChange = smoothing.subscribe;
 /** Smoothing as React state: [on, set]. */
 export function useSmoothing(): [boolean, (on: boolean) => void] {
   useSyncExternalStore(smoothing.subscribe, smoothing.get);

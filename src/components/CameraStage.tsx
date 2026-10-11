@@ -12,6 +12,7 @@ import {
   Circle,
   Square,
 } from "lucide-react";
+import { downloadBlob } from "../download";
 import type { ModeDef } from "../modes";
 import { stageHooks } from "../stage/stage-hooks";
 import { useStageLoop } from "../stage/use-stage-loop";
@@ -73,12 +74,7 @@ export default function CameraStage(props: {
   const shot = () =>
     canvas.current?.toBlob((blob) => {
       if (!blob) return;
-      const url = URL.createObjectURL(blob),
-        a = document.createElement("a");
-      a.href = url;
-      a.download = `spectra-${mode.id}-${Date.now()}.png`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      downloadBlob(`spectra-${mode.id}-${Date.now()}.png`, blob);
       notice("Screenshot saved.");
     });
   const canRecord = !!source && !capture.saving && status === "Ready";

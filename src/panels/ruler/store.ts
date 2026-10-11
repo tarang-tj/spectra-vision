@@ -19,6 +19,7 @@ import {
   refCorners,
   undoRefCorner,
 } from "./store-known";
+import { onPicture } from "./tap";
 
 export * from "./state";
 export * from "./store-known";
@@ -28,12 +29,7 @@ export * from "./store-known";
  * the error bar of a point that has not moved. */
 const clamp = (p: Pt, sigma?: number): Pt => {
   const s = getState().source,
-    at = s
-      ? {
-          x: Math.min(s.w, Math.max(0, p.x)),
-          y: Math.min(s.h, Math.max(0, p.y)),
-        }
-      : { x: p.x, y: p.y };
+    at = s ? onPicture(p, s) : { x: p.x, y: p.y };
   const sd = sigma ?? p.s;
   return sd === undefined ? at : { ...at, s: sd };
 };
