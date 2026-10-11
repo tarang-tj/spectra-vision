@@ -192,7 +192,7 @@ export function placeView(
     moved = (c: AnchorCheck, gap = c.gapMm, allowed = c.allowedMm) =>
       refuse(
         "apart",
-        `${name} is not on the plan: ${c.name} lands ${mm(gap)} from where the plan puts it, and the bars together allow ${mm(allowed)}. The sheet may have moved between pictures, or these are different points. ${sharers([c])} If the reference's long and short sides are swapped in one picture, press Swap sides there.`,
+        `${name} is not on the plan: ${c.name} lands ${mm(gap)} from where the plan puts it, and its error bars allow only ${mm(allowed)}. Either the sheet moved between pictures (take them again without touching it), or these are different spots (unmark the point in one picture and mark the right spot), or the reference's long and short sides are swapped in one picture (check the lengths written on the sheet's edges in each, and press Swap sides in the picture where they are wrong). ${sharers([c])}`,
       ),
     apart = checks.find((c) => c.verdict === "apart");
   if (apart) return moved(apart);

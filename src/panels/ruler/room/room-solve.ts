@@ -39,7 +39,14 @@ export type RoomPoint = {
 export type RoomInput = {
   /** The room's pictures in strip order; `frame` is null until the picture's
    * own reference is solved. */
-  views: readonly { id: number; name: string; frame: ViewFrame | null }[];
+  views: readonly {
+    id: number;
+    name: string;
+    frame: ViewFrame | null;
+    /** The frame this picture would have with its reference's long and
+     * short sides swapped, worked out only when a refusal asks for it. */
+    swapped?: () => ViewFrame | null;
+  }[];
   points: readonly RoomPoint[];
   /** Point ids in order round the room. */
   outline: readonly number[];
@@ -147,6 +154,46 @@ export function solveRoom(input: RoomInput): RoomSolution {
         grew = true;
       }
     }
+  }
+  // A picture refused because a point lands apart: would it join if one
+  // picture's reference were read with its sides the other way round? Tried
+  // for the refused picture and for the first one, and said only when the
+  // rest of the plan still stands.
+  for (const v of views) {
+    const p = result.get(v.id);
+    if (p?.state !== "refused" || p.reason !== "apart") continue;
+    const fitting = (v.id === first.id ? [v] : [v, first]).filter((c) => {
+      const frame = c.swapped?.();
+      if (!frame) return false;
+      const again = solveRoom({
+          views: views
+            .filter((w) => on.has(w.id) || w.id === v.id)
+            .map((w) => ({
+              id: w.id,
+              name: w.name,
+              frame: w.id === c.id ? frame : w.frame,
+            })),
+          points,
+          outline: [],
+          closed: false,
+        }),
+        fits = (id: number) => {
+          const s = again.views.find((w) => w.id === id)?.state;
+          return s === "first" || s === "placed" || s === "provisional";
+        };
+      return fits(v.id) && [...on.keys()].every(fits);
+    });
+    // Two pictures alone cannot say which of them reads the sheet wrongly:
+    // swapping either makes them agree. Then both are named.
+    if (fitting.length)
+      result.set(v.id, {
+        ...p,
+        text: `${p.text} With the long and short sides of ${fitting.map((c) => `${c.name}'s`).join(" or of ")} reference swapped, the pictures agree: ${
+          fitting.length === 1
+            ? `show ${fitting[0].name} and press Swap sides.`
+            : `look at the lengths written on the sheet's edges in each to see which is wrong, and press Swap sides there.`
+        }`,
+      });
   }
   const status = statusOf(views, on, result);
   const placed = points.map((p): Placed => {

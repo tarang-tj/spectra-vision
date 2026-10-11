@@ -364,7 +364,7 @@ test("a room from two pictures: refused and accepted anchors, an outline from co
   await tap(page, on(2, MARKS[1]));
   await expect(places(page).nth(1)).toHaveAttribute("data-state", "refused");
   await expect(places(page).nth(1)).toContainText(
-    "The sheet may have moved between pictures, or these are different points.",
+    "or these are different spots (unmark the point in one picture and mark the right spot)",
   );
   await expect(page.getByTestId("room-basis")).toContainText(
     "Rests on 1 picture (picture 1).",

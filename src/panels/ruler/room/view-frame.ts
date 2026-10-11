@@ -61,7 +61,7 @@ function shuffled(n: number, seed: number): number[] {
   return out;
 }
 
-const memo = new Map<number, { key: string; frame: ViewFrame | null }>();
+const memo = new Map<string, { key: string; frame: ViewFrame | null }>();
 const points = (ps: readonly Pt[]) =>
   ps.map((p) => `${p.x},${p.y},${p.s ?? ""}`).join(";");
 
@@ -72,11 +72,15 @@ export function frameOf(
   id: number,
   snap: ViewSnap,
   n = ROOM_TRIALS,
+  /** Keeps a second frame of the same view apart from its own (the view as
+   * it would be with its reference's sides swapped). */
+  slot = "",
 ): ViewFrame | null {
+  const at = `${id}${slot}`;
   const { s, d } = solved(snap),
     { sheet, lens } = d;
   if (!sheet) {
-    memo.delete(id);
+    memo.delete(at);
     return null;
   }
   const sigma = TAP_SIGMA_SCREEN_PX / (s.scale > 0 ? s.scale : 1),
@@ -90,7 +94,7 @@ export function frameOf(
       sigma,
       n,
     ].join("#"),
-    hit = memo.get(id);
+    hit = memo.get(at);
   if (hit && hit.key === key) return hit.frame;
   const seed = (ROOM_SEED + id * 7919) >>> 0;
   let trials: (Mat3 | null)[];
@@ -113,7 +117,7 @@ export function frameOf(
     sigma,
     trials,
   };
-  memo.set(id, { key, frame });
+  memo.set(at, { key, frame });
   return frame;
 }
 /** Forget every kept frame (tests, and a room that was closed). */

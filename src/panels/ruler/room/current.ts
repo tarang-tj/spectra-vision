@@ -4,9 +4,22 @@
 import { solveRoom, type RoomInput, type RoomSolution } from "./room-solve";
 import { getRoom, type RoomState } from "./store";
 import { frameOf } from "./view-frame";
-import { getViews, type View } from "./views-store";
+import { getViews, type View, type ViewSnap } from "./views-store";
 
 export type Current = { input: RoomInput; solution: RoomSolution };
+
+const swaps = new WeakMap<ViewSnap, ViewSnap>();
+/** The same picture with its reference's long and short sides swapped. Kept
+ * per snapshot, so asking again does not solve the picture again. */
+function swappedSnap(snap: ViewSnap): ViewSnap {
+  let hit = swaps.get(snap);
+  if (!hit)
+    swaps.set(
+      snap,
+      (hit = { ...snap, ruler: { ...snap.ruler, swap: !snap.ruler.swap } }),
+    );
+  return hit;
+}
 let memo: {
   views: readonly View[];
   room: RoomState;
@@ -30,6 +43,7 @@ export function currentRoom(
         id: v.id,
         name: `Picture ${i + 1}`,
         frame: frameOf(v.id, v.snap),
+        swapped: () => frameOf(v.id, swappedSnap(v.snap), undefined, "swapped"),
       })),
       points: room.points,
       outline: room.outline,

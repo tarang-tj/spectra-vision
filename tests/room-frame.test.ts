@@ -192,7 +192,7 @@ describe("refusals", () => {
     );
     expect(moved.views[1].state).toBe("refused");
     expect(moved.views[1].rigid).toBeNull();
-    expect(moved.views[1].text).toContain("may have moved between pictures");
+    expect(moved.views[1].text).toContain("the sheet moved between pictures");
     const check = moved.views[1].checks[0];
     expect(check.verdict).toBe("apart");
     expect(check.gapMm).toBeGreaterThan(49);
@@ -256,7 +256,7 @@ describe("refusals", () => {
     };
     const apart = two([mark(1, MARKS[0], [0, 2]), other]);
     expect(apart.views[1].state).toBe("refused");
-    expect(apart.views[1].text).toContain("these are different points");
+    expect(apart.views[1].text).toContain("these are different spots");
   });
 
   it("refuses a picture whose reference is another size, and waits for one with none", () => {
@@ -312,6 +312,86 @@ describe("refusals", () => {
       "unanchored",
     ]);
     expect(broken.points[2].sample).toBeNull();
+  });
+});
+
+describe("a refusal says what to do about each cause", () => {
+  const marks = (cams: number[]) => [
+    mark(1, MARKS[0], cams),
+    mark(2, MARKS[1], cams),
+  ];
+  /** The same picture with its reference's long and short sides swapped, as
+   * the Ruler reads a sheet seen along its long side. */
+  const wrongSides = (cam: number) => {
+    const good = snapOf({ cam });
+    return { ...good, ruler: { ...good.ruler, swap: !good.ruler.swap } };
+  };
+
+  it("gives a next step for a moved sheet, for different spots and for swapped sides", () => {
+    const moved = solveRoom(
+      roomOf(
+        [snapOf({ cam: 0 }), snapOf({ cam: 2, shift: { x: 300, y: 0 } })],
+        marks([0, 2]),
+      ),
+    ).views[1];
+    expect(moved.state).toBe("refused");
+    expect(moved.text).toContain(
+      "the sheet moved between pictures (take them again without touching it)",
+    );
+    expect(moved.text).toContain(
+      "these are different spots (unmark the point in one picture and mark the right spot)",
+    );
+    expect(moved.text).toContain(
+      "press Swap sides in the picture where they are wrong",
+    );
+    // Swapping either picture's sides would not make these agree: no picture
+    // is singled out.
+    expect(moved.text).not.toContain("the pictures agree");
+  });
+
+  it("names the picture whose sides to swap when that would make the pictures agree", () => {
+    // Three pictures, the third read the wrong way round. The first two
+    // stand, so only the third can be the one.
+    const three = [0, 1, 2],
+      sol = solveRoom(
+        roomOf(
+          [snapOf({ cam: 0 }), snapOf({ cam: 1 }), wrongSides(2)],
+          marks(three),
+        ),
+      );
+    expect(sol.views.map((v) => v.state)).toEqual([
+      "first",
+      "placed",
+      "refused",
+    ]);
+    expect(sol.views[2].text).toContain(
+      "With the long and short sides of Picture 3's reference swapped, the pictures agree: show Picture 3 and press Swap sides.",
+    );
+    // Swapped as the message says, it joins.
+    expect(
+      solveRoom(
+        roomOf(
+          [snapOf({ cam: 0 }), snapOf({ cam: 1 }), snapOf({ cam: 2 })],
+          marks(three),
+        ),
+      ).views[2].state,
+    ).toBe("placed");
+  });
+
+  it("names both of two pictures when either could be the one read the wrong way round", () => {
+    // The look report's case: the first picture's sheet is read wrongly and
+    // the correct second picture cannot join. Two pictures alone cannot say
+    // which is wrong, so both are named, with how to tell.
+    for (const snaps of [
+      [wrongSides(1), snapOf({ cam: 0 })],
+      [snapOf({ cam: 1 }), wrongSides(0)],
+    ]) {
+      const v = solveRoom(roomOf(snaps, marks([1, 0]))).views[1];
+      expect(v.state).toBe("refused");
+      expect(v.text).toContain(
+        "With the long and short sides of Picture 2's or of Picture 1's reference swapped, the pictures agree: look at the lengths written on the sheet's edges in each to see which is wrong, and press Swap sides there.",
+      );
+    }
   });
 });
 

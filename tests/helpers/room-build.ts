@@ -102,6 +102,17 @@ export function roomOf(
       id: i + 1,
       name: `Picture ${i + 1}`,
       frame: snap ? frameOf(i + 1, snap) : null,
+      // What the picture would give with its reference's sides swapped, for
+      // the hint a refusal may add.
+      swapped: () =>
+        snap
+          ? frameOf(
+              i + 1,
+              { ...snap, ruler: { ...snap.ruler, swap: !snap.ruler.swap } },
+              undefined,
+              "swapped",
+            )
+          : null,
     })),
     points: points.map((p) => ({ id: p.id, obs: p.seen })),
     outline,

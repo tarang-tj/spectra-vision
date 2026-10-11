@@ -136,7 +136,7 @@ Each picture's own plane map starts at one corner of its reference, and which co
 
 - its reference is not the size of the first picture's;
 - no shared point can tell which way round the sheet lies, each being too near the middle of the sheet for its bar;
-- under the best turn a shared point still lands further from where the other pictures put it than the bars together allow (the sheet may have moved, or these are different points);
+- under the best turn a shared point still lands further from where the other pictures put it than the bars together allow (the sheet moved, these are different spots, or one picture's reference has its long and short sides swapped; the sentence gives the cure for each, and names the picture when swapping one picture's sides would make them agree);
 - two shared points choose different turns.
 
 A refusal names every picture the disputed points are marked in, because the wrong mark may be in an earlier picture. A picture with no shared point is "not on the plan yet". A picture that is not on the plan gives the plan no point, no line and no pixel, and an outline that needs a point only that picture shows has no numbers. The reason is that a picture laid the wrong way round would put its corners somewhere else in the room, and the result would still read like a measurement. A later picture is checked against every picture placed before it. What this cannot catch: two shared points that are both mistaken for their look-alikes on the other side of the sheet, in a room that looks the same from both sides of it.
