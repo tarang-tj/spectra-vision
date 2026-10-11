@@ -5,8 +5,10 @@ import { presenceStore } from "../panels/presence/presence-store";
 import { telemetry } from "../telemetry/bus";
 import { addInferenceHold } from "./still";
 
-// The Lab's live charts, its stability meter and a benchmark all listen to
-// the per-inference event for as long as they measure, and nothing else does.
+// The Lab's live charts and a benchmark listen to the per-inference event for
+// as long as they measure, and nothing else does. The stability meter listens
+// for results, not inferences: it is kept running because the live charts
+// mount beside it in the Lab.
 addInferenceHold(() => (telemetry.listening("inference") ? "the Lab" : null));
 
 // A Presence session measures over time and goes on while another tab shows.
