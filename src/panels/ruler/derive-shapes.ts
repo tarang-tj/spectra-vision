@@ -1,10 +1,10 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Results for finished paths and outlines, as numbers and as text.
-import { formatMeasured } from "../../measure/format";
 import { measured } from "../../measure/noise";
 import type { Sheet } from "./homography";
 import type { Lens } from "./lens";
 import { droppedNote } from "./monte-carlo";
+import { readingText, shortReading } from "./reading";
 import { measureShape, type Quantity, type ShapeResult } from "./shapes";
 import type { Shape } from "./state";
 import { areaFromMm2, areaUnit, bigAreaUnit, fromMm, type Unit } from "./units";
@@ -25,11 +25,11 @@ export type ShapeRow = {
 };
 
 const len = (q: Quantity, unit: Unit, basis: string) =>
-  formatMeasured(
+  readingText(
     measured(fromMm(q.value, unit), fromMm(q.error, unit), unit, basis),
   );
 const area = (q: Quantity, unit: Unit, basis: string) =>
-  formatMeasured(
+  readingText(
     measured(
       areaFromMm2(q.value, unit),
       areaFromMm2(q.error, unit),
@@ -80,7 +80,10 @@ export function shapeRows(
       kind,
       label,
       result,
-      legTexts: result ? result.legs.map((l) => len(l, unit, basis)) : [],
+      // Legs sit in a list, so one too uncertain to state takes the short form.
+      legTexts: result
+        ? result.legs.map((l) => shortReading(len(l, unit, basis)))
+        : [],
       lengthText: result ? len(result.length, unit, basis) : "not measured",
       areaText: result?.area ? area(result.area, unit, basis) : null,
       areaAltText:

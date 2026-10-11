@@ -4,6 +4,7 @@
 // can place a point roughly and then refine it under the loupe.
 import type { StagePointerEvent } from "../../stage/stage-hooks";
 import { derive, longEdge } from "./derive";
+import { extensionFor, extensionPointer } from "./extensions";
 import { TAP_SIGMA_SCREEN_PX } from "./monte-carlo";
 import { view } from "./overlay";
 import { getState, hit, move, place, setLock, type Handle } from "./store";
@@ -23,6 +24,19 @@ export function onRulerPointer(e: StagePointerEvent): boolean {
   const at = { x: e.point.x * e.source.width, y: e.point.y * e.source.height };
   // One tap uncertainty, in source pixels, stored with every point it places.
   const sigma = TAP_SIGMA_SCREEN_PX / e.scale;
+  // A tool from its own folder sees the event first, unless one of the
+  // Ruler's own handles is being dragged: a second finger is ignored then,
+  // as it is without a tool.
+  // It needs the reference, so until all four corners are placed (at the
+  // start, or after Clear) taps go on placing corners as usual.
+  const ext =
+    getState().corners.length === 4 ? extensionFor(getState().tool) : null;
+  if (ext && view.still && !drag) {
+    if (extensionPointer(ext, e)) {
+      view.loupe = e.type === "up" ? null : { at, canvas: e.canvas };
+      return true;
+    }
+  }
   if (e.type === "down") {
     // A second finger while a drag is in progress is ignored, so the first
     // finger's point is not replaced and its release still ends the drag.
@@ -33,7 +47,11 @@ export function onRulerPointer(e: StagePointerEvent): boolean {
     if (!view.still) return false;
     const radius =
       (e.pointerType === "mouse" ? HIT_MOUSE : HIT_TOUCH) / e.scale;
-    drag = { id: e.pointerId, handle: hit(at, radius) ?? place(at, sigma) };
+    // With such a tool chosen a press never places a Ruler point, but it may
+    // still grab one, so the reference stays adjustable.
+    const handle = hit(at, radius) ?? (ext ? null : place(at, sigma));
+    if (!handle) return false;
+    drag = { id: e.pointerId, handle };
     // Hold the long-side guess for the whole drag.
     setLock(longEdge(derive(getState())));
     view.loupe = { at, canvas: e.canvas };

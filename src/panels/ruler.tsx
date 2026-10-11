@@ -1,14 +1,18 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useStudio } from "../studio-context";
 import { derive } from "./ruler/derive";
+import KnownSizes from "./ruler/known-sizes";
+import { EXTENSIONS, extensionEnv, extensionFor } from "./ruler/extensions";
 import LensSection from "./ruler/lens-section";
 import PlanPanel from "./ruler/plan-panel";
 import ReferencePicker from "./ruler/reference-picker";
 import Results from "./ruler/results";
 import ShapeTools, { openShape } from "./ruler/shape-tools";
+import TapeTest from "./ruler/tape-test";
 import {
   clear,
   isEmpty,
+  pendingRef,
   setUnit,
   toggleSwap,
   undo,
@@ -35,7 +39,12 @@ function Ruler() {
     // another photo that has not been drawn over yet.
     show = still && s.generation === frame.source?.generation,
     pending = s.measures.some((m) => m.b === null),
-    open = openShape(s);
+    ext = extensionFor(s.tool),
+    // A tool takes taps only once the reference is placed; until then taps
+    // and Undo belong to the reference corners.
+    toolActive = ext !== null && s.corners.length === 4,
+    open = openShape(s),
+    adding = pendingRef(s);
 
   let step: string;
   if (!hasSource) step = "Choose a camera, photo or demo first.";
@@ -51,6 +60,9 @@ function Ruler() {
   else if (s.corners.length < 4)
     step = `Tap corner ${s.corners.length + 1} of 4 of the ${d.reference.label}, in any order.`;
   else if (d.problem) step = d.problem;
+  else if (adding >= 0 && !ext)
+    step = `Tap corner ${s.extraRefs[adding].corners.length + 1} of 4 of reference ${adding + 2} (${s.extraRefs[adding].label}), in any order. Undo takes a corner back.`;
+  else if (ext) step = ext.step(extensionEnv(s, d));
   else if (s.tool === "path" || s.tool === "area") {
     const n = open?.pts.length ?? 0,
       finish = s.tool === "area" ? "Close outline" : "Finish path";
@@ -71,9 +83,9 @@ function Ruler() {
       <p className="ruler-note">
         Lay a sheet of known size flat on the surface you want to measure, in
         the same plane as the things you measure. Works on one flat surface
-        only. The further a span is from the reference, the larger its error. A
-        sheet of paper beats a card for rooms. Points under the stage buttons
-        cannot be tapped.
+        only. The further a span is from every known size, the larger its error:
+        for a room, add a second sheet or a tape-measured span under More known
+        sizes. Points under the stage buttons cannot be tapped.
       </p>
       <ReferencePicker s={s} />
       <p className="ruler-step" role="status" data-testid="ruler-step">
@@ -96,7 +108,11 @@ function Ruler() {
             </button>
           )
         )}
-        <button className="button" onClick={undo} disabled={isEmpty(s)}>
+        <button
+          className="button"
+          onClick={toolActive ? ext.undo : undo}
+          disabled={isEmpty(s)}
+        >
           Undo
         </button>
         <button className="button" onClick={clear} disabled={isEmpty(s)}>
@@ -123,8 +139,13 @@ function Ruler() {
           ))}
         </div>
       </section>
-      <ShapeTools s={s} />
+      <ShapeTools s={s} ready={!!d.sheet} />
+      {show && <KnownSizes s={s} d={d} />}
       <Results s={s} d={d} show={show} />
+      {show && <TapeTest d={d} />}
+      {EXTENSIONS.map((e) => (
+        <e.Section key={e.tool} show={show} />
+      ))}
       <PlanPanel s={s} d={d} show={show} />
       <LensSection s={s} d={d} />
       <ul className="ruler-guidance">
@@ -134,8 +155,15 @@ function Ruler() {
         </li>
         <li>
           For a whole room, one sheet of paper gives wide error bars, because
-          the bar grows with distance from the reference. Lay a bigger object of
-          known size flat on the floor and enter it as Custom to tighten them.
+          the bar grows with distance from the reference. A second sheet a few
+          metres away, or one span measured with a tape and used as a known
+          span, tightens them: the surface is then solved from all of them
+          together.
+        </li>
+        <li>
+          To check a reading, type what a tape measure read beside it. The tape
+          test lists each difference and says whether the tape value is inside
+          the bar. It changes nothing unless you press Use as known span.
         </li>
         <li>
           Measure only points that lie on the same surface as the reference.

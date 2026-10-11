@@ -23,11 +23,11 @@ export type KeyPress = {
 };
 
 /** Most modes a number key can reach. */
-export const MAX_MODE_KEYS = 7;
+export const MAX_MODE_KEYS = 8;
 
 /** The table shown in the help section. Keep it in step with matchShortcut. */
 export const SHORTCUTS: readonly { keys: string; does: string }[] = [
-  { keys: "1 to 7", does: "Switch vision mode" },
+  { keys: "1 to 8", does: "Switch vision mode" },
   { keys: "R", does: "Start or stop recording" },
   { keys: "S", does: "Save a screenshot" },
   { keys: "M", does: "Mirror the view" },

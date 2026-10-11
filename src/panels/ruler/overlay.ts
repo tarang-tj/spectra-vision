@@ -4,9 +4,13 @@
 // the one stage canvas, so Screenshot and Record capture it.
 import type { Frame } from "../../vision/frame";
 import { derive } from "./derive";
+import { drawExtensions } from "./extensions";
 import { orderCorners, type Pt } from "./homography";
+import { beginLabels, flushLabels } from "./overlay-labels";
 import { dot, INK, LINE, REF, tag } from "./overlay-parts";
+import { drawRefs } from "./overlay-refs";
 import { drawShapes } from "./overlay-shapes";
+import { shortReading } from "./reading";
 import { takeSnapshot, type Snapshot } from "./snapshot";
 import { bindSource, bindStillness, getState } from "./store";
 
@@ -107,6 +111,7 @@ export function drawRuler(ctx: CanvasRenderingContext2D, frame: Frame) {
   const s = getState(),
     d = derive(s),
     at = (p: Pt) => frame.project({ x: p.x / w, y: p.y / h });
+  beginLabels(frame.rect.w);
 
   if (s.corners.length) {
     const ring = d.sheet
@@ -135,19 +140,22 @@ export function drawRuler(ctx: CanvasRenderingContext2D, frame: Frame) {
           a = at(ring[i]),
           b = at(ring[j]);
         tag(
-          ctx,
           `${Number(mm.toFixed(1))} mm`,
           (a.x + b.x) / 2 - 20,
           (a.y + b.y) / 2,
           REF,
+          "optional",
         );
       });
     }
+    // The numbers count the taps; once all four are in they are a detail.
+    const rank = s.corners.length === 4 ? "detail" : "optional";
     s.corners.forEach((p, i) => {
       const c = at(p);
-      dot(ctx, c.x, c.y, REF, String(i + 1));
+      dot(ctx, c.x, c.y, REF, String(i + 1), rank);
     });
   }
+  drawRefs(ctx, s, at);
 
   s.measures.forEach((m, i) => {
     const a = at(m.a);
@@ -162,8 +170,7 @@ export function drawRuler(ctx: CanvasRenderingContext2D, frame: Frame) {
       dot(ctx, b.x, b.y, LINE, "");
       const row = d.rows.find((r) => r.index === i);
       tag(
-        ctx,
-        row ? row.text : "needs the reference",
+        row ? shortReading(row.text) : "needs the reference",
         (a.x + b.x) / 2 + 6,
         (a.y + b.y) / 2 - 8,
         LINE,
@@ -172,5 +179,7 @@ export function drawRuler(ctx: CanvasRenderingContext2D, frame: Frame) {
     dot(ctx, a.x, a.y, LINE, "");
   });
   drawShapes(ctx, s, d, at);
+  drawExtensions(ctx, frame, s, d, w, h);
+  flushLabels(ctx, frame.width, frame.height);
   loupe(ctx, frame);
 }

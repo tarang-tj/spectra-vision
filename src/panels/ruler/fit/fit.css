@@ -1,0 +1,65 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+/* The Box section of the Ruler panel. */
+/* Three sizes in one even row (over .ruler-custom's wrapping flex row). */
+.ruler-custom.fit-size {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+/* The verdicts lead the section and stay in view while any of it is: typing a
+   size further down still shows what it did to the verdict. */
+.fit-verdicts {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+.fit-verdicts li {
+  border-left-width: 4px;
+}
+.fit-verdicts li[data-kind="fits"] {
+  border-left-color: var(--accent);
+}
+.fit-verdicts li[data-kind="over"] {
+  border-left-color: #ffb3c7;
+}
+.fit-verdicts li[data-kind="close"] {
+  border-left-color: #ffd18d;
+}
+.fit-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.fit-line output {
+  min-width: 0;
+}
+/* Tick, cross or tilde in a ring: the word beside it says the same. */
+.fit-mark {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+.fit-line[data-kind="fits"] .fit-mark {
+  color: var(--accent);
+}
+.fit-line[data-kind="over"] .fit-mark {
+  color: #ffb3c7;
+}
+.fit-line[data-kind="close"] .fit-mark {
+  color: #ffd18d;
+}
+/* A verdict that is a sentence, not a number, reads at text size. */
+.fit-line[data-kind="close"] output {
+  font-size: 14px;
+  line-height: 1.5;
+}

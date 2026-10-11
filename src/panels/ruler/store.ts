@@ -4,15 +4,24 @@
 import type { Pt } from "./homography";
 import {
   getState,
+  isExtensionTool,
   MIN_POINTS,
+  pointsCleared,
   set,
   type Handle,
   type Shape,
   type ShapeKind,
   type Tool,
 } from "./state";
+import {
+  moveRefCorner,
+  placeRefCorner,
+  refCorners,
+  undoRefCorner,
+} from "./store-known";
 
 export * from "./state";
+export * from "./store-known";
 
 /** Keep the point on the picture and stamp it with the tap uncertainty (one
  * sd in source pixels) it was placed with, so a later resize cannot change
@@ -29,7 +38,8 @@ const clamp = (p: Pt, sigma?: number): Pt => {
   return sd === undefined ? at : { ...at, s: sd };
 };
 
-const isShapeTool = (t: Tool): t is ShapeKind => t !== "span";
+const isShapeTool = (t: Tool): t is ShapeKind =>
+  t === "path" || t === "area" || t === "edge";
 
 /** Add a vertex to the open shape of this kind, or start one. */
 function addVertex(kind: ShapeKind, at: Pt): Handle {
@@ -57,6 +67,9 @@ export function place(p: Pt, sigma?: number): Handle {
     set({ corners: [...state.corners, at] });
     return { kind: "corner", i: state.corners.length };
   }
+  // A further reference that is being tapped takes the next taps.
+  const ref = placeRefCorner(at);
+  if (ref) return ref;
   if (isShapeTool(state.tool)) return addVertex(state.tool, at);
   const last = state.measures[state.measures.length - 1];
   if (last && last.b === null) {
@@ -79,6 +92,7 @@ export function move(handle: Handle, p: Pt, sigma?: number) {
     set({ corners });
     return;
   }
+  if (handle.kind === "ref") return moveRefCorner(handle, at);
   if (handle.kind === "vertex") {
     const shape = state.shapes[handle.s];
     if (!shape || !shape.pts[handle.i]) return;
@@ -111,6 +125,7 @@ export function hit(p: Pt, radiusSrc: number): Handle | null {
     }
   };
   state.corners.forEach((c, i) => test(c, { kind: "corner", i }));
+  refCorners(state).forEach(({ p: c, r, i }) => test(c, { kind: "ref", r, i }));
   state.measures.forEach((m, i) => {
     test(m.a, { kind: "end", m: i, end: "a" });
     test(m.b, { kind: "end", m: i, end: "b" });
@@ -126,6 +141,10 @@ export function hit(p: Pt, radiusSrc: number): Handle | null {
  * reference corner (only while nothing else was measured). */
 export function undo() {
   const state = getState();
+  // An extension tool undoes its own points (see extensions.ts).
+  if (isExtensionTool(state.tool) && state.corners.length === 4) return;
+  // A further reference still being tapped loses its last corner first.
+  if (state.tool !== "edge" && undoRefCorner()) return;
   if (isShapeTool(state.tool)) {
     const at = state.shapes.map((s) => s.kind).lastIndexOf(state.tool);
     if (at >= 0) {
@@ -149,14 +168,24 @@ export function undo() {
     });
   } else if (
     state.corners.length &&
+    !state.extraRefs.length &&
     !state.shapes.some((s) => s.kind !== "edge")
   ) {
     set({ corners: state.corners.slice(0, -1) });
   }
 }
 
-export const clear = () =>
-  set({ corners: [], measures: [], shapes: [], swap: false, lock: null });
+export const clear = () => {
+  set({
+    corners: [],
+    extraRefs: [],
+    measures: [],
+    shapes: [],
+    swap: false,
+    lock: null,
+  });
+  pointsCleared();
+};
 
 /** Drop a half-built shape too short to keep; close one long enough. */
 const settle = (shapes: Shape[]): Shape[] =>
