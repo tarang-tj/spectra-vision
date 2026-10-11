@@ -2,7 +2,7 @@
 
 **Reality, augmented.** A camera-first computer vision studio by **Tarang Jammalamadaka**.
 
-[Open the live studio](https://tarang-tj.github.io/spectra-vision/) · [Watch the video demo](https://tarang-tj.github.io/spectra-vision/demo/) · [v1.1.1](https://github.com/tarang-tj/spectra-vision/releases/tag/v1.1.1) · [Ownership and license](LICENSE)
+[Open the live studio](https://tarang-tj.github.io/spectra-vision/) · [Watch the video demo](https://tarang-tj.github.io/spectra-vision/demo/) · [v2.3.0](https://github.com/tarang-tj/spectra-vision/releases/tag/v2.3.0) · [Ownership and license](LICENSE)
 
 Eight modes run seven real vision models on your camera: tracked object boxes, a body skeleton, hand-controlled light painting, a 478-point face mesh, a person cutout, gesture recognition, body, hands and face together, and a depth map from one camera. Ten effects draw on what the models find, a Ruler tab measures on a frozen picture with a stated error on every number, and a Lab tab measures how fast the models run on your device. Everything runs in your browser.
 

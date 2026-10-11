@@ -1,4 +1,4 @@
-# SPECTRA architecture (v2)
+# SPECTRA architecture
 
 SPECTRA is built from three registries. Each one is a folder that is scanned at build time with `import.meta.glob`, so **adding one file adds one entry**. Nothing else needs editing: no list, no switch, no shared stylesheet.
 
@@ -36,6 +36,8 @@ pnpm run test
 PAGES_BUILD=1 pnpm run build
 SPECTRA_TEST_PRODUCTION=1 pnpm run test:e2e
 ```
+
+`pnpm run test:fast` is the unit suite without the six simulation files (`ruler-coverage`, `walls-fused`, `walls-numbers`, `fit-fused`, `ruler-fused`, `fit-scene`), which are most of its run time. It is for the edit loop and is not part of the gate: `pnpm run test` and CI run everything.
 
 ## How registries discover files
 
@@ -113,6 +115,8 @@ type ModeDef = {
   count?(frame: FrameData): number; // the "Tracked" metric; defaults to the row count
   tracked?: boolean; // give detections track ids and trails (Objects only)
   exportFrame?(result: VisionResult): Record<string, unknown>; // extra keys for the session export
+  controls?: ComponentType; // extra settings, rendered by the Inspect panel
+  leave?(): void; // another mode took the stage, or the stage went away
 };
 type InspectorRow = {
   key: number;
@@ -157,6 +161,7 @@ The model file must be listed in `scripts/models.json` with its SHA-256, and the
 - **`tracked`.** Only Objects sets it. Its detections go through the tracker (`src/vision/tracker.ts`) and come back as `frame.tracks` with ids and trails, which the motion map draws. Gestures and Segment also report detections (a hand box, a class box), but those are not separate objects, so they get no track ids and no trails.
 - **`exportFrame`.** Each processed frame is stored for the session export with the five v1 keys (`elapsedMs`, `latencyMs`, `detections`, `landmarks`, `handedness`). A mode may add optional keys; it cannot replace a v1 key. Face adds `face` (blendshapes, head pose), Gestures `gestures`, Segment `segmentation` (class shares), Fusion `tasks` (each model's own result). The README documents the fields.
 - **Demo.** A mode with no `demo.motion` clip gets no motion demo button.
+- **`leave`.** The stage calls it once on the first frame after another mode is chosen, and when the stage unmounts. A mode that holds something between frames gives it back there: Depth releases its 3D renderer and that view's pointer handler. It does not wait for the next mode's model to load. A `leave` that throws is logged and the stage goes on.
 
 ## Vision tasks and the worker protocol
 
@@ -176,7 +181,7 @@ type TaskSpec = {
   model: string;
   preciseModel?: string; // loaded instead of `model` while Precision is "Precise"
   options: Record<string, unknown>;
-  delegate: "CPU" | "GPU";
+  delegate: "CPU" | "GPU" | "AUTO"; // AUTO is resolved before the worker starts
 };
 type TaskResult = {
   kind: TaskKind;
@@ -226,7 +231,7 @@ One worker runs one task. The six MediaPipe kinds run in `public/vision-worker.j
 
 `src/vision/delegate.ts`, `src/vision/task-runner.ts`, `src/vision/webgl-probe.ts`.
 
-A task asks for `"CPU"` or `"GPU"` in its `TaskSpec`. The three v1 modes, Face, Gestures and Fusion ask for CPU. Segment asks for GPU, where its model is several times faster. Depth asks for `"AUTO"`; for that kind GPU means WebGPU, and a browser without it falls back to CPU with the reason shown.
+A task asks for `"CPU"`, `"GPU"` or `"AUTO"` in its `TaskSpec`. Objects, Body, Hands, Gestures, Segment and Depth ask for `"AUTO"`, and so do Fusion's body and hand tasks. Face, and Fusion's face task, ask for CPU. `"AUTO"` becomes GPU only where the page has a hardware renderer (see "Added in 2.2"), so a machine without one, CI included, runs everything on CPU. For Depth, GPU means WebGPU, and a browser without it falls back to CPU with the reason shown.
 
 - **Choice store.** The Lab's CPU or GPU switch calls `chooseDelegate(kind, delegate)`. The choice is kept per task kind for the page's lifetime, `requestedDelegate(spec)` returns the choice or else the mode's own delegate, and every runner of that kind restarts on it (`onDelegateChoice`). `chooseDelegate(kind, null)` gives the decision back to the mode.
 - **Software-renderer refusal.** Before a GPU task starts, `gpuUnavailable()` asks the page's one WebGL probe for the renderer name. With no WebGL2, or with a software renderer (SwiftShader, llvmpipe, lavapipe, WARP, Mesa OffScreen, Generic Renderer, Basic Render Driver), GPU is refused up front and the task runs on CPU with the reason recorded. `"AUTO"` uses the same name check, so those renderers resolve to CPU there too. A software renderer can run the GPU path, but an abandoned start there was measured to keep the browser's GPU process busy for 16 seconds to minutes. The worker refuses a software renderer for `segment` on its own as well.
@@ -348,7 +353,7 @@ type Studio = {
 };
 ```
 
-Five panels ship: Inspect (`src/panels/inspect.tsx`), which is the v1 rail content, Lab (`src/panels/lab.tsx` with its parts in `src/panels/lab/`), and Library, Ruler and Presence, each a `.tsx` file with its parts in a folder of the same name. The last two are measuring panels built on the measurement layer below. With one visible panel there is no tab bar. With more, `src/components/Inspector.tsx` shows a tab bar (`.panel-tabs`) and the chosen panel. Beside the stage the rail takes the stage's height and the panel scrolls inside it.
+Five panels ship: Inspect (`src/panels/inspect.tsx`), which is the v1 rail content, Lab (`src/panels/lab.tsx` with its parts in `src/panels/lab/`), and Library, Ruler and Presence, each a `.tsx` file with its parts in a folder of the same name. The last two are measuring panels built on the measurement layer below. Each panel is rendered inside an `ErrorBoundary` (`src/components/ErrorBoundary.tsx`), and so is a mode's `controls` component in the Inspect panel: a throw while one of them renders shows a plain message in its place with a "Try again" button, is logged once with the name of what failed, and leaves the stage and the rest of the rail working. With one visible panel there is no tab bar. With more, `src/components/Inspector.tsx` shows a tab bar (`.panel-tabs`) and the chosen panel. Beside the stage the rail takes the stage's height and the panel scrolls inside it.
 
 The Lab subscribes to the telemetry bus only while it is open, keeps fixed-size rings of samples (`lab-store.ts`), computes percentiles with `src/telemetry/stats.ts`, and runs the benchmark protocol in `benchmark.ts` (20 s measured after a 2 s warm-up per mode and delegate, exported as JSON or Markdown by `benchmark-report.ts`). It owns no timer while merely open: it is driven by the stage's `frame` events.
 
@@ -501,7 +506,7 @@ type StagePointerEvent = {
 ```
 
 - **Overlay.** Drawn last, after the mode, the effects and the GL layer, on the one stage canvas in CSS pixels, so Record and Screenshot capture it. It is also drawn while paused (the stage keeps redrawing the held frame). Context state is saved and restored around it. An overlay that throws is logged once and skipped. Remove it in the effect cleanup.
-- **Pointer.** Events from the stage canvas; the newest handler sees an event first and returns `true` to consume it (later handlers do not see it, the browser default is prevented, and on a consumed `down` the canvas captures the pointer so a drag continues outside it). While any handler is registered the canvas sets `touch-action: none` and a crosshair cursor (`canvas[data-pointer="on"]`). With none registered the canvas behaves as before. To drag a handle, remember the pointer id on `down` and return `true` for its `move` and `up`.
+- **Pointer.** `onPointer(handler, { yields: true })` registers a handler that sees an event only after every other handler has declined it, whenever it was registered. It is for a handler that would take any press on the picture: Depth's 3D view turns on a drag this way, so with the Ruler open a press the Ruler uses is the Ruler's. Otherwise: events from the stage canvas; the newest handler sees an event first and returns `true` to consume it (later handlers do not see it, the browser default is prevented, and on a consumed `down` the canvas captures the pointer so a drag continues outside it). While any handler is registered the canvas sets `touch-action: none` and a crosshair cursor (`canvas[data-pointer="on"]`). With none registered the canvas behaves as before. To drag a handle, remember the pointer id on `down` and return `true` for its `move` and `up`.
 - **Pause.** `setPaused(true)` stops detection and holds the last frame (a video source pauses too); an uploaded photo is already still. Whoever pauses resumes.
 - `unproject(point, rect, mirror)` in `src/vision/geometry.ts` is the pure inverse of `project`.
 
@@ -515,7 +520,7 @@ The `pose` and `hand` tasks put MediaPipe's `worldLandmarks` in `extra.world` (t
 
 ### Precision (setting, Fast by default)
 
-A `TaskSpec` may declare `preciseModel`. With Precision on "Precise" (`usePrecision()`, `getPrecision()`, `modelOf(spec)`), the task runner loads it instead of `model` and restarts on a fresh worker when the setting changes; the delegate rules are unchanged. Body and Fusion declare `pose_landmarker_full.task` (9,398,198 bytes, Apache-2.0, in `scripts/models.json` with its SHA-256). `TaskResult.model` and the Lab (model cards, load times, benchmark) report the file actually in use. Models are still fetched on demand only, and the service worker caches the full model on its first real use with the other `models/` files (no list to edit). Remembered in `localStorage` (`spectra.precision.v1`). Defaults stay Lite on CPU because CI has no GPU.
+A `TaskSpec` may declare `preciseModel`. With Precision on "Precise" (`usePrecision()`, `getPrecision()`, `modelOf(spec)`), the task runner loads it instead of `model` and restarts on a fresh worker when the setting changes; the delegate rules are unchanged. Body and Fusion declare `pose_landmarker_full.task` (9,398,198 bytes, Apache-2.0, in `scripts/models.json` with its SHA-256) and Objects declares `efficientdet_lite2.tflite`. `TaskResult.model` and the Lab (model cards, load times, benchmark) report the file actually in use. Models are still fetched on demand only, and the service worker caches the full model on its first real use with the other `models/` files (no list to edit). Remembered in `localStorage` (`spectra.precision.v1`). The default is the smaller model. The delegate does not depend on this setting: it follows the rules under "Delegates".
 
 ### A measuring panel in ten lines (sketch: `store` is the panel's own module)
 
@@ -549,7 +554,7 @@ function Sway() {
 
 ## Added in 2.3
 
-- **Depth mode**: `src/modes/depth.ts`, an eighth mode on a new task kind, `depth`, with its own worker (`public/depth-worker.js`) on ONNX Runtime Web and a `progress` message for long downloads. The pure parts are in `src/vision/depth/` (`colormap.ts`, `affine-fit.ts`, `unproject.ts`, `orbit.ts`) and the drawing, the 3D point view and the readout in `src/modes/lib/depth-*`. The 3D view is WebGL2 on an off-page canvas copied onto the stage; it owns no loop or timer and releases its GL objects when the view or the mode goes away. The session export gains an optional `depth` key (a summary of the map, never the map).
+- **Depth mode**: `src/modes/depth.ts`, an eighth mode on a new task kind, `depth`, with its own worker (`public/depth-worker.js`) on ONNX Runtime Web and a `progress` message for long downloads. The pure parts are in `src/vision/depth/` (`colormap.ts`, `affine-fit.ts`, `unproject.ts`, `orbit.ts`) and the drawing, the 3D point view and the readout in `src/modes/lib/depth-*`. The 3D view is WebGL2 on an off-page canvas copied onto the stage; it owns no loop or timer and releases its GL objects when the view goes away or the mode is left (the mode's `leave`), and also when its own start fails part way. The worker reads the model into one buffer of the size the manifest gives (`options.bytes`), so the 99 MB file is held once while it arrives. The session export gains an optional `depth` key (a summary of the map, never the map).
 - **Metric depth from the Ruler**: `depth-metric.ts` reads the Ruler's state and never changes it. On a photo with a solved reference and a resolved focal length, the map cells inside the reference, further references and finished Area outlines are fitted as `1 / depth = a * output + b` (`fitDepth`), and the fit is refused with a reason when the marked floor's far edge is under 1.3 times as far as its near edge, when fewer than 30 points are usable, or when it leaves more than 25% scatter. A depth is a `Measured`: 2 standard deviations over the `cameraTrials` refits combined with twice the fit's scatter, and "not measured" when that bar exceeds half the depth (`depth-measured.ts`). The refits wait until the same scale has been asked for on 8 drawn frames, so dragging a Ruler handle does not trigger them per move.
 - **Camera model**: `src/measure/camera.ts` with `camera-fit.ts` and `vec.ts`, described under "Pure helpers".
 - **Ruler tool contract**: `extension-types.ts`, `extensions.ts`, `camera-of.ts`, `plumbs.ts`, described under "Ruler tools".
@@ -608,7 +613,7 @@ The service worker is registered in production builds only, after `load`, as `<b
 
 ## Styles
 
-`src/styles/index.css` imports `base.css`, `shell.css`, `stage.css` and `inspector.css`. `panel-tabs.css`, `deck.css`, `palette.css`, `coach.css`, `share.css` and `immersive.css` are imported by the component that uses them, and `src/panels/lab/lab.css` by the Lab. Plugins bring their own CSS file next to their module.
+`src/styles/index.css` imports `base.css`, `shell.css`, `stage.css`, `inspector.css` and `deck.css`. `panel-tabs.css`, `palette.css`, `coach.css`, `share.css`, `immersive.css` and `measure-settings.css` are imported by the component that uses them, and `src/panels/lab/lab.css` by the Lab and Presence. Plugins bring their own CSS file next to their module.
 
 ## File map
 
@@ -627,27 +632,36 @@ src/panels/                 types.ts, index.ts, inspect.tsx, lab.tsx, lab/, libr
 src/panels/ruler/           the plane solve (homography.ts, derive.ts, monte-carlo.ts), shapes, plan and
                             lens; fused known sizes (fuse-inputs.ts, fused*.ts, known-sizes.tsx,
                             tape-test.tsx); the tool contract (extension-types.ts, extensions.ts,
-                            camera-of.ts, plumbs.ts, reading.ts); fit/ (Box) and walls/ (Walls)
+                            camera-of.ts, plumbs.ts, reading.ts); tap.ts (grab radius, press to
+                            pixel, clamp to the picture); fit/ (Box) and walls/ (Walls)
 src/studio-context.ts       Studio type and useStudio()
 src/session-export.ts       the JSON download
+src/download.ts             save a blob or text as a local file (every export goes through it)
+src/test-hooks.ts           what a page opened with ?spectra-test exposes to the browser tests
 src/stage/                  renderer.ts, effect-host.ts, gl-layer.ts, use-stage-loop.ts, stage-hooks.ts
 src/gl/                     WebGL2 kit for effects
 src/vision/                 types.ts, frame.ts, draw.ts, geometry.ts, tracker.ts, merge.ts,
                             delegate.ts, webgl-probe.ts, task-runner.ts, useVision.ts, useSource.ts,
-                            useSession.ts, settings.ts, smooth-result.ts, result-feed.ts
+                            useSession.ts, settings.ts, smooth-result.ts, result-feed.ts,
+                            tracker-cost.ts
 src/vision/depth/           colormap.ts, affine-fit.ts, unproject.ts, orbit.ts (pure)
 src/measure/                one-euro.ts, series.ts, noise.ts, format.ts, angles.ts, camera.ts,
-                            camera-fit.ts, vec.ts (pure)
+                            camera-fit.ts, vec.ts (pure; vec.ts is the one home of solveLinear
+                            and invert3, the Ruler's plane solves included)
 src/telemetry/              bus.ts, stats.ts, task-status.ts
 src/shell/                  shortcuts, palette, layout, recorder, service worker registration
 src/components/             Header, ModeSwitch, CameraStage, StageMessage, CameraPicker, Inspector,
                             StudioDeck, EffectsPicker, EffectIntensity, ShareCard, CoachMarks,
-                            CommandPalette, ImmersiveDock, HelpPanel, Footer
+                            CommandPalette, ImmersiveDock, HelpPanel, Footer, MeasureSettings,
+                            ErrorBoundary
 src/styles/                 index.css, base.css, shell.css, stage.css, inspector.css, panel-tabs.css,
-                            deck.css, palette.css, coach.css, share.css, immersive.css
+                            deck.css, palette.css, coach.css, share.css, immersive.css,
+                            measure-settings.css
 tests/                      unit: tracker, registry (with fixtures), vision, telemetry, modes, effects, lab,
                             shell, measure-*, stage-hooks, vision-smoothing, vision-settings, ruler-*,
-                            fit-*, walls-*, depth-*;
+                            fit-*, walls-*, depth-*, library-*, presence-*, session-export,
+                            licence-notices; helpers/ (seeded noise, the worker harness);
                             e2e: studio, modes, effects, lab, shell, mode-switch, no-webgl, measure,
-                            ruler*, fit, walls, depth
+                            ruler*, fit, walls, depth, demo-page, detection-models,
+                            detection-stability, library, presence, error-boundary
 ```
