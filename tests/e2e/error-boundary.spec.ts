@@ -95,9 +95,12 @@ test("a mode's own settings that throw leave the rest of the Inspect panel in pl
   test.setTimeout(180_000);
   const errors = await open(page),
     alert = page.getByTestId("panel-fault");
-  await fault(page, "The Objects settings");
-  // Any state change renders the panel again; the frame list is one.
+  // The fault is set while another panel is open, so the settings throw on
+  // exactly one render: the one that opens Inspect. Set while Inspect is open,
+  // the next vision result renders the panel and throws as well (about one
+  // run in three), and the tab change then logs a second time.
   await tab(page, "Lab").click();
+  await fault(page, "The Objects settings");
   await tab(page, "Inspect").click();
   await expect(alert).toHaveText(/The Objects settings stopped on an error\./);
   await expect(
