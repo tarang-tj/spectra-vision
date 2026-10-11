@@ -9,7 +9,7 @@ import RoomPoints from "./room-points";
 import RoomResults from "./room-results";
 import { pointName } from "./room-solve";
 import { closeOutline, setNext, useRoom, type RoomState } from "./store";
-import { useViews, type View } from "./views-store";
+import { useViews, viewName, type View } from "./views-store";
 
 /** The one instruction for the Room tool, from where things stand. */
 export function roomStep(
@@ -24,6 +24,10 @@ export function roomStep(
     return "The stage shows a picture that is not one of the room's. Choose one of the room's pictures, or press Keep this picture.";
   if (!ready)
     return "Tap the four corners of the reference in this picture first.";
+  if (room.note && "held" in room.note)
+    return `That tap took hold of ${pointName(room.note.held)} and moved nothing. Drag it to adjust it, or tap a little further away to place a point.`;
+  if (room.note)
+    return `Nothing was undone: the last room change was tapped on ${viewName(room.note.undoOn)}, which is not on the stage. Show that picture, then press Undo.`;
   if (room.next.kind === "link")
     return `Tap ${pointName(room.next.point)} in this picture: the same spot on the floor.`;
   if (room.next.kind === "mark")

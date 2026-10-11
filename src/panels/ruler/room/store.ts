@@ -21,6 +21,11 @@ export type RoomState = {
   closed: boolean;
   next: Next;
   nextId: number;
+  /** What the step line must say about the last press or Undo, until the
+   * room next changes: a tap that took hold of a point and moved nothing, or
+   * an Undo that was not done because the change was made on another
+   * picture. */
+  note: { held: number } | { undoOn: number } | null;
 };
 
 const empty: RoomState = {
@@ -29,10 +34,14 @@ const empty: RoomState = {
   closed: false,
   next: { kind: "corner" },
   nextId: 1,
+  note: null,
 };
 const HISTORY = 200;
+/** Earlier states for Undo, each with the picture its change was tapped on
+ * (null for a change made in the panel, which is on screen whatever the
+ * picture). */
 let state = empty,
-  history: RoomState[] = [];
+  history: { state: RoomState; view: number | null }[] = [];
 const listeners = new Set<() => void>();
 
 export const getRoom = () => state;
@@ -41,9 +50,15 @@ export const subscribeRoom = (l: () => void) => {
   return () => void listeners.delete(l);
 };
 export const useRoom = () => useSyncExternalStore(subscribeRoom, getRoom);
-function commit(next: RoomState, remember = true) {
-  if (remember) history = [...history.slice(-HISTORY + 1), state];
-  state = next;
+function commit(next: RoomState, remember = true, view: number | null = null) {
+  if (remember) history = [...history.slice(-HISTORY + 1), { state, view }];
+  // Any change to the room ends the note about the press before it.
+  state = next.note ? { ...next, note: null } : next;
+  listeners.forEach((l) => l());
+}
+export function setNote(note: RoomState["note"]) {
+  if (note === state.note) return;
+  state = { ...state, note };
   listeners.forEach((l) => l());
 }
 /** What a tap does once a link is made or cannot be: corners while the
@@ -58,34 +73,49 @@ export function tapRoom(view: number, at: Pt): number {
   if (next.kind === "link") {
     const point = state.points.find((p) => p.id === next.point);
     if (point) {
-      commit({
-        ...state,
-        points: state.points.map((p) =>
-          p === point
-            ? {
-                ...p,
-                obs: [...p.obs.filter((o) => o.view !== view), { view, at }],
-              }
-            : p,
-        ),
-        next: resting(state.closed),
-      });
+      commit(
+        {
+          ...state,
+          points: state.points.map((p) =>
+            p === point
+              ? {
+                  ...p,
+                  obs: [...p.obs.filter((o) => o.view !== view), { view, at }],
+                }
+              : p,
+          ),
+          next: resting(state.closed),
+        },
+        true,
+        view,
+      );
       return point.id;
     }
   }
-  return addPoint(view, at, next.kind === "corner" && !state.closed);
+  return addPoint(view, at, next.kind === "corner" && !state.closed, view);
 }
-/** A new room point seen in `view`, as an outline corner or a floor mark. */
-export function addPoint(view: number, at: Pt, corner: boolean): number {
+/** A new room point seen in `view`, as an outline corner or a floor mark.
+ * `tapped` is the picture it was tapped on, or null when it was taken from
+ * the list in the panel. */
+export function addPoint(
+  view: number,
+  at: Pt,
+  corner: boolean,
+  tapped: number | null = null,
+): number {
   const id = state.nextId,
     asCorner = corner && !state.closed;
-  commit({
-    ...state,
-    points: [...state.points, { id, obs: [{ view, at }] }],
-    outline: asCorner ? [...state.outline, id] : state.outline,
-    next: resting(state.closed),
-    nextId: id + 1,
-  });
+  commit(
+    {
+      ...state,
+      points: [...state.points, { id, obs: [{ view, at }] }],
+      outline: asCorner ? [...state.outline, id] : state.outline,
+      next: resting(state.closed),
+      nextId: id + 1,
+    },
+    true,
+    tapped,
+  );
   return id;
 }
 /** Drag a mark. Not a step for Undo. */
@@ -149,11 +179,16 @@ export function closeOutline(closed: boolean) {
   if (closed === state.closed || (closed && state.outline.length < 3)) return;
   commit({ ...state, closed, next: resting(closed) });
 }
-export function undoRoom() {
+/** Take back the last change. A change tapped on a picture is undone only
+ * while that picture is on the stage (`onStage` is its id): otherwise Undo
+ * would remove a mark that is not on screen, so it says where to look. */
+export function undoRoom(onStage: number | null) {
   const back = history[history.length - 1];
   if (!back) return;
+  if (back.view !== null && back.view !== onStage)
+    return setNote({ undoOn: back.view });
   history = history.slice(0, -1);
-  commit(back, false);
+  commit(back.state, false);
 }
 /** A picture left the room: its marks go, and points left with none. */
 export function dropView(view: number) {
@@ -184,6 +219,7 @@ export function loadRoom(
     room
       ? {
           ...room,
+          note: null,
           next: resting(room.closed),
           nextId: room.points.reduce((m, p) => Math.max(m, p.id), 0) + 1,
         }

@@ -7,10 +7,10 @@ import type { StagePointerEvent } from "../../../stage/stage-hooks";
 import type { ExtensionEnv } from "../extension-types";
 import type { Pt } from "../homography";
 import { TAP_SIGMA_SCREEN_PX } from "../monte-carlo";
-import { hit, onPointsCleared } from "../store";
-import { hitRadius, tapPixel, TAP_TRAVEL } from "../tap";
+import { getState, handles, hit, onPointsCleared } from "../store";
+import { grabRadius, hitFloor, hitRadius, tapPixel, TAP_TRAVEL } from "../tap";
 import { stageView } from "./current";
-import { closeOutline, getRoom, moveObs, tapRoom } from "./store";
+import { closeOutline, getRoom, moveObs, setNote, tapRoom } from "./store";
 
 type Grab = {
   id: number;
@@ -26,17 +26,36 @@ export const dropGrab = () => {
 };
 onPointsCleared(dropGrab);
 
-function nearest(view: number, at: Pt, radius: number): number | null {
+/** The room mark in this picture that a press at `at` takes hold of, by the
+ * Ruler's own rule: within `radius`, less where another mark or one of the
+ * Ruler's handles is close (`grabRadius`), never under `floor`. So the
+ * space between two close marks stays free for a tap that places a point. */
+function nearest(
+  view: number,
+  at: Pt,
+  radius: number,
+  floor: number,
+): number | null {
+  const marks = getRoom().points.flatMap((p) => {
+      const o = p.obs.find((x) => x.view === view);
+      return o ? [{ id: p.id, at: o.at }] : [];
+    }),
+    others = [
+      ...marks.map((m) => m.at),
+      ...handles(getState()).map((h) => h.at),
+    ];
   let best: number | null = null,
-    bestD = radius;
-  for (const p of getRoom().points) {
-    const o = p.obs.find((x) => x.view === view);
-    if (!o) continue;
-    const d = Math.hypot(o.at.x - at.x, o.at.y - at.y);
-    if (d <= bestD) {
-      bestD = d;
-      best = p.id;
-    }
+    bestD = Infinity;
+  for (const m of marks) {
+    const d = Math.hypot(m.at.x - at.x, m.at.y - at.y);
+    if (d > radius || d > bestD) continue;
+    let spacing = Infinity;
+    for (const o of others)
+      if (o !== m.at)
+        spacing = Math.min(spacing, Math.hypot(o.x - m.at.x, o.y - m.at.y));
+    if (d > grabRadius(radius, floor, spacing)) continue;
+    bestD = d;
+    best = m.id;
   }
   return best;
 }
@@ -50,16 +69,19 @@ export function roomPointer(e: StagePointerEvent, env: ExtensionEnv): boolean {
     grab = null;
     if (!e.inside || !env.d.sheet || !view) return false;
     const radius = hitRadius(e),
+      floor = hitFloor(e),
       start = { id: e.pointerId, view: view.id, from: e.canvas },
       // While a point is being marked in this picture every press marks it:
       // it may lie right beside another mark.
       own =
-        getRoom().next.kind === "link" ? null : nearest(view.id, at, radius);
+        getRoom().next.kind === "link"
+          ? null
+          : nearest(view.id, at, radius, floor);
     if (own !== null) {
       grab = { ...start, point: own, moved: false };
       return true;
     }
-    if (hit(at, radius)) return false;
+    if (hit(at, radius, floor)) return false;
     grab = { ...start, point: tapRoom(view.id, at), moved: true };
     return true;
   }
@@ -82,6 +104,8 @@ export function roomPointer(e: StagePointerEvent, env: ExtensionEnv): boolean {
     const room = getRoom();
     if (!room.closed && room.outline[0] === point && room.outline.length >= 3)
       closeOutline(true);
+    // Otherwise the tap placed nothing: say so, or it looks lost.
+    else setNote({ held: point });
   }
   return true;
 }

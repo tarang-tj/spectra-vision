@@ -5,6 +5,8 @@ import type { RulerExtension } from "../extension-types";
 import { drawRoom } from "./overlay";
 import { roomPointer } from "./pointer";
 import RoomSection from "./room-section";
+import { getState } from "../state";
+import { stageView } from "./current";
 import { undoRoom } from "./store";
 
 // The Ruler works this line out only when its own state changes, so it stays
@@ -19,7 +21,7 @@ const room: RulerExtension = {
   step,
   draw: drawRoom,
   pointer: roomPointer,
-  undo: undoRoom,
+  undo: () => undoRoom(stageView(getState().generation)?.id ?? null),
   Section: RoomSection,
 };
 export default room;

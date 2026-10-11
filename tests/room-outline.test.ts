@@ -219,15 +219,79 @@ describe("the Room tool through the stores", () => {
     roomPointer(press("down", first), env());
     roomPointer(press("up", first), env());
     expect(getRoom().closed).toBe(true);
-    undoRoom();
+    undoRoom(a);
     expect(getRoom().closed).toBe(false);
-    undoRoom();
+    undoRoom(a);
     expect(getRoom().points).toHaveLength(2);
     // With no room picture on the stage the tool takes nothing.
     bindSource(++generation, W, H, 1);
     expect(stageView(getState().generation)).toBeNull();
     expect(viewOf(a)).not.toBeNull();
     expect(roomPointer(press("down", p0), env())).toBe(false);
+  });
+});
+
+describe("the Room tool's presses on a phone", () => {
+  // A 1600 px picture shown 390 CSS px wide, touched with a finger.
+  const SCALE = 390 / W,
+    touch = (type: StagePointerEvent["type"], x: number, y: number) =>
+      press(
+        type,
+        { x, y },
+        {
+          pointerType: "touch",
+          scale: SCALE,
+          canvas: { x: x * SCALE, y: y * SCALE },
+        },
+      ),
+    /** A finger tap `css` CSS pixels right of source point (x, y). */
+    tapAt = (x: number, y: number, css = 0) => {
+      const sx = x + css / SCALE;
+      roomPointer(touch("down", sx, y), extensionEnv());
+      roomPointer(touch("up", sx, y), extensionEnv());
+      return sx;
+    };
+
+  it("places a point beside another one, and says so when a tap only took hold", async () => {
+    const view = await addCamera(0);
+    setTool("room");
+    const step = () => roomStep(getRoom(), 1, viewOf(view), true);
+    const x1 = tapAt(200, 200);
+    expect(getRoom().points).toHaveLength(1);
+    // Beyond a finger's reach of the first: a second point.
+    const x2 = tapAt(x1, 200, 30);
+    expect(getRoom().points).toHaveLength(2);
+    // 14 px beyond the second. The two points are 30 px apart, so each is
+    // grabbed only within 12 px: this tap places a third point.
+    const x3 = tapAt(x2, 200, 14);
+    expect(getRoom().points).toHaveLength(3);
+    // 9 px beyond the third, whose neighbour is 14 px away: its reach is the
+    // 8 px floor, so this places a fourth.
+    tapAt(x3, 200, 9);
+    expect(getRoom().points).toHaveLength(4);
+    expect(getRoom().note).toBeNull();
+    // 5 px from the second point: the tap takes hold of it, moves nothing,
+    // makes no point, and the step line says so. (A tap on the first corner
+    // of an outline closes it instead.)
+    const before = getRoom().points;
+    tapAt(x2, 200, -5);
+    expect(getRoom().points).toBe(before);
+    expect(getRoom().note).toEqual({ held: 2 });
+    expect(step()).toBe(
+      "That tap took hold of Room point 2 and moved nothing. Drag it to adjust it, or tap a little further away to place a point.",
+    );
+    // The note goes with the next point placed.
+    tapAt(900, 300);
+    expect(getRoom().points).toHaveLength(5);
+    expect(getRoom().note).toBeNull();
+    expect(step()).not.toContain("took hold");
+    // A drag still moves the point it took hold of, with no note left.
+    roomPointer(touch("down", x1, 200), extensionEnv());
+    roomPointer(touch("move", x1 + 40, 230), extensionEnv());
+    roomPointer(touch("up", x1 + 40, 230), extensionEnv());
+    expect(getRoom().points[0].obs[0].at.x).toBeCloseTo(x1 + 40, 6);
+    expect(getRoom().points[0].obs[0].at.y).toBeCloseTo(230, 6);
+    expect(getRoom().note).toBeNull();
   });
 });
 
@@ -266,9 +330,29 @@ describe("the room's points", () => {
     expect(getRoom().points.map((p) => p.id)).toEqual([1, 3, 4]);
     expect(getRoom().closed).toBe(false);
     removePoint(4);
-    undoRoom();
+    undoRoom(null);
     expect(getRoom().points.map((p) => p.id)).toEqual([1, 3, 4]);
     expect(addPoint(1, at(7), false)).toBe(5);
+  });
+
+  it("undoes a tapped change only while its picture is on the stage, and says where to look", () => {
+    const at = (x: number) => ({ x, y: 10, s: 1.5 });
+    tapRoom(1, at(1));
+    tapRoom(2, at(2));
+    // Picture 1 is showing: the last mark was made on picture 2.
+    const before = getRoom().points;
+    undoRoom(1);
+    expect(getRoom().points).toBe(before);
+    expect(getRoom().note).toEqual({ undoOn: 2 });
+    undoRoom(2);
+    expect(getRoom().points.map((p) => p.id)).toEqual([1]);
+    expect(getRoom().note).toBeNull();
+    // A change made in the panel is on screen whatever the picture shows.
+    setCorner(1, false);
+    undoRoom(2);
+    expect(getRoom().outline).toEqual([1]);
+    undoRoom(1);
+    expect(getRoom().points).toEqual([]);
   });
 
   it("offers the points the other tools placed, by picture and name", async () => {
