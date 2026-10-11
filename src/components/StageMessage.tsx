@@ -20,6 +20,12 @@ const CAUSES = [
     fix: "",
   },
   {
+    // The start of OFFLINE_MESSAGE (src/vision/download-failure.ts).
+    match: "This device is offline",
+    title: "You are offline.",
+    fix: "",
+  },
+  {
     match: "Camera disconnected",
     title: "The camera went away.",
     fix: "",
