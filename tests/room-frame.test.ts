@@ -889,6 +889,9 @@ describe("a mirror image with marks near the sheet's centre lines, noisy", () =>
     );
     // On the line it is held; well clear of it, placed.
     expect(rows[0].placed).toBe(0);
+    // 20 mm off is still held: with the margin at 2 about 4 in 10 of these
+    // were placed, and that is the margin a flipped picture slipped through.
+    expect(rows[1].placed).toBe(0);
     expect(rows[rows.length - 1].placed / PER).toBeGreaterThanOrEqual(0.9);
   }, 3_000_000);
 });
