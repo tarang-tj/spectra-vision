@@ -128,10 +128,11 @@ export async function showView(id: number, load: Load): Promise<boolean> {
   try {
     generation = await load(view.blob, view.label);
   } catch {
+    // The stage keeps the picture it had (a file that cannot be read is
+    // turned away before the stage lets go), so that picture stays current.
     emit({
       ...state,
       busy: false,
-      current: null,
       problem: `${viewName(id)} could not be opened. Its picture may be damaged.`,
     });
     return false;

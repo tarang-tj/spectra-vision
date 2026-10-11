@@ -173,6 +173,19 @@ describe.each(["frame", "restore"] as const)(
       expect(viewOf(a)!.snap.ruler.corners).toHaveLength(4);
     });
 
+    it("stays on the picture it had when another one cannot be opened", async () => {
+      const a = (await addView(png("a"), "a.png", load))!;
+      sheet(0);
+      const b = (await addView(png("b"), "b.png", load))!;
+      expect(getViews().current).toBe(b);
+      const bad: Load = () => Promise.reject(new Error("no"));
+      expect(await showView(a, bad)).toBe(false);
+      // The stage still shows picture b, so b is still the current one.
+      expect(getViews().current).toBe(b);
+      expect(getViews().problem).toMatch(/could not be opened/);
+      expect(getViews().busy).toBe(false);
+    });
+
     it("round-trips 150 random states through leaving and entering a view", async () => {
       const { snap: random, int } = randomSnaps(
         first === "frame" ? 11 : 12,
