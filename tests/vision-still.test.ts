@@ -17,7 +17,7 @@ import {
   stillWords,
 } from "../src/vision/still";
 import "../src/vision/still-holds";
-import { MIN_FRAME_GAP } from "../src/vision/task-runner";
+import { createTaskRunner, MIN_FRAME_GAP } from "../src/vision/task-runner";
 import { STEADY_TRACKER } from "../src/vision/tracker";
 
 /** Drive a gate the way the frame tick does, 60 times a second from `from`
@@ -194,6 +194,27 @@ describe("what the readout says", () => {
     setStillState({ state: "held", by: "the Lab" });
     expect(told).toBe(4);
     off();
+  });
+  it("every mode's task can still be posted to its worker", () => {
+    // A worker message is cloned; a function in it throws (DataCloneError).
+    for (const m of modes)
+      for (const spec of tasksOf(m)) {
+        const posted: unknown[] = [],
+          runner = createTaskRunner(
+            spec,
+            "http://x/",
+            { onReady() {}, onResult() {}, onError() {} },
+            () => ({
+              onmessage: null,
+              onerror: null,
+              terminate() {},
+              postMessage: (message: unknown) =>
+                void posted.push(structuredClone(message)),
+            }),
+          );
+        expect(posted, `${m.id} ${spec.kind}`).toHaveLength(1);
+        runner.dispose();
+      }
   });
   it("Depth is the only mode that asks for one result, and it restates its readout", () => {
     const once = modes

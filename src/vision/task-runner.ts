@@ -260,8 +260,8 @@ export function createTaskRunner(
       fail("Vision worker failed. Retry or use a current Chrome/Edge browser.");
     };
     // `live` holds functions, which cannot be posted: its current values are
-    // folded into the options instead.
-    const { live, ...plain } = spec;
+    // folded into the options instead. `restate` is the page's own business.
+    const { live, restate: _page, ...plain } = spec;
     worker.postMessage({
       type: "init",
       base,

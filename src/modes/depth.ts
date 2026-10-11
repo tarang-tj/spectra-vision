@@ -1,7 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import catalogue from "../../scripts/models.json";
-import { testHooksEnabled } from "../test-hooks";
-import type { DepthExtra, Source, TaskResult } from "../vision/types";
+import type { Source } from "../vision/types";
 import DepthControls from "./lib/depth-controls";
 import {
   drawHeld,
@@ -12,8 +11,9 @@ import {
 } from "./lib/depth-map";
 import { measuredDepth, onDepthReadout } from "./lib/depth-measured";
 import { depthScale } from "./lib/depth-metric";
+import { noteDrawn } from "./lib/depth-probe";
 import { depthExtra, depthRows, legendOf } from "./lib/depth-readout";
-import { cloudHeld, drawCloud, releaseCloud } from "./lib/depth-session";
+import { drawCloud, releaseCloud } from "./lib/depth-session";
 import { getDepthView } from "./lib/depth-store";
 import { depthSync, isMoving, lagLine } from "./lib/depth-sync";
 import { drawChip } from "./lib/hud";
@@ -23,41 +23,6 @@ import type { ModeDef } from "./types";
 // result arrives, with no frame at hand, and needs it to tell a photo from a
 // video.
 let onStage: Source | null = null;
-// The latest result drawn, for the browser tests' read-only probe.
-let drawn: { task: TaskResult; extra: DepthExtra; points: number } | null =
-  null;
-
-/** `window.__spectraDepth`, only on a page opened with `?spectra-test`: the
- * size and range of the map on the stage, the delegate that produced it, a
- * value read at an image-normalized point, and whether the 3D view holds a
- * WebGL renderer. */
-function exposeProbe() {
-  if (typeof window === "undefined" || !testHooksEnabled()) return;
-  Object.assign(window, {
-    __spectraDepth: {
-      last: () =>
-        drawn && {
-          width: drawn.extra.width,
-          height: drawn.extra.height,
-          min: drawn.extra.min,
-          max: drawn.extra.max,
-          delegate: drawn.task.delegate,
-          latency: drawn.task.latency,
-          points: drawn.points,
-        },
-      at: (x: number, y: number) =>
-        drawn
-          ? drawn.extra.values[
-              Math.floor(y * drawn.extra.height) * drawn.extra.width +
-                Math.floor(x * drawn.extra.width)
-            ]
-          : null,
-      cloudHeld,
-    },
-  });
-}
-exposeProbe();
-
 const MODEL = "depth_anything_v2_small.onnx";
 
 const depth: ModeDef = {
@@ -153,7 +118,7 @@ const depth: ModeDef = {
       if (drawn && selected === 2) drawMarker(ctx, frame, ends.far, "Farthest");
     }
     frame.emit("after", "depth", 0);
-    drawn = { task, extra, points };
+    noteDrawn({ task, extra, points, over: sync.over, lag });
   },
   inspector(frame) {
     const task = frame.result?.tasks.depth,
