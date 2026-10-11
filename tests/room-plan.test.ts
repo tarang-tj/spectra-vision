@@ -93,7 +93,10 @@ describe("the merged top-down view", () => {
       );
 
   it("puts every painted pixel on the right quarter of the floor, from four pictures at three different turns", () => {
-    const room = roomOf(snaps, [mark(1, MARKS[0], [0, 1, 2, 3])]),
+    const room = roomOf(snaps, [
+        mark(1, MARKS[0], [0, 1, 2, 3]),
+        mark(9, MARKS[1], [0, 1, 2, 3]),
+      ]),
       sol = solveRoom(room),
       k = baseCorner(room, 0),
       corners = CORNERS.map((c) => inBoardFrame(c, k)),
@@ -146,7 +149,10 @@ describe("the merged top-down view", () => {
   it("uses the nearer camera where two pictures show the same floor", () => {
     // Cameras 0 and 2 face each other across the room.
     const two = [snaps[0], snaps[2]],
-      room = roomOf(two, [mark(1, MARKS[0], [0, 2])]),
+      room = roomOf(two, [
+        mark(1, MARKS[0], [0, 2]),
+        mark(9, MARKS[1], [0, 2]),
+      ]),
       sol = solveRoom(room),
       k = baseCorner(room, 0),
       fit = fitBox({ x0: -2000, y0: -2000, x1: 3000, y1: 2500 }),
@@ -179,6 +185,7 @@ describe("the merged top-down view", () => {
       ],
       room = roomOf(moved, [
         mark(1, MARKS[0], [0, 1, 3], [1, 2, 4]),
+        mark(9, MARKS[1], [0, 1, 3], [1, 2, 4]),
         { id: 2, seen: [{ view: 3, at: tapOn(2, CORNERS[0]) }] },
       ]),
       sol = solveRoom(room);
@@ -211,10 +218,10 @@ describe("the merged top-down view", () => {
     );
     expect(new Set(from)).toEqual(new Set([0, 1, 2]));
     // The room point only picture 3 shows has no place on the plan.
-    expect(sol.points[1].sample).toBeNull();
+    expect(sol.points.find((p) => p.id === 2)!.sample).toBeNull();
     expect(
       scene.extras.filter((e) => e.kind === "dot" && e.label.startsWith("R")),
-    ).toHaveLength(1);
+    ).toHaveLength(2);
   });
 });
 
@@ -245,6 +252,7 @@ describe("the room plan's contents", () => {
       corners = [CORNERS[2], CORNERS[3], CORNERS[0], CORNERS[1]],
       points = [
         mark(1, MARKS[0], [0, 2]),
+        mark(9, MARKS[1], [0, 2]),
         ...corners.map((c, i) => ({
           id: i + 2,
           seen: [{ view: i < 2 ? 1 : 2, at: tapOn(i < 2 ? 0 : 2, c) }],
@@ -313,10 +321,10 @@ describe("the room plan's contents", () => {
         (e) => e.kind === "dot" && e.label === "height, picture 2",
       ),
     ).toHaveLength(1);
-    // The mark both pictures show: two faint crosses under one named dot.
+    // Each mark both pictures show: two faint crosses under one named dot.
     expect(
       scene.extras.filter((e) => e.kind === "dot" && e.faint),
-    ).toHaveLength(2);
+    ).toHaveLength(4);
     expect(
       scene.extras.some(
         (e) => e.kind === "dot" && /^R1, \d+ mm apart$/.test(e.label),

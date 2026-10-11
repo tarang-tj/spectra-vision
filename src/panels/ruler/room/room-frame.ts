@@ -57,9 +57,17 @@ export function symmetries(from: readonly Pt[], to: readonly Pt[]): Rigid[] {
 
 /** One point marked in this picture (`here`, its own frame) and in pictures
  * already on the plan (`there`, where they together put it, room frame). */
-export type Anchor = { name: string; here: Fix; there: Fix };
+export type Anchor = {
+  name: string;
+  /** Every picture the point is marked in, this one included, in words
+   * ("pictures 1 and 2"). A refusal names them all: any may be the wrong one. */
+  pictures: string;
+  here: Fix;
+  there: Fix;
+};
 export type AnchorCheck = {
   name: string;
+  pictures: string;
   /** The turn that brings the two positions closest. */
   turn: number;
   /** How far apart they then are, and how far the two bars together allow in
@@ -98,6 +106,7 @@ export function checkAnchor(
     least = Math.min(...tries.map((c) => c.bars));
   return {
     name: a.name,
+    pictures: a.pictures,
     turn: best.t.turn,
     gapMm: best.gap,
     allowedMm: best.bars > 0 ? (best.gap * limit) / best.bars : Infinity,
@@ -116,6 +125,16 @@ export function checkAnchor(
 export type Placement =
   | { state: "placed"; rigid: Rigid; checks: AnchorCheck[]; text: string }
   | {
+      /** The shared points suggest a turn but cannot confirm it: one point
+       * alone, or several too close together to count as two. Such a picture
+       * is listed and contributes nothing. */
+      state: "provisional";
+      turn: number;
+      reason: "one" | "close";
+      checks: AnchorCheck[];
+      text: string;
+    }
+  | {
       state: "refused";
       reason: "size" | "apart" | "contradiction" | "undecided";
       checks: AnchorCheck[];
@@ -130,11 +149,22 @@ const TURNS = [
   "half way round",
   "three quarter turns round",
 ];
+/** Who shares the disputed points. An earlier picture may be the one that
+ * was tied in wrongly, so every picture is named, not only the newest. */
+const sharers = (checks: AnchorCheck[]) =>
+  `${checks
+    .map((c, i) => `${c.name} ${i ? "" : "is marked "}in ${c.pictures}`)
+    .join(
+      ", ",
+    )}; any one of those marks may be the wrong one, in an earlier picture as well as in this one.`;
 
 /** Place one picture in the room's frame from its anchors, or say why not.
- * `name` is the picture's ("Picture 2"). A picture is placed only when at
- * least one anchor decides the turn, none disagrees with it beyond the bars,
- * and no two decide differently. */
+ * `name` is the picture's ("Picture 2"). A picture is placed only when two
+ * shared points, at different places on the floor, choose the same turn,
+ * none disagrees with it beyond the bars, and no two choose differently. One
+ * point is never enough: a spot mistaken for its look-alike on the other
+ * side of the sheet (the opposite corner of a room) fits the wrong turn
+ * exactly, and nothing in two pictures and one point can show it. */
 export function placeView(
   name: string,
   candidates: readonly Rigid[],
@@ -151,7 +181,7 @@ export function placeView(
     return {
       state: "unanchored",
       checks: [],
-      text: `${name} is not on the plan yet. Mark in it one point that is also marked in a picture already on the plan.`,
+      text: `${name} is not on the plan yet. Mark in it two points that are also marked in pictures already on the plan.`,
     };
   const limit = limitFor(anchors.length),
     checks = anchors.map((a) => checkAnchor(candidates, a, limit)),
@@ -162,7 +192,7 @@ export function placeView(
     moved = (c: AnchorCheck, gap = c.gapMm, allowed = c.allowedMm) =>
       refuse(
         "apart",
-        `${name} is not on the plan: ${c.name} lands ${mm(gap)} from where the other picture puts it, and the two bars together allow ${mm(allowed)}. The sheet may have moved between pictures, or these are different points. If the reference's long and short sides are swapped in one picture, press Swap sides there.`,
+        `${name} is not on the plan: ${c.name} lands ${mm(gap)} from where the plan puts it, and the bars together allow ${mm(allowed)}. The sheet may have moved between pictures, or these are different points. ${sharers([c])} If the reference's long and short sides are swapped in one picture, press Swap sides there.`,
       ),
     apart = checks.find((c) => c.verdict === "apart");
   if (apart) return moved(apart);
@@ -171,7 +201,7 @@ export function placeView(
   if (other)
     return refuse(
       "contradiction",
-      `${name} is not on the plan: ${deciding[0].name} and ${other.name} disagree about which way round the sheet lies. One of them is not the same point in both pictures.`,
+      `${name} is not on the plan: ${deciding[0].name} and ${other.name} disagree about which way round the sheet lies, so one of them is not the same spot in every picture. ${sharers([deciding[0], other])}`,
     );
   if (!deciding.length)
     return refuse(
@@ -186,11 +216,38 @@ export function placeView(
       off,
       (off.gapMm * off.bars[rigid.turn]) / Math.max(off.bars[off.turn], 1e-9),
     );
-  const first = deciding[0];
+  // Two of the deciding points must be two places on the floor: further
+  // apart than their bars could put one point.
+  const where = (c: AnchorCheck) => anchors[checks.indexOf(c)].there,
+    first = deciding[0],
+    second = deciding.find((c) => {
+      const p = where(first),
+        q = where(c);
+      return (
+        c !== first &&
+        inBars(
+          { x: p.at.x - q.at.x, y: p.at.y - q.at.y },
+          addCov(p.cov, q.cov),
+        ) >=
+          2 * limit
+      );
+    }),
+    suggests = `it lies ${TURNS[rigid.turn]} from how its own corners read`;
+  if (!second)
+    return {
+      state: "provisional",
+      turn: rigid.turn,
+      reason: deciding.length === 1 ? "one" : "close",
+      checks,
+      text:
+        deciding.length === 1
+          ? `${name} is not on the plan yet. ${first.name} alone suggests ${suggests} (the pictures put it ${mm(first.gapMm)} apart, the bars allow ${mm(first.allowedMm)}), and one point cannot confirm that: a spot mistaken for its look-alike on the other side of the sheet, such as the opposite corner of the room, fits the other way round just as well. Mark a second shared point, away from the first.`
+          : `${name} is not on the plan yet. ${deciding.map((c) => c.name).join(" and ")} suggest ${suggests}, but they are too close together for their bars to count as two points. Mark a shared point further from them.`,
+    };
   return {
     state: "placed",
     rigid,
     checks,
-    text: `${name} is on the plan, ${TURNS[rigid.turn]} from how its own corners read. ${first.name} decides it: the two pictures put it ${mm(first.gapMm)} apart and the two bars together allow ${mm(first.allowedMm)}.`,
+    text: `${name} is on the plan, ${TURNS[rigid.turn]} from how its own corners read. ${first.name} and ${second.name} agree on that: the pictures put them ${mm(first.gapMm)} and ${mm(second.gapMm)} apart, and the bars allow ${mm(first.allowedMm)} and ${mm(second.allowedMm)}.`,
   };
 }

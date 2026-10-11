@@ -114,8 +114,10 @@ describe("the Room tool through the stores", () => {
     click(0, CORNERS[3]);
     setNext({ kind: "mark" });
     click(0, MARKS[0]);
+    setNext({ kind: "mark" });
+    click(0, MARKS[1]);
     expect(getRoom().outline).toEqual([1, 2]);
-    expect(getRoom().points.map((p) => p.obs[0].view)).toEqual([a, a, a]);
+    expect(getRoom().points.map((p) => p.obs[0].view)).toEqual([a, a, a, a]);
 
     const b = await addCamera(2);
     // The tool stays Room on the new picture; its corners came first.
@@ -128,7 +130,7 @@ describe("the Room tool through the stores", () => {
     cur = currentRoom();
     // Two corners are only in a picture that is not on the plan: no numbers.
     expect(cur.solution.numbers).toBeNull();
-    expect(cur.solution.missing).toEqual([4, 5]);
+    expect(cur.solution.missing).toEqual([5, 6]);
 
     setNext({ kind: "link", point: 3 });
     expect(roomStep(getRoom(), 2, viewOf(b), true)).toContain(
@@ -136,6 +138,12 @@ describe("the Room tool through the stores", () => {
     );
     click(2, MARKS[0]);
     expect(getRoom().next).toEqual({ kind: "mark" });
+    // One shared point only suggests a turn: still nothing from picture 2.
+    cur = currentRoom();
+    expect(cur.solution.views[1].state).toBe("provisional");
+    expect(cur.solution.numbers).toBeNull();
+    setNext({ kind: "link", point: 4 });
+    click(2, MARKS[1]);
     cur = currentRoom();
     expect(cur.solution.views[1].state).toBe("placed");
     expect(cur.solution.views[1].text).toContain("half way round");
@@ -177,7 +185,7 @@ describe("the Room tool through the stores", () => {
     expect(JSON.stringify(currentRoom().solution.numbers)).toBe(before);
     // Removing a picture takes its marks, and the corners only it showed.
     await removeView(b, load);
-    expect(getRoom().points.map((p) => p.id)).toEqual([1, 2, 3]);
+    expect(getRoom().points.map((p) => p.id)).toEqual([1, 2, 3, 4]);
     expect(getRoom().outline).toEqual([1, 2]);
     expect(getRoom().closed).toBe(false);
   });

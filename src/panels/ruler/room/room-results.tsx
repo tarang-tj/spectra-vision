@@ -67,8 +67,9 @@ export default function RoomResults({
         No numbers yet: {solution.missing.length} corner
         {solution.missing.length === 1 ? "" : "s"} of the outline{" "}
         {solution.missing.length === 1 ? "is" : "are"} marked only in pictures
-        that are not on the plan. A picture joins the plan when a point marked
-        in it is also marked in a picture already on the plan.
+        that are not on the plan. A picture joins the plan when two points
+        marked in it, at different places on the floor, are also marked in
+        pictures already on the plan and agree.
       </p>
     ) : null;
   const all = roomBasis(solution.outlineViews, order),

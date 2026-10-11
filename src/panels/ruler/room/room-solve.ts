@@ -25,6 +25,7 @@ import {
   type ViewFrame,
 } from "./room-merge";
 import { statusOf, type ViewStatus } from "./room-status";
+import { picturesText } from "./text";
 
 export { toOwn } from "./floor-maths";
 export type { ViewStatus } from "./room-status";
@@ -78,6 +79,7 @@ export function solveRoom(input: RoomInput): RoomSolution {
     first = views[0],
     base = first?.frame ?? null,
     frames = new Map(views.map((v) => [v.id, v.frame])),
+    order = views.map((v) => v.id),
     // Every marked point as its own picture sees it.
     own: Own[] = points.flatMap((p) =>
       p.obs.flatMap((o) => {
@@ -107,6 +109,15 @@ export function solveRoom(input: RoomInput): RoomSolution {
             ? [
                 {
                   name: pointName(h.point),
+                  pictures: picturesText(
+                    [
+                      id,
+                      ...own
+                        .filter((t) => t.point === h.point && on.has(t.view))
+                        .map((t) => t.view),
+                    ],
+                    order,
+                  ),
                   here: { at: h.sample.at, cov: here },
                   there: { at: there.at, cov },
                 },

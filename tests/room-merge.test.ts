@@ -1,6 +1,5 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { beforeEach, describe, expect, it } from "vitest";
-import { gaussian, seededRandom } from "../src/panels/ruler/monte-carlo";
 import {
   inBars,
   limitFor,
@@ -37,6 +36,7 @@ import {
   type Mark,
   type Nudge,
 } from "./helpers/room-build";
+import { lcgNormal } from "./helpers/seeded";
 
 beforeEach(() => dropFrames());
 
@@ -201,7 +201,8 @@ describe.each([
 ] as const)("coverage of the merged bars, %s board", (label, board) => {
   it("holds each truth in 90 to 99% of 240 noisy retakes, with bars neither too narrow nor too wide", () => {
     const RETAKES = 240,
-      normal = gaussian(seededRandom(20261010)),
+      // Not the app's own generator: an error in that one must not cancel.
+      normal = lcgNormal(20261010),
       // One tap uncertainty: 1.5 screen pixels at a display scale of 1.
       nudge: Nudge = (p: P) => ({
         x: p.x + 1.5 * normal(),

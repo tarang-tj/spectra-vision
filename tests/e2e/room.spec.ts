@@ -236,6 +236,15 @@ test("a room from two pictures: refused and accepted anchors, an outline from co
     .click();
   await tap(page, on(0, boardCentre()));
   await expect(page.getByTestId("room-point")).toHaveCount(4);
+  // And the other mark on the floor: a picture needs two shared points.
+  await group(page, "Next tap adds")
+    .getByRole("button", { name: "Floor mark", exact: true })
+    .click();
+  await tap(page, on(0, MARKS[1]));
+  await expect(page.getByTestId("room-point")).toHaveCount(5);
+  await expect(page.getByTestId("room-shared-warning")).toContainText(
+    "Opposite corners of a room can look alike",
+  );
 
   // Picture 2 (camera 3, the other side of the room). The Room tool stays
   // chosen; the reference's corners come first.
@@ -283,9 +292,34 @@ test("a room from two pictures: refused and accepted anchors, an outline from co
     .click();
   await markButton(3).click();
   await tap(page, on(2, MARKS[0]));
+  // One good shared point only suggests the turn: nothing joins the plan.
+  await expect(places(page).nth(1)).toHaveAttribute(
+    "data-state",
+    "provisional",
+  );
+  await expect(places(page).nth(1)).toContainText(
+    "Room point 3 alone suggests it lies half way round",
+  );
+  await expect(places(page).nth(1)).toContainText("Mark a second shared point");
+  await expect(page.getByTestId("room-basis")).toContainText(
+    "Rests on 1 picture (picture 1).",
+  );
+  await expect(page.getByTestId("room-plan")).toHaveAttribute(
+    "data-pictures",
+    "1",
+  );
+  await expect(page.getByTestId("room-plan-note")).toContainText(
+    "Not drawn: picture 2",
+  );
+  // The second shared point, elsewhere on the floor: placed.
+  await markButton(5).click();
+  await tap(page, on(2, MARKS[1]));
   await expect(places(page).nth(1)).toHaveAttribute("data-state", "placed");
   await expect(places(page).nth(1)).toContainText(
     "Picture 2 is on the plan, half way round",
+  );
+  await expect(places(page).nth(1)).toContainText(
+    "Room point 3 and Room point 5 agree",
   );
 
   // The other two corners, from this picture, and close.
@@ -468,13 +502,22 @@ test("at 390 px wide: a room is built by taps, nothing scrolls sideways and ever
     .getByRole("button", { name: "Floor mark", exact: true })
     .click();
   await tap(page, on(0, MARKS[0]));
+  await group(page, "Next tap adds")
+    .getByRole("button", { name: "Floor mark", exact: true })
+    .click();
+  await tap(page, on(0, MARKS[1]));
   await addPicture(page, 2, 2);
   const [c0, c1, c2, c3] = boardCorners().map((c) => on(2, c));
   for (const c of [c2, c0, c3, c1]) await tap(page, c);
-  await page
-    .getByRole("button", { name: "Mark Room point 3 in this picture" })
-    .click();
-  await tap(page, on(2, MARKS[0]));
+  for (const [n, m] of [
+    [3, MARKS[0]],
+    [4, MARKS[1]],
+  ] as const) {
+    await page
+      .getByRole("button", { name: `Mark Room point ${n} in this picture` })
+      .click();
+    await tap(page, on(2, m));
+  }
   await expect(places(page).nth(1)).toHaveAttribute("data-state", "placed");
   await group(page, "Next tap adds")
     .getByRole("button", { name: "Outline corner", exact: true })

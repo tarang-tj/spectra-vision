@@ -52,9 +52,19 @@ export default function RoomSection() {
       <h3>Room</h3>
       <p className="ruler-note">
         One outline from corners in different pictures. A picture after the
-        first joins the plan through a point marked both in it and in a picture
-        already on the plan: the same spot on the floor, well away from the
-        sheet. On the picture each room point is labelled R and its number.
+        first joins the plan only when two points, at different places on the
+        floor, are marked both in it and in pictures already on the plan, and
+        both agree on which way round the sheet lies. With one shared point the
+        picture is listed and gives the plan nothing: no point, no line, no
+        number. On the picture each room point is labelled R and its number.
+      </p>
+      <p className="ruler-warn" data-testid="room-shared-warning">
+        Choose shared points that cannot be mistaken: a door edge, a mark on the
+        floor. Opposite corners of a room can look alike, and the wrong one fits
+        the sheet turned half way round. Two points catch one such mistake. What
+        cannot be caught: two shared points both mistaken for their look-alikes
+        on the other side of the sheet, in a room that looks the same from both
+        sides of it.
       </p>
       {s.tool === "room" && (
         <p className="ruler-step" role="status" data-testid="room-step">
@@ -66,7 +76,11 @@ export default function RoomSection() {
           <li
             key={v.id}
             data-state={v.state}
-            className={v.state === "refused" ? "ruler-warn" : "ruler-basis"}
+            className={
+              v.state === "refused" || v.state === "provisional"
+                ? "ruler-warn"
+                : "ruler-basis"
+            }
           >
             {v.text}
           </li>

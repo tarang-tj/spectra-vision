@@ -12,7 +12,13 @@ import type { ViewFrame } from "./room-merge";
 export type ViewStatus = {
   id: number;
   name: string;
-  state: "first" | "placed" | "refused" | "unanchored" | "no-reference";
+  state:
+    | "first"
+    | "placed"
+    | "provisional"
+    | "refused"
+    | "unanchored"
+    | "no-reference";
   /** Its frame to the room's; null unless it is on the plan. */
   rigid: Rigid | null;
   text: string;

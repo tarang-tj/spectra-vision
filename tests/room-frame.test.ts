@@ -1,13 +1,13 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { beforeEach, describe, expect, it } from "vitest";
 import { applyHomography } from "../src/panels/ruler/homography";
-import { gaussian, seededRandom } from "../src/panels/ruler/monte-carlo";
 import { applyRigid, symmetries } from "../src/panels/ruler/room/room-frame";
 import { solveRoom } from "../src/panels/ruler/room/room-solve";
 import { dropFrames } from "../src/panels/ruler/room/view-frame";
 import {
   BOARD,
   boardCentre,
+  cameraFor,
   CORNERS,
   inBoardFrame,
   MARKS,
@@ -15,11 +15,14 @@ import {
 } from "./fixtures/room-scene";
 import {
   baseCorner,
+  H,
+  W,
   roomOf,
   snapOf,
   tapOn,
   type Nudge,
 } from "./helpers/room-build";
+import { lcgNormal } from "./helpers/seeded";
 
 beforeEach(() => dropFrames());
 
@@ -80,9 +83,9 @@ describe("the turns of a reference onto itself", () => {
   });
 });
 
-describe("placing a second picture from one anchor, exact taps", () => {
+describe("placing a second picture from two shared points, exact taps", () => {
   // Every ordered pair of the four cameras: quarter turns and half turns both
-  // ways. One mark beside the board is the anchor.
+  // ways. The two floor marks are the shared points.
   const pairs = [0, 1, 2, 3].flatMap((a) =>
     [0, 1, 2, 3].filter((b) => b !== a).map((b) => [a, b] as const),
   );
@@ -91,12 +94,24 @@ describe("placing a second picture from one anchor, exact taps", () => {
     (a, b) => {
       const room = roomOf(
           [snapOf({ cam: a }), snapOf({ cam: b })],
-          [mark(1, MARKS[0], [a, b])],
+          [mark(1, MARKS[0], [a, b]), mark(2, MARKS[1], [a, b])],
         ),
         sol = solveRoom(room);
       expect(sol.views[0].state).toBe("first");
       expect(sol.views[1].state, sol.views[1].text).toBe("placed");
-      expect(sol.views[1].text).toContain("Room point 1 decides it");
+      expect(sol.views[1].text).toContain(
+        "Room point 1 and Room point 2 agree",
+      );
+      // Either mark alone leaves the picture off the plan.
+      for (const m of MARKS)
+        expect(
+          solveRoom(
+            roomOf(
+              [snapOf({ cam: a }), snapOf({ cam: b })],
+              [mark(1, m, [a, b])],
+            ),
+          ).views[1].state,
+        ).toBe("provisional");
       // Against hand-written truth, over the whole room.
       expect(worstMiss(room, 1, a, a)).toBeLessThan(1e-3);
       expect(worstMiss(room, 2, b, a)).toBeLessThan(1e-3);
@@ -118,7 +133,7 @@ describe("placing a second picture from one anchor, exact taps", () => {
         const sol = solveRoom(
           roomOf(
             [snapOf({ cam: a }), snapOf({ cam: b })],
-            [mark(1, MARKS[0], [a, b])],
+            [mark(1, MARKS[0], [a, b]), mark(2, MARKS[1], [a, b])],
           ),
         );
         return sol.views[1].rigid!.turn;
@@ -164,9 +179,10 @@ describe("refusals", () => {
     expect(two([mark(1, { x: c.x + 12, y: c.y }, [0, 2])]).views[1].state).toBe(
       "refused",
     );
-    expect(
-      two([mark(1, { x: c.x + 400, y: c.y }, [0, 2])]).views[1].state,
-    ).toBe("placed");
+    // 400 mm out it decides; with a second shared point the picture is placed.
+    const out = mark(1, { x: c.x + 400, y: c.y }, [0, 2]);
+    expect(two([out]).views[1].state).toBe("provisional");
+    expect(two([out, mark(2, MARKS[1], [0, 2])]).views[1].state).toBe("placed");
   });
 
   it("refuses when the sheet moved 50 mm between pictures, and not when it did not", () => {
@@ -196,7 +212,7 @@ describe("refusals", () => {
       ).toBe("refused");
     // A move far inside the bars cannot be seen, and is not refused.
     const still = two(
-      [mark(1, MARKS[0], [0, 2])],
+      [mark(1, MARKS[0], [0, 2]), mark(2, MARKS[1], [0, 2])],
       snapOf({ cam: 2, shift: { x: 2, y: 0 } }),
     );
     expect(still.views[1].state).toBe("placed");
@@ -222,9 +238,14 @@ describe("refusals", () => {
     expect(sol.views[1].text).toContain("disagree about which way round");
     expect(sol.views[1].text).toContain("Room point 1");
     expect(sol.views[1].text).toContain("Room point 2");
-    // Either anchor alone would have been taken: the refusal needs both.
-    expect(two([mark(1, MARKS[0], [0, 2])]).views[1].state).toBe("placed");
-    expect(two([wrong]).views[1].state).toBe("placed");
+    // Either alone only suggests a turn (the wrong point the wrong one), and
+    // neither alone puts the picture on the plan.
+    const right = two([mark(1, MARKS[0], [0, 2])]).views[1],
+      fooled = two([wrong]).views[1];
+    expect(right.state).toBe("provisional");
+    expect(fooled.state).toBe("provisional");
+    expect(right.text).toContain("half way round");
+    expect(fooled.text).toContain("the same way round");
     // A second anchor that is simply another point is refused as apart.
     const other = {
       id: 2,
@@ -251,16 +272,24 @@ describe("refusals", () => {
   });
 
   it("places a third picture through the second, and takes both off when the second is refused", () => {
-    // Point 1 ties pictures 1 and 2; point 2 ties pictures 2 and 3 only.
-    const points = [
+    // Points 1 and 2 tie pictures 1 and 2; points 3 and 4 tie pictures 2 and
+    // 3 only, so picture 3 can join through picture 2 alone.
+    const P3 = { x: 1500, y: 600 },
+      P4 = { x: 2900, y: 800 };
+    for (const p of [P3, P4])
+      for (const cam of [1, 2]) expect(cameraFor(cam, W, H).sees(p)).toBe(true);
+    const tie = (id: number, p: P) => ({
+        id,
+        seen: [
+          { view: 2, at: tapOn(1, p) },
+          { view: 3, at: tapOn(2, p) },
+        ],
+      }),
+      points = [
         mark(1, MARKS[0], [0, 1]),
-        {
-          id: 2,
-          seen: [
-            { view: 2, at: tapOn(1, MARKS[1]) },
-            { view: 3, at: tapOn(2, MARKS[1]) },
-          ],
-        },
+        mark(2, MARKS[1], [0, 1]),
+        tie(3, P3),
+        tie(4, P4),
       ],
       snaps = [snapOf({ cam: 0 }), snapOf({ cam: 1 }), snapOf({ cam: 2 })],
       chain = roomOf(snaps, points),
@@ -282,69 +311,27 @@ describe("refusals", () => {
       "refused",
       "unanchored",
     ]);
-    expect(broken.points[1].sample).toBeNull();
-  });
-
-  it("keeps a later picture off when a point it shares with an earlier one disagrees", () => {
-    // Picture 2 joins through a mark tapped half a turn off, so it is placed
-    // the wrong way round and nothing in pictures 1 and 2 alone can show it.
-    // Picture 3 joins picture 1 correctly and shares one correct mark with
-    // picture 2: that mark fits only the other turn, so picture 3 is refused.
-    const c = boardCentre(),
-      p = MARKS[1],
-      turned = { x: 2 * c.x - p.x, y: 2 * c.y - p.y },
-      probe = { x: 3300, y: 700 },
-      wrong = {
-        id: 1,
-        seen: [
-          { view: 1, at: tapOn(0, p) },
-          { view: 2, at: tapOn(2, turned) },
-        ],
-      },
-      good = {
-        id: 2,
-        seen: [
-          { view: 1, at: tapOn(0, MARKS[0]) },
-          { view: 3, at: tapOn(1, MARKS[0]) },
-        ],
-      },
-      shared = {
-        id: 3,
-        seen: [
-          { view: 2, at: tapOn(2, probe) },
-          { view: 3, at: tapOn(1, probe) },
-        ],
-      },
-      snaps = [snapOf({ cam: 0 }), snapOf({ cam: 2 }), snapOf({ cam: 1 })],
-      sol = solveRoom(roomOf(snaps, [wrong, good, shared]));
-    expect(sol.views.map((v) => v.state)).toEqual([
-      "first",
-      "placed",
-      "refused",
-    ]);
-    expect(sol.views[2].text).toContain(
-      "Room point 2 and Room point 3 disagree about which way round",
-    );
-    // Without the shared mark nothing ties pictures 2 and 3, and both stand.
-    expect(
-      solveRoom(roomOf(snaps, [wrong, good])).views.map((v) => v.state),
-    ).toEqual(["first", "placed", "placed"]);
+    expect(broken.points[2].sample).toBeNull();
   });
 });
 
 describe("with noisy taps, 200 retakes each", () => {
   const RETAKES = 200;
-  function run(
-    at: P,
-    cams: [number, number],
-    shift?: P,
-  ): { right: number; wrong: number; refused: number } {
-    const normal = gaussian(seededRandom(777)),
+  type Tally = {
+    right: number;
+    wrong: number;
+    refused: number;
+    provisional: number;
+  };
+  /** Pictures from `cams` with `shared` marked in both, tapped with 1.5 px of
+   * noise from a generator that is not the app's own. */
+  function run(shared: P[], cams: [number, number], shift?: P): Tally {
+    const normal = lcgNormal(777),
       nudge: Nudge = (p) => ({
         x: p.x + 1.5 * normal(),
         y: p.y + 1.5 * normal(),
       }),
-      tally = { right: 0, wrong: 0, refused: 0 };
+      tally: Tally = { right: 0, wrong: 0, refused: 0, provisional: 0 };
     for (let i = 0; i < RETAKES; i++) {
       dropFrames();
       const room = roomOf(
@@ -352,10 +339,11 @@ describe("with noisy taps, 200 retakes each", () => {
             snapOf({ cam: cams[0], nudge }),
             snapOf({ cam: cams[1], nudge, shift }),
           ],
-          [mark(1, at, cams, nudge)],
+          shared.map((p, k) => mark(k + 1, p, cams, nudge)),
         ),
         sol = solveRoom(room);
-      if (!sol.views[1].rigid) tally.refused++;
+      if (sol.views[1].state === "provisional") tally.provisional++;
+      else if (!sol.views[1].rigid) tally.refused++;
       // The right turn puts the room's far corners within a metre of truth;
       // the wrong one puts them several metres off.
       else if (worstMiss(room, 2, cams[1], cams[0]) < 1000) tally.right++;
@@ -363,30 +351,201 @@ describe("with noisy taps, 200 retakes each", () => {
     }
     return tally;
   }
+  const say = (line: string) => {
+    if (process.env.ROOM_REPORT) process.stderr.write(`\n[room] ${line}\n`);
+  };
   it("places the picture the right way round nearly always, and never the wrong way", () => {
-    const near = run(MARKS[0], [0, 2]);
+    const near = run([MARKS[0], MARKS[1]], [0, 2]);
     expect(near.wrong).toBe(0);
     expect(near.right / RETAKES).toBeGreaterThanOrEqual(0.9);
-    // A shared far corner of the room: a wide bar, still never the wrong way.
-    const far = run(CORNERS[2], [0, 1]);
+    // A far corner of the room that both show, and one mark: a wide bar on
+    // one of the two, still never the wrong way.
+    const far = run([CORNERS[3], MARKS[1]], [0, 1]);
     expect(far.wrong).toBe(0);
     expect(far.right / RETAKES).toBeGreaterThanOrEqual(0.9);
-    if (process.env.ROOM_REPORT)
-      process.stderr.write(
-        `\n[room] anchor beside the board: ${JSON.stringify(near)}; anchor at a far corner: ${JSON.stringify(far)}\n`,
-      );
+    say(
+      `two marks beside the board: ${JSON.stringify(near)}; a far corner and a mark: ${JSON.stringify(far)}`,
+    );
   });
-  it("never places a picture from an anchor at the middle of the sheet", () => {
-    const mid = run(boardCentre(), [0, 2]);
-    expect(mid.right + mid.wrong).toBe(0);
+  it("never places a picture from one shared point, wherever it is", () => {
+    for (const p of [boardCentre(), MARKS[0], CORNERS[3]]) {
+      const one = run([p], [0, 1]);
+      expect(one.right + one.wrong).toBe(0);
+    }
+    const mid = run([boardCentre()], [0, 2]);
+    expect(mid.provisional).toBe(0);
+    expect(mid.refused).toBe(RETAKES);
   });
-  it("refuses a sheet moved 50 mm in at least 9 of 10 retakes", () => {
-    const moved = run(MARKS[0], [0, 2], { x: 50, y: 0 });
+  it("refuses a sheet moved 50 mm in at least 9 of 10 retakes, and never places it turned", () => {
+    const moved = run([MARKS[0], MARKS[1]], [0, 2], { x: 50, y: 0 });
     expect(moved.wrong).toBe(0);
     expect(moved.refused / RETAKES).toBeGreaterThanOrEqual(0.9);
-    if (process.env.ROOM_REPORT)
-      process.stderr.write(
-        `\n[room] sheet moved 50 mm: ${JSON.stringify(moved)}\n`,
+    say(`sheet moved 50 mm, two marks: ${JSON.stringify(moved)}`);
+  });
+});
+
+describe("one shared point is never enough", () => {
+  // The review's case: the board at the room's middle, pictures from facing
+  // cameras, and "the far right corner" marked as one point in both. Those
+  // are two different corners, mirror images through the sheet.
+  const board = { x: 1600, y: 1200, w: 1000, h: 700 },
+    snaps = () => [snapOf({ cam: 0, board }), snapOf({ cam: 2, board })],
+    A = { x: 4200, y: 3100 },
+    mirrorOfA = { x: 0, y: 0 },
+    M = { x: 2900, y: 1700 },
+    mistaken = {
+      id: 1,
+      seen: [
+        { view: 1, at: tapOn(0, A) },
+        { view: 2, at: tapOn(2, mirrorOfA) },
+      ],
+    },
+    // A wall from a corner only picture 1 shows to a mark only picture 2 shows.
+    ends = [
+      { id: 8, seen: [{ view: 1, at: tapOn(0, { x: 0, y: 3100 }) }] },
+      { id: 9, seen: [{ view: 2, at: tapOn(2, { x: 3000, y: 800 }) }] },
+    ],
+    WALL_MM = Math.hypot(3000, 2300);
+
+  it("keeps a picture tied in by one point off the plan: provisional, no point, no number", () => {
+    const sol = solveRoom(roomOf(snaps(), [mistaken, ...ends], [8, 9]));
+    expect(sol.views[1].state).toBe("provisional");
+    expect(sol.views[1].rigid).toBeNull();
+    expect(sol.views[1].text).toContain("Room point 1 alone suggests");
+    expect(sol.views[1].text).toContain("Mark a second shared point");
+    // Nothing of picture 2 is on the plan, and so no wall is given.
+    expect(sol.points.find((p) => p.id === 9)!.sample).toBeNull();
+    expect(sol.points.find((p) => p.id === 1)!.seen.map((s) => s.view)).toEqual(
+      [1],
+    );
+    expect(sol.numbers).toBeNull();
+    expect(sol.missing).toEqual([9]);
+    // The same with a correct single point: still provisional.
+    const right = mark(1, A, [0, 2]),
+      one = solveRoom(roomOf(snaps(), [right, ...ends], [8, 9]));
+    expect(one.views[1].state).toBe("provisional");
+    expect(one.views[1].text).toContain("half way round");
+    expect(one.numbers).toBeNull();
+  });
+
+  it("places it once a second point, elsewhere on the floor, agrees: half a turn, the wall inside its bar", () => {
+    const room = roomOf(
+        snaps(),
+        [mark(1, A, [0, 2]), mark(2, M, [0, 2]), ...ends],
+        [8, 9],
+      ),
+      sol = solveRoom(room);
+    expect(sol.views[1].state, sol.views[1].text).toBe("placed");
+    expect(sol.views[1].rigid!.turn).toBe(2);
+    expect(sol.views[1].text).toContain("Room point 1 and Room point 2 agree");
+    const wall = sol.numbers!.walls[0]!;
+    expect(Math.abs(wall.value - WALL_MM)).toBeLessThanOrEqual(wall.error);
+    expect(Math.abs(wall.value - WALL_MM) / WALL_MM).toBeLessThan(0.01);
+  });
+
+  it("refuses when the second point contradicts the first, and names every picture that shares them", () => {
+    const sol = solveRoom(
+      roomOf(snaps(), [mistaken, mark(2, M, [0, 2]), ...ends], [8, 9]),
+    );
+    expect(sol.views[1].state).toBe("refused");
+    expect(sol.views[1].rigid).toBeNull();
+    expect(sol.views[1].text).toContain("disagree about which way round");
+    expect(sol.views[1].text).toContain(
+      "Room point 1 is marked in pictures 1 and 2, Room point 2 in pictures 1 and 2",
+    );
+    expect(sol.views[1].text).toContain(
+      "any one of those marks may be the wrong one",
+    );
+    expect(sol.numbers).toBeNull();
+  });
+
+  it("does not count two points too close together as two", () => {
+    // The second point 60 mm from the first: inside the far corner's bar.
+    const near = { x: A.x - 60, y: A.y },
+      sol = solveRoom(
+        roomOf(
+          snaps(),
+          [mark(1, A, [0, 2]), mark(2, near, [0, 2]), ...ends],
+          [8, 9],
+        ),
       );
+    expect(sol.views[1].state).toBe("provisional");
+    expect(sol.views[1].text).toContain("too close together");
+    expect(sol.numbers).toBeNull();
+    // And the mirrored pair, both mistaken the same way, is not let through
+    // by being close together either.
+    const both = solveRoom(
+      roomOf(snaps(), [
+        mistaken,
+        {
+          id: 2,
+          seen: [
+            { view: 1, at: tapOn(0, near) },
+            { view: 2, at: tapOn(2, { x: 60, y: 0 }) },
+          ],
+        },
+      ]),
+    );
+    expect(both.views[1].state).toBe("provisional");
+  });
+
+  describe("with a third picture (camera 1)", () => {
+    const three = () => [0, 2, 1].map((cam) => snapOf({ cam, board })),
+      N = { x: 1200, y: 2300 },
+      // Picture 3 tied to picture 1 by two true points.
+      tie = [
+        {
+          id: 2,
+          seen: [
+            { view: 1, at: tapOn(0, M) },
+            { view: 3, at: tapOn(1, M) },
+          ],
+        },
+        {
+          id: 3,
+          seen: [
+            { view: 1, at: tapOn(0, N) },
+            { view: 3, at: tapOn(1, N) },
+          ],
+        },
+      ];
+    it("a: tied to picture 1 only, it is placed and picture 2 stays provisional", () => {
+      const sol = solveRoom(roomOf(three(), [mistaken, ...tie]));
+      expect(sol.views.map((v) => v.state)).toEqual([
+        "first",
+        "provisional",
+        "placed",
+      ]);
+    });
+    it("b: when it also shares a true point with picture 2, picture 2 is the one refused", () => {
+      const shared = {
+          id: 4,
+          seen: [
+            { view: 2, at: tapOn(2, { x: 1000, y: 600 }) },
+            { view: 3, at: tapOn(1, { x: 1000, y: 600 }) },
+          ],
+        },
+        sol = solveRoom(roomOf(three(), [mistaken, ...tie, shared]));
+      expect(sol.views.map((v) => v.state)).toEqual([
+        "first",
+        "refused",
+        "placed",
+      ]);
+      expect(sol.views[1].text).toContain("Picture 2 is not on the plan");
+      expect(sol.views[1].text).toContain(
+        "Room point 1 is marked in pictures 1 and 2",
+      );
+      expect(sol.views[1].text).toContain("Room point 4 in pictures 2 and 3");
+    });
+    it("c: a second true point between pictures 1 and 2 refuses picture 2", () => {
+      const sol = solveRoom(
+        roomOf(three(), [mistaken, ...tie, mark(5, N, [0, 2])]),
+      );
+      expect(sol.views.map((v) => v.state)).toEqual([
+        "first",
+        "refused",
+        "placed",
+      ]);
+    });
   });
 });

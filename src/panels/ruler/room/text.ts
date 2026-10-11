@@ -25,7 +25,7 @@ export function picturesText(views: number[], order: number[]): string {
 export function roomBasis(views: number[], order: number[]): string {
   const n = views.length,
     those = n === 1 ? "that picture" : "those pictures";
-  return `Rests on ${n} picture${n === 1 ? "" : "s"} (${picturesText(views, order)}). The bar is 2 standard deviations over ${ROOM_TRIALS} simulated retakes of every tap in ${those}: the reference corners of each and the room points themselves, each moved by the tap uncertainty, with a point marked in more than one picture weighted by how well each picture fixes it. Not included: lens distortion left uncorrected, points off the floor, a bent or misprinted reference, and a sheet that moved between pictures by less than the bars could show.`;
+  return `Rests on ${n} picture${n === 1 ? "" : "s"} (${picturesText(views, order)}). The bar is 2 standard deviations over ${ROOM_TRIALS} simulated retakes of every tap in ${those}: the reference corners of each and the room points themselves, each moved by the tap uncertainty, with a point marked in more than one picture weighted by how well each picture fixes it. Not included: lens distortion left uncorrected, points off the floor, a bent or misprinted reference, a sheet that moved between pictures by less than the bars could show, and two shared points that are both mistaken for their look-alikes on the other side of the sheet, in a room that looks the same from both sides of it.`;
 }
 
 export const lengthOf = (q: Quantity, unit: Unit, basis: string): Measured =>
