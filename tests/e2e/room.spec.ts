@@ -823,3 +823,82 @@ test("a photo already on the stage joins the room with its taps, and a frozen ca
   ).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test("a picture saved flipped left to right is held, then refused as a mirror image, and never joins the plan", async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await open(page);
+  await openRuler(page);
+  // Two marks on the line through the middle of the board, along its long
+  // side, and one well off it.
+  const mid = boardCentre(),
+    onLine = [
+      { x: mid.x + 900, y: mid.y },
+      { x: mid.x - 900, y: mid.y },
+    ],
+    flipped = (p: P) => ({ x: IMAGE.w - on(2, p).x, y: on(2, p).y });
+  await addPicture(page, 0, 1);
+  await tapBoard(page, 0);
+  await shape(page, "Room").click();
+  await group(page, "Next tap adds")
+    .getByRole("button", { name: "Floor mark", exact: true })
+    .click();
+  for (const p of [...onLine, MARKS[1]]) await tap(page, on(0, p));
+  await expect(page.getByTestId("room-point")).toHaveCount(3);
+
+  // The second picture, from the facing camera, as a mirror image.
+  const corners = boardCorners(),
+    png = await page.evaluate(drawRoomView, {
+      ...IMAGE,
+      floor: cams[2].floorSeen().map((q) => ({ x: IMAGE.w - q.x, y: q.y })),
+      board: corners.map(flipped),
+      marks: [...onLine, MARKS[1]].map(flipped),
+      tick: flipped({ x: corners[0].x + 60, y: corners[0].y - 60 }),
+      name: "flipped",
+    });
+  await page.getByLabel("Add a picture of this room").setInputFiles({
+    name: "flipped.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(png, "base64"),
+  });
+  await expect(page.getByTestId("room-strip").locator("li")).toHaveCount(2);
+  await expect(step(page)).toContainText("Tap corner 1 of 4");
+  for (const c of corners) await tap(page, flipped(c));
+  const markHere = async (n: number, p: P) => {
+    await page
+      .getByRole("button", { name: `Mark Room point ${n} in this picture` })
+      .click();
+    await tap(page, flipped(p));
+  };
+  await markHere(1, onLine[0]);
+  await markHere(2, onLine[1]);
+  // Both shared points fit a turn exactly, and the mirror image as well.
+  await expect(places(page).nth(1)).toHaveAttribute(
+    "data-state",
+    "provisional",
+  );
+  await expect(places(page).nth(1)).toContainText(
+    "lie on a line through the middle of the sheet, so they cannot tell this picture from its mirror image",
+  );
+  await expect(places(page).nth(1)).toContainText(
+    "Mark a shared point well off that line",
+  );
+  await expect(page.getByTestId("room-plan")).toHaveAttribute(
+    "data-pictures",
+    "1",
+  );
+  // The point off the line: only a mirror image fits all three.
+  await markHere(3, MARKS[1]);
+  await expect(places(page).nth(1)).toHaveAttribute("data-state", "refused");
+  await expect(places(page).nth(1)).toContainText(
+    "appears to be a mirror image (flipped left to right)",
+  );
+  await expect(page.getByTestId("room-plan")).toHaveAttribute(
+    "data-pictures",
+    "1",
+  );
+  expect(errors).toEqual([]);
+});
