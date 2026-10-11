@@ -73,8 +73,13 @@ async function savable(blob: Blob): Promise<Blob> {
   );
 }
 function blobOf(url: string): Blob {
+  // A plain loop into one array of the right size. Asking Uint8Array.from to
+  // call a function per character first builds a list of one-letter strings:
+  // about 40 MB of memory for each MB of picture.
   const [head, body] = url.split(","),
-    bytes = Uint8Array.from(atob(body), (c) => c.charCodeAt(0));
+    binary = atob(body),
+    bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new Blob([bytes], { type: head.slice(5, head.indexOf(";")) });
 }
 const count = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
