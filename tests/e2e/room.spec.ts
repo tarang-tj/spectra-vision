@@ -536,3 +536,106 @@ test("at 390 px wide: a room is built by taps, nothing scrolls sideways and ever
   expect(layout.outside).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+test("a photo already on the stage joins the room with its taps, and a frozen camera frame is kept as a picture", async ({
+  page,
+}) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await open(page);
+  await openRuler(page);
+
+  // A photo uploaded the ordinary way, measured before any room exists.
+  const corners = boardCorners(),
+    png = await page.evaluate(drawRoomView, {
+      ...IMAGE,
+      floor: cams[0].floorSeen(),
+      board: corners.map((c) => on(0, c)),
+      marks: MARKS.map((m) => on(0, m)),
+      tick: on(0, { x: corners[0].x + 60, y: corners[0].y - 60 }),
+      name: "camera 1",
+    });
+  await page.getByLabel("Upload image or video").setInputFiles({
+    name: "first.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(png, "base64"),
+  });
+  await expect(page.locator(".hud-badge").first()).toHaveText("LOCAL IMAGE");
+  await tapBoard(page, 0);
+  for (const m of MARKS) await tap(page, on(0, m));
+  const first = await reading(page);
+  await expect(page.getByTestId("room-status")).toHaveText(
+    "No pictures in this room yet.",
+  );
+  await expect(
+    page.getByRole("button", { name: "Keep this picture", exact: true }),
+  ).toBeVisible();
+  // Adding the next picture keeps this one first, with what was tapped.
+  await addPicture(page, 2, 2);
+  await expect(thumb(page, 1)).toHaveAccessibleName("Picture 1, first.png");
+  await expect(page.getByTestId("ruler-result")).toHaveCount(0);
+  await thumb(page, 1).click();
+  await expect(thumb(page, 1)).toHaveAttribute("aria-pressed", "true");
+  expect(await reading(page)).toEqual(first);
+
+  // A new room, and the same photo kept by its own button.
+  await page
+    .getByRole("button", { name: "Start a new room", exact: true })
+    .click();
+  await expect(page.getByTestId("room-status")).toHaveText(
+    "No pictures in this room yet.",
+  );
+  await page
+    .getByRole("button", { name: "Keep this picture", exact: true })
+    .click();
+  await expect(page.getByTestId("room-strip").locator("li")).toHaveCount(1);
+  await expect(thumb(page, 1)).toHaveAttribute("aria-pressed", "true");
+  expect(await reading(page)).toEqual(first);
+  await expect(thumb(page, 1).locator("img")).toBeVisible();
+
+  // A camera: a moving picture cannot be a view; a frozen frame can.
+  await page
+    .getByRole("button", { name: "Start a new room", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Start camera" }).click();
+  await expect(page.getByRole("button", { name: "Stop camera" })).toBeVisible();
+  await expect(
+    page.getByText("A moving picture cannot be one of the room's pictures."),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Keep this/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Freeze frame", exact: true }).click();
+  const keep = page.getByRole("button", {
+    name: "Keep this frame as a picture",
+    exact: true,
+  });
+  await expect(keep).toBeVisible();
+  // Four taps on the frozen frame: they must come along with it.
+  await page.locator(".camera-stage canvas").scrollIntoViewIfNeeded();
+  const box = (await page.locator(".camera-stage canvas").boundingBox())!;
+  for (const [fx, fy] of [
+    [0.4, 0.45],
+    [0.6, 0.45],
+    [0.63, 0.7],
+    [0.37, 0.7],
+  ])
+    await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
+  await expect(step(page)).toContainText("Tap two points");
+  await keep.click();
+  await expect(page.getByTestId("room-strip").locator("li")).toHaveCount(1);
+  await expect(page.getByTestId("room-status")).toHaveText(
+    "1 picture in this room.",
+  );
+  await expect(thumb(page, 1)).toHaveAttribute("aria-pressed", "true");
+  await expect(thumb(page, 1)).toHaveAccessibleName(/^Picture 1, Frame from /);
+  // It is a still picture now: the camera is released and the taps stayed.
+  await expect(page.locator(".hud-badge").first()).toHaveText("LOCAL IMAGE");
+  await expect(
+    page.getByRole("button", { name: "Start camera" }),
+  ).toBeVisible();
+  await expect(step(page)).toContainText("Tap two points");
+  await expect(
+    page.getByRole("button", { name: "Resume live view" }),
+  ).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
