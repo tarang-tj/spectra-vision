@@ -139,10 +139,12 @@ test("Depth infers a still picture once, then only when the picture changes", as
   expect(await results(page)).toBe(quiet);
   // A new picture is inferred, once.
   await page.getByRole("button", { name: "Use demo image" }).click();
-  await expect.poll(() => depth(page), { timeout: 60_000 }).not.toBeNull();
+  await expect
+    .poll(() => results(page), { timeout: 60_000 })
+    .toBeGreaterThan(quiet);
   await expect(fps(page)).toHaveText("still picture");
   const again = await results(page);
-  expect(again).toBeGreaterThan(quiet);
+  expect(again).toBe(quiet + 1);
   await page.waitForTimeout(4000);
   expect(await results(page)).toBe(again);
   // The demo still has no bars: the whole map is picture, drawn over it.
