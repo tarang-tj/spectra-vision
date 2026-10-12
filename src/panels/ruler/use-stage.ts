@@ -4,7 +4,7 @@
 // panel that mounts again draws them again.
 import { useCallback, useEffect, useRef } from "react";
 import { useStudio } from "../../studio-context";
-import { drawRuler, dropSnapshot, view } from "./overlay";
+import { drawRuler, dropSnapshot, view } from "./overlay/overlay";
 import { endDrag, onRulerPointer } from "./pointer";
 import { clear } from "./store";
 

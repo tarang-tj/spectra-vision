@@ -2,17 +2,17 @@
 // What the Ruler draws on the stage canvas: the reference outline, measuring
 // lines with their results, draggable handles and the loupe. It is drawn on
 // the one stage canvas, so Screenshot and Record capture it.
-import type { Frame } from "../../vision/frame";
-import { derive } from "./derive";
-import { drawExtensions } from "./extensions";
-import { orderCorners, type Pt } from "./homography";
+import type { Frame } from "../../../vision/frame";
+import { derive } from "../derive";
+import { drawExtensions } from "../extensions";
+import { orderCorners, type Pt } from "../homography";
 import { beginLabels, flushLabels } from "./overlay-labels";
 import { dot, INK, LINE, REF, tag } from "./overlay-parts";
 import { drawRefs } from "./overlay-refs";
 import { drawShapes } from "./overlay-shapes";
-import { shortReading } from "./reading";
-import { takeSnapshot, type Snapshot } from "./plan/snapshot";
-import { bindSource, bindStillness, getState } from "./store";
+import { shortReading } from "../reading";
+import { takeSnapshot, type Snapshot } from "../plan/snapshot";
+import { bindSource, bindStillness, getState } from "../store";
 
 /** Shared between the overlay and the pointer code. */
 export const view = {

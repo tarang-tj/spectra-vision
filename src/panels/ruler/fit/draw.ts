@@ -3,8 +3,8 @@
 // camera's focal length is known, the whole box in perspective. Called by the
 // Ruler for every still frame; it keeps no loop and no state of its own.
 import type { DrawEnv } from "../extension-types";
-import { isCompact } from "../overlay-labels";
-import { dot, tag } from "../overlay-parts";
+import { isCompact } from "../overlay/overlay-labels";
+import { dot, tag } from "../overlay/overlay-parts";
 import { fromMm, type Unit } from "../units";
 import { getBox } from "./box-state";
 import {

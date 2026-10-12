@@ -1,10 +1,10 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Further references on the stage: a dashed outline (the first reference's is
 // solid), a name, and a numbered handle on each corner.
-import { orderCorners, type Pt } from "./homography";
+import { orderCorners, type Pt } from "../homography";
 import { isCompact } from "./overlay-labels";
 import { dot, REF, tag } from "./overlay-parts";
-import type { RulerState } from "./state";
+import type { RulerState } from "../state";
 
 export function drawRefs(
   ctx: CanvasRenderingContext2D,

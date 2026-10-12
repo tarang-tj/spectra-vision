@@ -4,7 +4,7 @@ import { useStudio } from "../../../studio-context";
 import type { Derived } from "../derive";
 import { downloadText } from "../../../download";
 import { planCsv, planSvg } from "./export-plan";
-import { view } from "../overlay";
+import { view } from "../overlay/overlay";
 import { drawPrims } from "./plan-draw";
 import { LEGEND, layoutScene, type Prim } from "./plan-layout";
 import { buildScene, type PlanScene } from "./plan-scene";

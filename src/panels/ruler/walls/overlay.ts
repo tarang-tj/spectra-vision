@@ -4,8 +4,8 @@
 // heights. An edge whose height is assumed is dashed and says so.
 import { projectPoint } from "../../../measure/camera";
 import type { DrawEnv } from "../extension-types";
-import { isCompact } from "../overlay-labels";
-import { dot, tag } from "../overlay-parts";
+import { isCompact } from "../overlay/overlay-labels";
+import { dot, tag } from "../overlay/overlay-parts";
 import { isUncertainShort } from "../reading";
 import { currentWalls } from "./current";
 import { heightAt } from "./shell";

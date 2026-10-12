@@ -11,7 +11,7 @@ import type { StagePointerEvent } from "../../stage/stage-hooks";
 import { derive, longEdge } from "./derive";
 import { extensionFor, extensionPointer } from "./extensions";
 import { TAP_SIGMA_SCREEN_PX } from "./monte-carlo";
-import { view } from "./overlay";
+import { view } from "./overlay/overlay";
 import {
   building,
   getState,

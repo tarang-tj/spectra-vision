@@ -1,10 +1,10 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Paths, outlines and lens edges on the stage canvas.
-import type { Derived } from "./derive";
-import type { Pt } from "./homography";
+import type { Derived } from "../derive";
+import type { Pt } from "../homography";
 import { dot, EDGE, LINE, PATH, tag } from "./overlay-parts";
-import { shortReading } from "./reading";
-import type { RulerState } from "./state";
+import { shortReading } from "../reading";
+import type { RulerState } from "../state";
 
 const COLOR = { path: PATH, area: LINE, edge: EDGE } as const;
 
