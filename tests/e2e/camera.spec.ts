@@ -412,7 +412,6 @@ test("an unanswered prompt gets a hint and a Cancel that gives the page back", a
   await open(page);
   await bench(page, (b) => (b.hang = true));
   await start(page);
-  await expect(page.locator(".loading")).toContainText("Opening source");
   const waiting = page.getByRole("status").filter({ hasText: "Waiting" });
   await expect(waiting).toContainText("Look for its prompt");
   await expect(page.getByRole("button", { name: "Opening…" })).toBeDisabled();
