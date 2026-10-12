@@ -1,12 +1,12 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import { EXTENSIONS } from "./extensions";
+import { EXTENSIONS } from "../extensions";
 import {
   finishShape,
   MIN_POINTS,
   setTool,
   type RulerState,
   type Tool,
-} from "./store";
+} from "../store";
 
 const TOOLS: { id: Exclude<Tool, "edge">; label: string; hint: string }[] = [
   { id: "span", label: "Span", hint: "Distance between two points" },

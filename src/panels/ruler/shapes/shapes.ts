@@ -8,9 +8,9 @@ import {
   solveHomography,
   type Pt,
   type Sheet,
-} from "./homography";
-import { fusedRuns } from "./known/fused-trials";
-import { applyLens, type Lens } from "./lens";
+} from "../homography";
+import { fusedRuns } from "../known/fused-trials";
+import { applyLens, type Lens } from "../lens";
 import {
   DEFAULT_SAMPLES,
   DEFAULT_SEED,
@@ -18,7 +18,7 @@ import {
   makeJitter,
   MIN_SAMPLES,
   seededRandom,
-} from "./monte-carlo";
+} from "../monte-carlo";
 
 /** A direct value and its error (2 sd), in mm or mm squared. */
 export type Quantity = { value: number; error: number };

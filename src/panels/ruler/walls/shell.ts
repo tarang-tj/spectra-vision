@@ -4,7 +4,7 @@
 // clock, no randomness. Lengths are mm, areas mm2, volume mm3.
 import { heightAbove, type Camera, type P2 } from "../../../measure/camera";
 import { applyHomography, type Mat3 } from "../homography";
-import { legLengths, polygonArea, selfIntersects } from "../shapes";
+import { legLengths, polygonArea, selfIntersects } from "../shapes/shapes";
 
 export type ShellInput = {
   /** Flat picture points to plane mm. */

@@ -4,7 +4,7 @@ import BasisDetails from "./basis-details";
 import { resultsText, type Derived } from "./derive";
 import { DEFAULT_SAMPLES, TAP_SIGMA_SCREEN_PX } from "./monte-carlo";
 import { isUncertainText } from "./reading";
-import ShapeResults from "./shape-results";
+import ShapeResults from "./shapes/shape-results";
 import type { RulerState } from "./store";
 import TapeEntry from "./known/tape-entry";
 

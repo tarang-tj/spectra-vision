@@ -1,13 +1,19 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Results for finished paths and outlines, as numbers and as text.
-import { measured } from "../../measure/noise";
-import type { Sheet } from "./homography";
-import type { Lens } from "./lens";
-import { droppedNote } from "./monte-carlo";
-import { readingText, shortReading } from "./reading";
+import { measured } from "../../../measure/noise";
+import type { Sheet } from "../homography";
+import type { Lens } from "../lens";
+import { droppedNote } from "../monte-carlo";
+import { readingText, shortReading } from "../reading";
 import { measureShape, type Quantity, type ShapeResult } from "./shapes";
-import type { Shape } from "./state";
-import { areaFromMm2, areaUnit, bigAreaUnit, fromMm, type Unit } from "./units";
+import type { Shape } from "../state";
+import {
+  areaFromMm2,
+  areaUnit,
+  bigAreaUnit,
+  fromMm,
+  type Unit,
+} from "../units";
 
 export type ShapeRow = {
   /** Index into the state's shapes. */

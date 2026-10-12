@@ -8,7 +8,7 @@
 import { applyHomography, type Mat3, type Pt } from "../homography";
 import { applyLens, type Lens } from "../lens";
 import { gaussian, makeJitter, seededRandom } from "../monte-carlo";
-import { polygonArea, selfIntersects } from "../shapes";
+import { polygonArea, selfIntersects } from "../shapes/shapes";
 import { applyRigid, type Cov, type Rigid } from "./room-frame";
 
 /** One picture's own map of the floor and its simulated retakes. */

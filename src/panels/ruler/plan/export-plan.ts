@@ -7,7 +7,7 @@ import { LEGEND, type Prim } from "./plan-layout";
 import type { PlanScene } from "./plan-scene";
 import type { RulerState } from "../state";
 import { droppedNote } from "../monte-carlo";
-import { toPlane } from "../shapes";
+import { toPlane } from "../shapes/shapes";
 import type { Fit } from "./topdown";
 import { areaFromMm2, areaUnit, fromMm } from "../units";
 

@@ -1,6 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import type { ShapeRow } from "./derive-shapes";
-import { isUncertainText } from "./reading";
+import { isUncertainText } from "../reading";
 
 /** Numbers behind an output, so tests and exports can read them. */
 const attrs = (

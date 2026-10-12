@@ -7,7 +7,7 @@ import type { Pt } from "../homography";
 import { COLORS } from "../plan/plan-layout";
 import { buildScene, type PlanItem, type PlanScene } from "../plan/plan-scene";
 import { readingText, shortReading } from "../reading";
-import { toPlane } from "../shapes";
+import { toPlane } from "../shapes/shapes";
 import type { Unit } from "../units";
 import { ROOM } from "./overlay";
 import { applyRigid } from "./room-frame";

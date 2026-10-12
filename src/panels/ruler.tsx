@@ -10,7 +10,7 @@ import ReferencePicker from "./ruler/reference-picker";
 import ClearButton from "./ruler/room/clear-button";
 import ViewStrip from "./ruler/room/view-strip";
 import Results from "./ruler/results";
-import ShapeTools, { openShape } from "./ruler/shape-tools";
+import ShapeTools, { openShape } from "./ruler/shapes/shape-tools";
 import TapeTest from "./ruler/known/tape-test";
 import {
   handleName,

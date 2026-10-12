@@ -3,7 +3,7 @@
 // label text. The canvas and the SVG export both draw from this one scene.
 import type { Derived } from "../derive";
 import { shortReading } from "../reading";
-import { toPlane } from "../shapes";
+import { toPlane } from "../shapes/shapes";
 import type { Pt } from "../homography";
 import type { RulerState } from "../state";
 
