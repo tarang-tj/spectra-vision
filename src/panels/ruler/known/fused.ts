@@ -13,18 +13,22 @@
 // Pure: no DOM, no randomness.
 import { solveLinear } from "../../../measure/vec";
 import {
-  applyHomography,
   PIVOT_FLOOR,
   solveHomography,
   type Mat3,
   type Pt,
 } from "../homography";
 import {
+  core,
   denormalize,
   invert3,
   normOf,
+  poses,
+  residuals,
+  spanLen,
   toImage,
   type Norm,
+  type Scaled,
 } from "./fused-maths";
 
 /** Four taps (flat pixels, each with its `s`) and the rectangle's own corners
@@ -56,32 +60,6 @@ export type FuseSolution = {
 };
 export type FuseStart = { params: number[]; image: Norm; plane: Norm };
 
-/** Everything in scaled units: `s` is each tap's sd. */
-type Scaled = {
-  first: { taps: Pt[]; plane: Pt[] };
-  rects: { taps: Pt[]; plane: Pt[] }[];
-  spans: { a: Pt; b: Pt; len: number; sd: number }[];
-};
-
-const core = (p: number[]): Mat3 => [
-  p[0],
-  p[1],
-  p[2],
-  p[3],
-  p[4],
-  p[5],
-  p[6],
-  p[7],
-  1,
-];
-
-/** Plane distance of a span, or null at the horizon. */
-function spanLen(h: Mat3, a: Pt, b: Pt): number | null {
-  const pa = applyHomography(h, a),
-    pb = applyHomography(h, b);
-  return pa && pb ? Math.hypot(pa.x - pb.x, pa.y - pb.y) : null;
-}
-
 /** One sd of a known span's length: both ends' tap sd through the local
  * scale, and the tape. Held fixed for the whole solve. */
 function spanSd(h: Mat3, a: Pt, b: Pt, tape: number): number | null {
@@ -102,84 +80,6 @@ function spanSd(h: Mat3, a: Pt, b: Pt, tape: number): number | null {
     }
   }
   return v > 0 && Number.isFinite(v) ? Math.sqrt(v) : null;
-}
-
-/** Fills `r`; false when a point falls at or beyond the horizon. */
-function residuals(p: number[], sc: Scaled, r: Float64Array): boolean {
-  const h = core(p),
-    g = invert3(h);
-  if (!g) return false;
-  let at = 0;
-  const corner = (x: number, y: number, t: Pt) => {
-    const q = toImage(g, h, x, y);
-    if (!q) return false;
-    r[at++] = (q.x - t.x) / (t.s as number);
-    r[at++] = (q.y - t.y) / (t.s as number);
-    return true;
-  };
-  for (let k = 0; k < 4; k++)
-    if (!corner(sc.first.plane[k].x, sc.first.plane[k].y, sc.first.taps[k]))
-      return false;
-  for (let j = 0; j < sc.rects.length; j++) {
-    const rect = sc.rects[j],
-      tx = p[8 + 3 * j],
-      ty = p[9 + 3 * j],
-      cos = Math.cos(p[10 + 3 * j]),
-      sin = Math.sin(p[10 + 3 * j]);
-    for (let k = 0; k < 4; k++) {
-      const c = rect.plane[k];
-      if (
-        !corner(
-          tx + c.x * cos - c.y * sin,
-          ty + c.x * sin + c.y * cos,
-          rect.taps[k],
-        )
-      )
-        return false;
-    }
-  }
-  for (const s of sc.spans) {
-    const d = spanLen(h, s.a, s.b);
-    if (d === null) return false;
-    r[at++] = (d - s.len) / s.sd;
-  }
-  return true;
-}
-
-/** Each further rectangle laid where the map `h` sees it (best rigid fit). */
-function poses(h: Mat3, rects: Scaled["rects"]): number[] | null {
-  const out: number[] = [];
-  for (const rect of rects) {
-    const q: Pt[] = [];
-    for (const t of rect.taps) {
-      const on = applyHomography(h, t);
-      if (!on) return null;
-      q.push(on);
-    }
-    const mean = (pts: Pt[], k: "x" | "y") =>
-        pts.reduce((s, v) => s + v[k], 0) / pts.length,
-      cx = mean(rect.plane, "x"),
-      cy = mean(rect.plane, "y"),
-      qx = mean(q, "x"),
-      qy = mean(q, "y");
-    let dot = 0,
-      cross = 0;
-    rect.plane.forEach((c, k) => {
-      const ax = c.x - cx,
-        ay = c.y - cy,
-        bx = q[k].x - qx,
-        by = q[k].y - qy;
-      dot += ax * bx + ay * by;
-      cross += ax * by - ay * bx;
-    });
-    const th = Math.atan2(cross, dot);
-    out.push(
-      qx - (cx * Math.cos(th) - cy * Math.sin(th)),
-      qy - (cx * Math.sin(th) + cy * Math.cos(th)),
-      th,
-    );
-  }
-  return out;
 }
 
 const STEP = 1e-6;
