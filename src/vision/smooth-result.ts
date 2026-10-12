@@ -6,8 +6,8 @@ import type { OneEuroOptions } from "../measure/one-euro";
 import type { TaskKind, TaskResult, VisionResult } from "./types";
 
 // Pose, hand, face and gesture-hand landmarks. Detections and masks are not
-// landmarks and pass through untouched. Object boxes are not smoothed: they
-// reach the stage as tracks, which this file does not see.
+// landmarks and pass through untouched. Object boxes reach the stage as
+// tracks, which this file does not see: they are smoothed in track-smooth.ts.
 const SMOOTHED: readonly TaskKind[] = ["pose", "hand", "face", "gesture"];
 
 /** One Euro settings per task, chosen from jitter on a still demo input
