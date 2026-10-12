@@ -1,7 +1,10 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // What the stage says while a large model is fetched for the first time: its
 // size, once, and that it is kept afterwards. A task takes part by stating
-// its model's size in `options.bytes` (Depth does, from scripts/models.json).
+// its model's size in `options.bytes` (Depth does, from scripts/models.json),
+// or the size of each file it may load in `sizes` (Objects does: which file
+// it loads depends on the delegate and the Precision setting).
+import { modelOf } from "./settings";
 import type { TaskSpec } from "./types";
 
 /** A file size as people say it: "99 MB". */
@@ -18,7 +21,8 @@ export const downloadNote = (bytes: number, kept: boolean) =>
  * or every stated model is already stored on this device. Never throws: a
  * browser without Cache Storage is treated as having nothing stored. */
 export async function firstDownloadNote(
-  specs: Pick<TaskSpec, "model" | "options">[],
+  specs: (Pick<TaskSpec, "model" | "options"> &
+    Partial<Pick<TaskSpec, "kind" | "preciseModel" | "gpuModel" | "sizes">>)[],
   base: string,
   env: {
     caches?: Pick<CacheStorage, "match">;
@@ -31,12 +35,14 @@ export async function firstDownloadNote(
 ): Promise<string | null> {
   let bytes = 0;
   for (const spec of specs) {
-    const size = Number(spec.options.bytes);
+    // The file the task's runner is loading now, and what that file weighs.
+    const model = modelOf(spec),
+      size = Number(spec.options.bytes ?? spec.sizes?.[model]);
     if (!(size > 0)) continue;
     let stored = false;
     try {
       // By address alone, as the service worker matches it (public/sw.js).
-      stored = !!(await env.caches?.match(`${base}models/${spec.model}`, {
+      stored = !!(await env.caches?.match(`${base}models/${model}`, {
         ignoreVary: true,
       }));
     } catch {

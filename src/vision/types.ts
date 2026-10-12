@@ -47,6 +47,14 @@ export type TaskSpec = {
    * `model` while the Precision setting is "Precise". Listed in
    * scripts/models.json like any other model. */
   preciseModel?: string;
+  /** A larger model that costs little on a real GPU. It runs instead of
+   * `model` while the task is on GPU, and gives way to `model` on CPU, after
+   * a GPU to CPU fallback, and where it proves slow (vision/model-choice.ts).
+   * Listed in scripts/models.json like any other model. */
+  gpuModel?: string;
+  /** The size in bytes of each model file this task may load, by file name,
+   * for the first-download line (vision/first-download.ts). */
+  sizes?: Readonly<Record<string, number>>;
   options: Record<string, unknown>;
   /** Options that win over `options` and can change while the task runs. */
   live?: LiveOptions;

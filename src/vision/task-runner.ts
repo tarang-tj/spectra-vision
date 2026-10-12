@@ -11,7 +11,16 @@ import {
   requestedDelegate,
 } from "./delegate";
 import { downloadFailure } from "./download-failure";
-import { modelOf, onPrecisionChange } from "./settings";
+import {
+  GUARD_RESULTS,
+  SLOW_MS,
+  gpuModelFor,
+  medianOf,
+  noteDelegate,
+  onModelChoice,
+  refuseGpuModel,
+} from "./model-choice";
+import { getPrecision, modelOf, onPrecisionChange } from "./settings";
 import type { Delegate, TaskResult, TaskSpec } from "./types";
 
 /** Kinds whose worker fetches different runtime files on GPU and on CPU
@@ -38,7 +47,8 @@ export type TaskRunner = {
   readonly spec: TaskSpec;
   /** The delegate in use right now (differs from the requested one after a fallback). */
   delegate(): Delegate;
-  /** The model file in use (the precise one while Precision asks for it). */
+  /** The model file in use (the precise one while Precision asks for it, a
+   * task's larger one while it is on a real GPU). */
   model(): string;
   ready(): boolean;
   /** True when the worker can take a frame at this animation time. */
@@ -71,9 +81,13 @@ export function createTaskRunner(
   let worker: WorkerLike | null = null,
     requested: Delegate = requestedDelegate(spec),
     active: Delegate = requested,
-    // The file this worker loads: the task's model, or its precise one while
-    // the Precision setting asks for it.
-    model = modelOf(spec),
+    // The file this worker loads: the task's model, its precise one while
+    // the Precision setting asks for it, or its larger one on a real GPU.
+    // Settled by `pick` once the delegate is known.
+    model = "",
+    // Inference times of the larger model's first results, while it is still
+    // on trial here; null once it has passed or is not what is running.
+    trial: number[] | null = null,
     ready = false,
     busy = false,
     produced = false,
@@ -108,7 +122,14 @@ export function createTaskRunner(
         ? `GPU failed earlier on this page (${failed}). Running on CPU. Choose GPU in the Lab to try again.`
         : "";
   };
+  // The model for the delegate in use. The delegate is put on record first,
+  // so the Lab's `modelOf(spec)` names the same file.
+  const pick = () => {
+    noteDelegate(spec.kind, active);
+    return modelOf(spec, undefined, active);
+  };
   choose();
+  model = pick();
   let status = beginStatus(spec.kind, model, requested, active, note);
 
   const stop = () => {
@@ -153,6 +174,7 @@ export function createTaskRunner(
       note = `A file the GPU path needs could not be downloaded. Running on CPU.`;
       failedOver = true;
       active = "CPU";
+      model = pick();
       events.onRestart?.();
       start();
       return;
@@ -161,13 +183,17 @@ export function createTaskRunner(
     if (!retry && model !== spec.model && !produced) {
       // The precise model never produced a frame (offline on first use, a
       // failed download): run the standard one and say so, so a saved
-      // Precise choice cannot leave the mode broken on every visit.
+      // Precise choice cannot leave the mode broken on every visit. The same
+      // goes for a larger model chosen for the GPU, which is then given up
+      // for this page so the Lab names the file that really runs.
       console.warn(
         `[spectra vision] ${spec.kind}: ${model} failed (${message}); using ${spec.model}.`,
       );
       stop();
+      const larger = onTrial();
+      if (larger) refuseGpuModel(spec.kind, message);
       model = spec.model;
-      note = `The precise model did not load (${message}). Running the standard model.`;
+      note = `The ${larger ? "larger" : "precise"} model did not load (${message}). Running the standard model.`;
       events.onRestart?.();
       start();
       return;
@@ -192,6 +218,36 @@ export function createTaskRunner(
     produced = false;
     failedOver = true;
     active = retry;
+    // A larger model that was running because of the GPU goes with it.
+    model = pick();
+    events.onRestart?.();
+    start();
+  };
+  // Whether what runs now is the task's larger model, there only because of
+  // the GPU (not because Precision asked for it).
+  const onTrial = () =>
+    model !== spec.model &&
+    getPrecision() !== "precise" &&
+    gpuModelFor(spec, active) === model;
+  // The larger model was picked on the evidence of one GPU. Where it is slow
+  // it is given up once, for this page, and the standard model takes over on
+  // the same delegate.
+  const judge = (latency: number) => {
+    if (!trial) return;
+    trial.push(latency);
+    if (trial.length < GUARD_RESULTS) return;
+    const median = medianOf(trial);
+    trial = null;
+    if (median <= SLOW_MS) return;
+    const reason = `it took ${Math.round(median)} ms a frame here`;
+    console.warn(
+      `[spectra vision] ${spec.kind}: ${model} is slow (${reason}); using ${spec.model}.`,
+    );
+    stop();
+    refuseGpuModel(spec.kind, reason);
+    model = spec.model;
+    note = `The larger model was slow on this device (${Math.round(median)} ms a frame). Running the standard model.`;
+    ready = busy = produced = false;
     events.onRestart?.();
     start();
   };
@@ -224,6 +280,7 @@ export function createTaskRunner(
     started = performance.now();
     downloaded = false;
     firstSent = 0;
+    trial = onTrial() ? [] : null;
     status = beginStatus(spec.kind, model, requested, active, note);
     try {
       // Depth runs on another runtime, in a worker script of its own.
@@ -279,6 +336,10 @@ export function createTaskRunner(
           delegate: active,
         });
         events.onResult(result);
+        // Finer names add their own time to `latency`; the model is judged
+        // without it.
+        const finer = (result.extra?.finer as { ms?: number } | undefined)?.ms;
+        judge(result.latency - (finer ?? 0));
       } else if (message.type === "error") fail(message.error);
     };
     worker.onerror = () => {
@@ -317,21 +378,26 @@ export function createTaskRunner(
       return;
     stop();
     choose();
+    model = pick();
     ready = busy = produced = false;
     events.onRestart?.();
     start();
   });
 
-  // The Precision setting: load the other model for this task, if it has one.
-  const unwatchPrecision = onPrecisionChange(() => {
-    const next = modelOf(spec);
-    if (disposed || next === model) return;
+  // The Precision setting, or the switch for the larger model on a GPU: load
+  // the other model for this task, if that names another file.
+  const reload = () => {
+    if (disposed) return;
+    const next = pick();
+    if (next === model) return;
     stop();
     model = next;
     ready = busy = produced = false;
     events.onRestart?.();
     start();
-  });
+  };
+  const unwatchPrecision = onPrecisionChange(reload),
+    unwatchChoice = onModelChoice(reload);
 
   return {
     spec,
@@ -367,6 +433,7 @@ export function createTaskRunner(
       ready = false;
       unwatch();
       unwatchPrecision();
+      unwatchChoice();
       unwatchLive?.();
       stop();
     },
