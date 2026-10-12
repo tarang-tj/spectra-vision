@@ -144,14 +144,14 @@ describe("the stage card", () => {
   it("is absent when nothing failed", () => {
     expect(stageCard(null, "", "desktop")).toBeNull();
   });
-  it("retries the demo, not the camera, when the demo failed", () => {
+  it("offers the demo again, and no camera retry, when the demo failed", () => {
     const card = stageCard(
       { from: "demo", text: "Demo image could not load." },
       "",
       "desktop",
     )!;
-    expect(card.retry).toBe("Retry demo");
-    expect(card.demo).toBe(false);
+    expect(card.retry).toBeNull();
+    expect(card.demo).toBe(true);
     expect(card.camera).toBe(false);
   });
   it("offers a file that did not open the demo and no retry", () => {

@@ -68,12 +68,11 @@ export function useSourceControls(notice: (text: string) => void) {
       camera.start();
     }
   };
-  /** Retry whatever failed: the same camera request, or the demo. A demo
-   * that did not load never starts the camera. */
+  /** Retry the camera request that failed, exactly as it was asked. Only a
+   * camera failure has a retry: a demo that did not load offers the demo. */
   const retrySource = () => {
     setPaused(false);
     if (input.problem?.from === "camera") camera.retry();
-    else onDemo();
   };
   // True where Front and Rear mean something (see hasSides).
   const cameraSides = useMemo(

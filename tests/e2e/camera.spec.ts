@@ -382,9 +382,10 @@ test("Retry repeats the request that failed, and a demo that failed never starts
   await expect(alert(page).locator("strong")).toHaveText(
     "The demo did not load.",
   );
-  await expect(alert(page).getByRole("button")).toHaveText(["Retry demo"]);
+  // One way forward, and it is not the camera.
+  await expect(alert(page).getByRole("button")).toHaveText(["Try demo"]);
   await page.unroute("**/demo/**");
-  await alert(page).getByRole("button", { name: "Retry demo" }).click();
+  await alert(page).getByRole("button", { name: "Try demo" }).click();
   await expect(badge(page)).toHaveText("DEMO IMAGE");
   expect(await bench(page, (b) => b.calls.length)).toBe(0);
   // A rear camera that is busy: Retry asks for the rear camera again.

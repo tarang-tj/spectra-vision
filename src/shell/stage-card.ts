@@ -4,8 +4,8 @@ import type { Platform } from "../vision/camera-errors";
 import type { SourceProblem } from "../vision/useSource";
 
 /** The stage's error card: what happened, what to do, and which ways forward
- * to offer. `retry` is the retry button's words, or null when trying again
- * cannot help; `demo` is false when the retry already is the demo. */
+ * to offer. `retry` is the retry button's words, or null when there is
+ * nothing of its own to retry; `demo` offers the demo picture. */
 export type StageCard = {
   title: string;
   text: string;
@@ -17,8 +17,8 @@ export type StageCard = {
 };
 
 /** The card for a source that failed, else for a model that failed, else
- * null. Each kind of failure retries its own thing: a demo that did not load
- * never offers to start the camera. */
+ * null. Only a camera failure offers to retry the camera: a demo that did
+ * not load offers the demo again, and nothing that would start a camera. */
 export function stageCard(
   problem: SourceProblem | null,
   modelError: string,
@@ -35,8 +35,8 @@ export function stageCard(
       title: "The demo did not load.",
       text: problem.text,
       fix: "",
-      retry: "Retry demo",
-      demo: false,
+      retry: null,
+      demo: true,
       camera: false,
     };
   if (problem)
