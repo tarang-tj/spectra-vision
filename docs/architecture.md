@@ -8,7 +8,7 @@ SPECTRA is built from three registries. Each one is a folder that is scanned at 
 | Effects  | `src/effects/` | `EffectDef`           | A switch in the effects tray        | Trails, Constellation, Plasma hands, Ember trail, Neon ribbons, Aura, Hologram, Starfield pull, Echo, Face light |
 | Panels   | `src/panels/`  | `PanelDef`            | A tab in the inspector (right rail) | Inspect, Lab, Library, Ruler, Presence                                                                           |
 
-Visual and interaction design is specified in [design/implementation-spec.md](design/implementation-spec.md). This file covers structure only.
+The version 1 visual design (colours, type, composition) is recorded in [design/implementation-spec.md](design/implementation-spec.md); its notes on structure are out of date. This file is the current account of structure.
 
 ## Rules every plugin must obey
 

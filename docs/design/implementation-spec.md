@@ -1,4 +1,6 @@
-# SPECTRA interface specification
+# SPECTRA interface specification (version 1 design record)
+
+This is the design record for version 1, kept as written. The colours under "Composition and tokens" are still the ones in the code. The structure under "Architecture and real workflow" is not: it describes three modes, one worker and no panels. For how the app is built today, read [../architecture.md](../architecture.md).
 
 Concept: [desktop](concept-desktop.png), generated using the built-in Image Gen tool on 2026-10-07. SPECTRA is a camera-first application, not a landing page.
 
