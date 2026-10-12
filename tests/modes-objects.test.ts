@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import objects, { LOOKING } from "../src/modes/objects";
 import { forgetDrawn } from "../src/modes/lib/object-boxes";
 import ObjectModelSetting from "../src/modes/lib/object-model-setting";
@@ -17,6 +17,7 @@ import { beginStatus } from "../src/telemetry/task-status";
 import { createFrame, updateFrame } from "../src/vision/frame";
 import type { FrameData } from "../src/vision/frame";
 import { setSmoothing } from "../src/vision/settings";
+import { TrackSmoother } from "../src/vision/track-smooth";
 import type { Source, Track, VisionResult } from "../src/vision/types";
 
 // Objects drawn on a canvas that only keeps a record: every rectangle
@@ -186,15 +187,22 @@ describe("Objects: smoothing of the drawn boxes", () => {
     expect(drawn).toBeCloseTo(raw, 6);
   });
   it("filters once per result, not once per drawn frame", () => {
-    const tracks = [track(1, 0.4)],
-      first = result(0);
-    draw({ result: first, tracks });
-    const moved = [track(1, 0.5)],
-      next = result(66),
-      once = draw({ result: next, tracks: moved }).boxes[0].x;
-    // The same result drawn thirty more times stays where it was.
-    for (let i = 0; i < 30; i++)
-      expect(draw({ result: next, tracks: moved }).boxes[0].x).toBe(once);
+    const filtered = vi.spyOn(TrackSmoother.prototype, "apply");
+    try {
+      const tracks = [track(1, 0.4)],
+        first = result(0);
+      draw({ result: first, tracks });
+      const moved = [track(1, 0.5)],
+        next = result(66),
+        once = draw({ result: next, tracks: moved }).boxes[0].x;
+      // The same result drawn thirty more times stays where it was, and the
+      // filter was run for the two results only.
+      for (let i = 0; i < 30; i++)
+        expect(draw({ result: next, tracks: moved }).boxes[0].x).toBe(once);
+      expect(filtered).toHaveBeenCalledTimes(2);
+    } finally {
+      filtered.mockRestore();
+    }
   });
   it("starts again on a new source, where ids start again", () => {
     draw({ result: result(0), tracks: [track(1, 0.1)] });

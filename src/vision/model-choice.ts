@@ -46,6 +46,9 @@ export function onModelChoice(listener: () => void) {
   };
 }
 
+/** How many runners are watching the switch (leak check for tests). */
+export const modelChoiceWatchers = () => listeners.size;
+
 /** The runner says which delegate its task is on, at every start. */
 export const noteDelegate = (kind: TaskKind, delegate: Delegate) => {
   inUse.set(kind, delegate);

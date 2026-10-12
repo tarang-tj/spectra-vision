@@ -18,6 +18,7 @@ import {
   gpuModelRefusal,
   largerOnGpu,
   medianOf,
+  modelChoiceWatchers,
   resetModelChoice,
   setLargerOnGpu,
 } from "../src/vision/model-choice";
@@ -274,8 +275,11 @@ describe("the task runner and the larger model", () => {
     runner.dispose();
   });
   it("stops listening to the switch when it is disposed", () => {
-    const { workers, runner } = harness();
+    const before = modelChoiceWatchers(),
+      { workers, runner } = harness();
+    expect(modelChoiceWatchers()).toBe(before + 1);
     runner.dispose();
+    expect(modelChoiceWatchers()).toBe(before);
     setLargerOnGpu(false);
     expect(workers).toHaveLength(1);
   });
