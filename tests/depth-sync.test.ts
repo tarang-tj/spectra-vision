@@ -9,7 +9,11 @@ import {
   lagLine,
 } from "../src/modes/lib/depth-sync";
 import { unprojectRelief } from "../src/vision/depth/unproject";
-import { createFrameHolder, MAX_SIDE } from "../src/vision/held-frame";
+import {
+  createFrameHolder,
+  MAX_HELD,
+  MAX_SIDE,
+} from "../src/vision/held-frame";
 import type { DepthExtra, TaskResult } from "../src/vision/types";
 
 const image = { name: "held" } as unknown as CanvasImageSource;
@@ -86,26 +90,87 @@ describe("the frame holder", () => {
   const bitmap = (name: string, width = 640, height = 480) =>
     ({ name, width, height }) as never;
 
-  it("hands each result the frame it was computed from, on two canvases in turn", () => {
+  const drawnInto = (held: { image: unknown }) =>
+    (held.image as { drawn: unknown[] }).drawn;
+
+  it("hands each result the frame it was computed from, on two canvases once the page keeps up", () => {
     surfaces.length = 0;
     const h = holder();
     expect(h.commit()).toBeNull();
     h.capture(bitmap("a"), 10);
     const a = h.commit()!;
     expect(a.capturedAt).toBe(10);
+    h.settle(a.image);
     h.capture(bitmap("b"), 20);
     // Until b's result arrives, a's picture is untouched.
-    expect((a.image as never as { drawn: unknown[] }).drawn).toHaveLength(1);
+    expect(drawnInto(a)).toHaveLength(1);
     const b = h.commit()!;
     expect(b.capturedAt).toBe(20);
     expect(b.image).not.toBe(a.image);
+    h.settle(b.image);
     h.capture(bitmap("c"), 30);
     const c = h.commit()!;
-    // c reuses a's canvas; b's, the one before it, is still whole.
+    // The page has rendered b, so c reuses a's canvas; b's is still whole.
     expect(c.image).toBe(a.image);
-    expect((b.image as never as { drawn: unknown[] }).drawn).toHaveLength(1);
+    expect(drawnInto(b)).toHaveLength(1);
+    h.settle(c.image);
     expect(surfaces).toHaveLength(2);
     expect(h.commit()).toBeNull();
+  });
+  it("never draws into a picture it handed out before the page has moved on", () => {
+    surfaces.length = 0;
+    const h = holder();
+    h.capture(bitmap("a"), 10);
+    const a = h.commit()!;
+    h.settle(a.image);
+    h.capture(bitmap("b"), 20);
+    const b = h.commit()!;
+    // The page still shows a: b was handed out but not rendered yet.
+    h.capture(bitmap("c"), 30);
+    expect(drawnInto(a)).toHaveLength(1);
+    expect(drawnInto(b)).toHaveLength(1);
+    const c = h.commit()!;
+    expect(c.image).not.toBe(a.image);
+    expect(c.image).not.toBe(b.image);
+    expect(surfaces).toHaveLength(3);
+    // Once the page has rendered c, the two before it are free again.
+    h.settle(c.image);
+    h.capture(bitmap("d"), 40);
+    const d = h.commit()!;
+    expect([a.image, b.image]).toContain(d.image);
+    expect(drawnInto(c)).toHaveLength(1);
+    expect(surfaces).toHaveLength(3);
+  });
+  it("keeps the picture the page shows and the latest one, whatever lies between", () => {
+    surfaces.length = 0;
+    const h = holder();
+    const held = ["a", "b", "c"].map((name, i) => {
+      h.capture(bitmap(name), i);
+      return h.commit()!;
+    });
+    // The page rendered a; b was replaced before it was ever rendered.
+    h.settle(held[0].image);
+    h.capture(bitmap("d"), 3);
+    expect(h.commit()!.image).toBe(held[1].image);
+    expect(drawnInto(held[0])).toHaveLength(1);
+    expect(drawnInto(held[2])).toHaveLength(1);
+  });
+  it("holds nothing when the page has rendered none of the last four", () => {
+    surfaces.length = 0;
+    const h = holder();
+    for (let i = 0; i < MAX_HELD; i++) {
+      h.capture(bitmap(`n${i}`), i);
+      expect(h.commit()).not.toBeNull();
+    }
+    h.capture(bitmap("over"), 9);
+    expect(h.commit()).toBeNull();
+    expect(surfaces).toHaveLength(MAX_HELD);
+    expect(surfaces.every((s) => s.drawn.length === 1)).toBe(true);
+    // The page catches up with nothing on show: all but the latest are free.
+    h.settle(null);
+    h.capture(bitmap("again"), 10);
+    expect(h.commit()).not.toBeNull();
+    expect(surfaces).toHaveLength(MAX_HELD);
   });
   it("a frame that gets no result is not handed to the next one", () => {
     surfaces.length = 0;
