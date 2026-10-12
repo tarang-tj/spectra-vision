@@ -11,11 +11,11 @@ import {
   type FuseRect,
   type FuseStart,
 } from "./fused";
-import type { Mat3, Pt } from "./homography";
-import { applyLens, type Lens } from "./lens";
+import type { Mat3, Pt } from "../homography";
+import { applyLens, type Lens } from "../lens";
 // (monte-carlo.ts imports this file too; both use the other only inside
 // functions, so the cycle is harmless.)
-import { gaussian, seededRandom } from "./monte-carlo";
+import { gaussian, seededRandom } from "../monte-carlo";
 
 /** One retake: its plane map and where it puts the first reference's corners
  * in the picture (flat pixels). */

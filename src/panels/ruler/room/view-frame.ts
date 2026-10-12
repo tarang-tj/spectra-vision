@@ -5,7 +5,7 @@
 // make them again. Each picture has its own random stream, so the retakes of
 // two pictures are independent of each other, as two real photos are.
 import { derive, type Derived } from "../derive";
-import { fusedRuns } from "../fused-trials";
+import { fusedRuns } from "../known/fused-trials";
 import { solveHomography, type Mat3, type Pt } from "../homography";
 import {
   gaussian,

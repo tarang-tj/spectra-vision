@@ -2,14 +2,14 @@
 // The further known sizes as the panel shows them: which went into the fused
 // solve and why any did not, and the tape test (typed tape readings set
 // against the measured spans).
-import { roundError } from "../../measure/format";
+import { roundError } from "../../../measure/format";
 import { fuseSheet } from "./fuse-inputs";
-import type { Sheet } from "./homography";
-import type { Lens } from "./lens";
-import type { Span } from "./monte-carlo";
-import { shortReading } from "./reading";
-import type { Measure, RulerState } from "./state";
-import { fromMm, toMm } from "./units";
+import type { Sheet } from "../homography";
+import type { Lens } from "../lens";
+import type { Span } from "../monte-carlo";
+import { shortReading } from "../reading";
+import type { Measure, RulerState } from "../state";
+import { fromMm, toMm } from "../units";
 
 export const DEFAULT_TAPE_SD_MM = 2;
 /** Longest typed length accepted, in mm: more than 100 m is a typo. */

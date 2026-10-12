@@ -1,5 +1,5 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import type { Derived } from "./derive";
+import type { Derived } from "../derive";
 import "./tape-test.css";
 
 const COLUMNS = [

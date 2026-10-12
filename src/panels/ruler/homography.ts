@@ -2,7 +2,7 @@
 // Plane geometry for the Ruler, in source pixels (never normalized units, so
 // the aspect ratio is right). Pure: no DOM, no clock, no randomness.
 import { solveLinear } from "../../measure/vec";
-import type { Fused } from "./fused-trials";
+import type { Fused } from "./known/fused-trials";
 
 /** `s` is the tap uncertainty (one sd, source pixels) the point was placed
  * with; it rides along so the error bar does not depend on later resizing. */

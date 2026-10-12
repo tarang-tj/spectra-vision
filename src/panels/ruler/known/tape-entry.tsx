@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import type { Derived } from "./derive";
+import type { Derived } from "../derive";
 import { tapeMm } from "./derive-known";
-import { setKnown, setTape, type RulerState } from "./store";
+import { setKnown, setTape, type RulerState } from "../store";
 
 /** Beside one span: what a tape measure read for it. Typing a reading only
  * checks the span against it. Use as known span feeds the typed length into

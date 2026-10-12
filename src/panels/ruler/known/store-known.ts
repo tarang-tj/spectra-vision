@@ -2,9 +2,9 @@
 // Editing the further known sizes: more references on the same surface, the
 // tape reading typed beside a span, and whether that reading is used as a
 // known size. The state itself lives in state.ts.
-import type { Pt } from "./homography";
-import type { Reference } from "./references";
-import { getState, set, type Handle, type RulerState } from "./state";
+import type { Pt } from "../homography";
+import type { Reference } from "../references";
+import { getState, set, type Handle, type RulerState } from "../state";
 
 /** Start a further reference of this size: the next four taps are its
  * corners. One at a time; taps then place spans again. */

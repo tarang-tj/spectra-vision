@@ -11,14 +11,14 @@
 // rectangle, where it lies on the surface (two offsets and a turn). The work
 // is done in centred, scaled coordinates so the numbers are all of order one.
 // Pure: no DOM, no randomness.
-import { solveLinear } from "../../measure/vec";
+import { solveLinear } from "../../../measure/vec";
 import {
   applyHomography,
   PIVOT_FLOOR,
   solveHomography,
   type Mat3,
   type Pt,
-} from "./homography";
+} from "../homography";
 import {
   denormalize,
   invert3,

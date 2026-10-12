@@ -5,7 +5,7 @@
 // (hollow, dashed, and said to be from the plan). Those are a check on the
 // picture's placement and a help in finding the same spot.
 import type { DrawEnv } from "../extension-types";
-import { invert3, toImage } from "../fused-maths";
+import { invert3, toImage } from "../known/fused-maths";
 import { dot, tag } from "../overlay-parts";
 import { readingText, shortReading } from "../reading";
 import { currentRoom, stageView } from "./current";

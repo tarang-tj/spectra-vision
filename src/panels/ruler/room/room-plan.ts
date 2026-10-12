@@ -6,7 +6,7 @@
 // one picture's top-down view honest (topdown.ts) apply to each picture here:
 // nothing beyond the horizon, outside the photo, or too far to resolve.
 // Pure: no DOM.
-import { invert3 } from "../fused-maths";
+import { invert3 } from "../known/fused-maths";
 import type { Mat3 } from "../homography";
 import { invertLens, type Lens } from "../lens";
 import { SMEAR_LIMIT, worstStretch, type Fit, type Raster } from "../topdown";

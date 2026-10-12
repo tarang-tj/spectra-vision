@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect } from "vitest";
-import { solveFused } from "../src/panels/ruler/fused";
-import { fusedRuns } from "../src/panels/ruler/fused-trials";
+import { solveFused } from "../src/panels/ruler/known/fused";
+import { fusedRuns } from "../src/panels/ruler/known/fused-trials";
 import {
   applyHomography,
   orderCorners,

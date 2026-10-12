@@ -1,15 +1,15 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useState } from "react";
-import type { Derived } from "./derive";
+import type { Derived } from "../derive";
 import { DEFAULT_TAPE_SD_MM } from "./derive-known";
-import { customReference, REFERENCES } from "./references";
+import { customReference, REFERENCES } from "../references";
 import {
   addReference,
   pendingRef,
   removeReference,
   setTapeSd,
   type RulerState,
-} from "./store";
+} from "../store";
 
 /** Further known sizes on the same surface: more references to tap, and the
  * tape uncertainty that goes with typed lengths. Everything usable is solved

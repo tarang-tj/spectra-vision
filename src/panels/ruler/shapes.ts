@@ -9,7 +9,7 @@ import {
   type Pt,
   type Sheet,
 } from "./homography";
-import { fusedRuns } from "./fused-trials";
+import { fusedRuns } from "./known/fused-trials";
 import { applyLens, type Lens } from "./lens";
 import {
   DEFAULT_SAMPLES,

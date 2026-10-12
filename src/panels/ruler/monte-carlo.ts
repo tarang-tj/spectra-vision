@@ -5,7 +5,7 @@
 // random numbers are seeded, so the same taps always give the same bar.
 import { measured, type Measured } from "../../measure/noise";
 import { fromMm, type Unit } from "./units";
-import { fusedRuns } from "./fused-trials";
+import { fusedRuns } from "./known/fused-trials";
 import { applyLens, type Lens } from "./lens";
 import {
   planeDistance,

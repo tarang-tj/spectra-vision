@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Small 3x3 helpers for the fused solve. Pure.
-import { invert3 as invertM3 } from "../../measure/vec";
-import type { Mat3, Pt } from "./homography";
+import { invert3 as invertM3 } from "../../../measure/vec";
+import type { Mat3, Pt } from "../homography";
 
 /** Centre and spread of a point set: coordinates become (v - c) / s. */
 export type Norm = { cx: number; cy: number; s: number };

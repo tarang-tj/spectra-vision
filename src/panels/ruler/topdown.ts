@@ -4,7 +4,7 @@
 // (nearest pixel). Where the picture cannot say what is there, the pixel is
 // left transparent instead of being smeared: beyond the horizon, outside the
 // photo, or too far away for the photo's pixels to resolve at this scale.
-import { invert3 } from "./fused-maths";
+import { invert3 } from "./known/fused-maths";
 import type { Mat3, Pt } from "./homography";
 import { invertLens, type Lens } from "./lens";
 

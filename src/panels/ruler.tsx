@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useStudio } from "../studio-context";
 import { derive } from "./ruler/derive";
-import KnownSizes from "./ruler/known-sizes";
+import KnownSizes from "./ruler/known/known-sizes";
 import { EXTENSIONS, extensionEnv, extensionFor } from "./ruler/extensions";
 import LensSection from "./ruler/lens-section";
 import { longSideNote } from "./ruler/long-side";
@@ -11,7 +11,7 @@ import ClearButton from "./ruler/room/clear-button";
 import ViewStrip from "./ruler/room/view-strip";
 import Results from "./ruler/results";
 import ShapeTools, { openShape } from "./ruler/shape-tools";
-import TapeTest from "./ruler/tape-test";
+import TapeTest from "./ruler/known/tape-test";
 import {
   handleName,
   isEmpty,

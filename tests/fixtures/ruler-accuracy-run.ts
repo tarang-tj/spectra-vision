@@ -4,7 +4,10 @@
 // span, then read spans. The scene and its truth come from the fixture; only
 // the measuring is the code under test.
 import { appendFileSync } from "node:fs";
-import { fuseSheet, type Fusion } from "../../src/panels/ruler/fuse-inputs";
+import {
+  fuseSheet,
+  type Fusion,
+} from "../../src/panels/ruler/known/fuse-inputs";
 import {
   orderCorners,
   solveSheet,

@@ -9,8 +9,8 @@ import {
   orderCorners,
   type Pt,
   type Sheet,
-} from "./homography";
-import { applyLens, type Lens } from "./lens";
+} from "../homography";
+import { applyLens, type Lens } from "../lens";
 
 export type ExtraRect = { corners: Pt[]; long: number; short: number };
 export type KnownSpan = { a: Pt; b: Pt; mm: number | null };
