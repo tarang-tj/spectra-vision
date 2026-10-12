@@ -100,7 +100,7 @@ describe("Objects' first download", () => {
         catalogue.find((entry) => entry.file === file)!.bytes,
       ]);
     expect(Object.keys(spec.sizes!).sort()).toEqual(
-      [spec.model, spec.gpuModel!].sort(),
+      [spec.model, spec.gpuModel!, spec.sharpModel!].sort(),
     );
     // The size is not handed to MediaPipe as a task option.
     expect(spec.options).not.toHaveProperty("bytes");

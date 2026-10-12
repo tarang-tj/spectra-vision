@@ -22,7 +22,12 @@ export const downloadNote = (bytes: number, kept: boolean) =>
  * browser without Cache Storage is treated as having nothing stored. */
 export async function firstDownloadNote(
   specs: (Pick<TaskSpec, "model" | "options"> &
-    Partial<Pick<TaskSpec, "kind" | "preciseModel" | "gpuModel" | "sizes">>)[],
+    Partial<
+      Pick<
+        TaskSpec,
+        "kind" | "preciseModel" | "gpuModel" | "sharpModel" | "sizes"
+      >
+    >)[],
   base: string,
   env: {
     caches?: Pick<CacheStorage, "match">;

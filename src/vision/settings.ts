@@ -10,6 +10,7 @@
 //              (model-choice.ts).
 import { useSyncExternalStore } from "react";
 import { readFlag, writeFlag } from "../shell/storage";
+import { sharperFor } from "./detector/sharper";
 import { gpuModelFor } from "./model-choice";
 import type { Delegate, TaskSpec } from "./types";
 
@@ -81,13 +82,16 @@ export function usePrecision(): [Precision, (value: Precision) => void] {
 
 /** The model file a task runs under the current Precision setting. On Fast,
  * a task that names a larger model for a real GPU runs it there
- * (model-choice.ts); `delegate` defaults to the one its runner is on now. */
+ * (model-choice.ts); `delegate` defaults to the one its runner is on now.
+ * A Sharper model the person chose wins over both wherever it can run
+ * (detector/sharper.ts). */
 export const modelOf = (
   spec: Pick<TaskSpec, "model" | "preciseModel"> &
-    Partial<Pick<TaskSpec, "kind" | "gpuModel">>,
+    Partial<Pick<TaskSpec, "kind" | "gpuModel" | "sharpModel">>,
   level: Precision = precision.get(),
   delegate?: Delegate,
 ): string =>
-  level === "precise" && spec.preciseModel
+  sharperFor(spec, delegate) ??
+  (level === "precise" && spec.preciseModel
     ? spec.preciseModel
-    : (gpuModelFor(spec, delegate) ?? spec.model);
+    : (gpuModelFor(spec, delegate) ?? spec.model));

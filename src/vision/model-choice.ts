@@ -53,6 +53,9 @@ export const modelChoiceWatchers = () => listeners.size;
 export const noteDelegate = (kind: TaskKind, delegate: Delegate) => {
   inUse.set(kind, delegate);
 };
+/** The delegate this kind's runner is on now, if one has started. */
+export const delegateInUse = (kind: TaskKind): Delegate | undefined =>
+  inUse.get(kind);
 /** Give up the larger model of this kind for the rest of the page session. */
 export const refuseGpuModel = (kind: TaskKind, reason: string) => {
   refused.set(kind, reason);

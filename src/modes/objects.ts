@@ -1,4 +1,5 @@
 import { taskStatus } from "../telemetry/task-status";
+import { SHARPER_MODEL } from "../vision/detector/sharper";
 import type { Frame } from "../vision/frame";
 import { modelOf } from "../vision/settings";
 import { COLORS, type TaskSpec } from "../vision/types";
@@ -18,11 +19,15 @@ const task: TaskSpec = {
   // 14.4, and it holds a small vase at 60% that the smaller model scores
   // around its 45% gate.
   gpuModel: "efficientdet_lite2.tflite",
+  // Sharper: a stronger detector on WebGPU, only when the person chooses it
+  // (vision/detector/sharper.ts).
+  sharpModel: SHARPER_MODEL,
   // From scripts/models.json; tests/vision-first-download.test.ts holds them
   // to it.
   sizes: {
     "efficientdet_lite0.tflite": 7_254_339,
     "efficientdet_lite2.tflite": 12_138_859,
+    [SHARPER_MODEL]: 41_535_197,
   },
   options: { scoreThreshold: 0.1, maxResults: 20 },
   // Finer names (modes/lib/finer.ts): off unless the user turns it on.

@@ -111,7 +111,10 @@ describe("which model Objects runs", () => {
       gpuModel: LARGE,
       preciseModel: LARGE,
     });
-    expect(Object.keys(spec.sizes!).sort()).toEqual([SMALL, LARGE]);
+    expect(spec.sizes).toMatchObject({
+      [SMALL]: 7_254_339,
+      [LARGE]: 12_138_859,
+    });
   });
   it("is the larger one on GPU and the standard one on CPU", () => {
     expect(modelOf(spec, "fast", "GPU")).toBe(LARGE);

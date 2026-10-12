@@ -10,6 +10,13 @@ import {
   onDelegateChoice,
   requestedDelegate,
 } from "./delegate";
+import {
+  SHARPER_READY_LIMIT_MS,
+  onSharperChange,
+  refuseSharper,
+  sharperOptions,
+  workerScript,
+} from "./detector/sharper";
 import { downloadFailure } from "./download-failure";
 import {
   GUARD_RESULTS,
@@ -48,7 +55,8 @@ export type TaskRunner = {
   /** The delegate in use right now (differs from the requested one after a fallback). */
   delegate(): Delegate;
   /** The model file in use (the precise one while Precision asks for it, a
-   * task's larger one while it is on a real GPU). */
+   * task's larger one while it is on a real GPU, its Sharper one while that
+   * is chosen and can run). */
   model(): string;
   ready(): boolean;
   /** True when the worker can take a frame at this animation time. */
@@ -158,6 +166,27 @@ export function createTaskRunner(
             typeof navigator === "undefined" || navigator.onLine !== false,
           ),
       retry = download ? null : fallbackDelegate(active);
+    if (sharp()) {
+      // Sharper could not start, or stopped (no WebGPU adapter, a file that
+      // did not arrive, a lost device). It runs on another runtime, so this
+      // says nothing about MediaPipe's GPU path: no GPU failure is recorded
+      // and the task stays on its delegate, on the model it would run
+      // without Sharper. Sharper is given up for this page.
+      const reason = /^Vision worker failed/.test(message)
+        ? "its worker stopped"
+        : (download ?? message).replace(/^Vision model failed: /, "");
+      console.warn(
+        `[spectra vision] ${spec.kind}: ${model} stopped (${reason}); using the standard model.`,
+      );
+      stop();
+      refuseSharper(reason);
+      model = pick();
+      note = `Sharper is not running (${reason}). Running the standard model.`;
+      produced = false;
+      events.onRestart?.();
+      start();
+      return;
+    }
     if (
       download &&
       !produced &&
@@ -223,6 +252,8 @@ export function createTaskRunner(
     events.onRestart?.();
     start();
   };
+  // Whether what runs now is the task's Sharper model.
+  const sharp = () => !!spec.sharpModel && model === spec.sharpModel;
   // Whether what runs now is the task's larger model, there only because of
   // the GPU (not because Precision asked for it).
   const onTrial = () =>
@@ -271,13 +302,20 @@ export function createTaskRunner(
     )
       return;
     const now = performance.now(),
-      reason = gpuStartTimeout({
-        active,
-        ready,
-        produced,
-        sinceStart: now - clock,
-        sinceFirstFrame: firstSent ? now - firstSent : null,
-      });
+      // Sharper is ready only after its slow first pass, so its start gets
+      // a longer bound of its own.
+      reason =
+        sharp() && !ready
+          ? now - clock >= SHARPER_READY_LIMIT_MS
+            ? `it did not start within ${SHARPER_READY_LIMIT_MS / 1000} s`
+            : null
+          : gpuStartTimeout({
+              active,
+              ready,
+              produced,
+              sinceStart: now - clock,
+              sinceFirstFrame: firstSent ? now - firstSent : null,
+            });
     if (reason) fail(reason);
     else watchdog = setTimeout(watch, 250);
   };
@@ -288,10 +326,9 @@ export function createTaskRunner(
     trial = onTrial() ? [] : null;
     status = beginStatus(spec.kind, model, requested, active, note);
     try {
-      // Depth runs on another runtime, in a worker script of its own.
-      worker = spawn(
-        `${base}${spec.kind === "depth" ? "depth-worker.js" : "vision-worker.js"}`,
-      );
+      // Depth and Sharper run on another runtime, each in a worker script
+      // of its own.
+      worker = spawn(`${base}${workerScript(spec.kind, model)}`);
     } catch {
       status.state = "failed";
       events.onError(
@@ -359,7 +396,11 @@ export function createTaskRunner(
       base,
       task: {
         ...plain,
-        options: { ...spec.options, ...live?.current() },
+        options: {
+          ...spec.options,
+          ...live?.current(),
+          ...(sharp() ? sharperOptions(spec) : {}),
+        },
         model,
         delegate: active,
       },
@@ -389,8 +430,9 @@ export function createTaskRunner(
     start();
   });
 
-  // The Precision setting, or the switch for the larger model on a GPU: load
-  // the other model for this task, if that names another file.
+  // The Precision setting, the switch for the larger model on a GPU, or the
+  // Sharper choice: load the other model for this task, if that names
+  // another file.
   const reload = () => {
     if (disposed) return;
     const next = pick();
@@ -402,7 +444,8 @@ export function createTaskRunner(
     start();
   };
   const unwatchPrecision = onPrecisionChange(reload),
-    unwatchChoice = onModelChoice(reload);
+    unwatchChoice = onModelChoice(reload),
+    unwatchSharper = onSharperChange(reload);
 
   return {
     spec,
@@ -439,6 +482,7 @@ export function createTaskRunner(
       unwatch();
       unwatchPrecision();
       unwatchChoice();
+      unwatchSharper();
       unwatchLive?.();
       stop();
     },

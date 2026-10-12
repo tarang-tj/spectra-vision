@@ -52,6 +52,11 @@ export type TaskSpec = {
    * a GPU to CPU fallback, and where it proves slow (vision/model-choice.ts).
    * Listed in scripts/models.json like any other model. */
   gpuModel?: string;
+  /** A stronger model on another runtime, run instead of every other model
+   * of the task while the person has chosen it and it can run
+   * (vision/detector/sharper.ts). Listed in scripts/models.json like any
+   * other model. */
+  sharpModel?: string;
   /** The size in bytes of each model file this task may load, by file name,
    * for the first-download line (vision/first-download.ts). */
   sizes?: Readonly<Record<string, number>>;
