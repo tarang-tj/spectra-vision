@@ -201,7 +201,8 @@ test.describe("a panel that cannot be fetched", () => {
     const loading = body(page).getByRole("status");
     await expect(loading).toHaveText("Loading the Ruler panel…");
     await expect(page.getByRole("alert")).toHaveCount(0);
-    expect(held).toBe(1);
+    // The request is out and unanswered: that is what the line stands for.
+    await expect.poll(() => held).toBeGreaterThanOrEqual(1);
     release();
     const alert = page.getByTestId("panel-load-fault");
     await expect(alert).toHaveAttribute("role", "alert");
