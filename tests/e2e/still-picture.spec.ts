@@ -16,6 +16,7 @@ type Probed = {
       content: { x: number; y: number; width: number; height: number } | null;
       over: string;
       lag: string;
+      capturedAt: number | null;
     } | null;
     at(x: number, y: number): number | null;
   };
@@ -237,27 +238,40 @@ test("Depth on a moving clip draws each map over the frame it came from, and lea
       let sum = 0;
       for (let i = 0; i < data.length; i += 64)
         sum = (sum * 31 + data[i] + data[i + 1]) >>> 0;
+      // Read in the same task as the pixels, so both describe one draw.
+      const last = (window as Probed).__spectraDepth!.last();
       return {
         sum,
         count: (window as Probed).__spectraResults!.count,
-        clip: document.querySelector("video")?.currentTime ?? null,
+        // Which result the stage last drew, and over which picture.
+        drawn: last?.capturedAt ?? null,
+        over: last?.over ?? "",
       };
     });
-  // A result is counted when it arrives and drawn a render and a frame
-  // later, so one read can fall between the two: the count has moved and the
-  // stage has not. Four reads 120 ms apart with one count have no arrival among them,
-  // and the middle two are a drawn frame clear of an arrival on either side.
-  let pair: { a: number; b: number } | null = null;
-  const reads = [await fingerprint()];
-  for (let attempt = 0; attempt < 80 && !pair; attempt++) {
+  // Two reads are compared only when both drew the same result over its own
+  // held picture: then the stage must not have moved, though the clip has.
+  const pairs: { a: number; b: number }[] = [];
+  for (let reads = 0; reads < 60 && pairs.length < 5; reads += 2) {
+    const a = await fingerprint();
     await page.waitForTimeout(120);
-    reads.push(await fingerprint());
-    const last = reads.slice(-4);
-    if (last.length === 4 && last.every((r) => r.count === last[0].count))
-      pair = { a: last[1].sum, b: last[2].sum };
+    const b = await fingerprint();
+    if (
+      a.over === "held" &&
+      b.over === "held" &&
+      a.drawn !== null &&
+      a.drawn === b.drawn
+    )
+      pairs.push({ a: a.sum, b: b.sum });
   }
-  expect(pair).not.toBeNull();
-  expect(pair!.b).toBe(pair!.a);
+  expect(pairs.length, "reads that drew one held result").toBeGreaterThan(2);
+  for (const pair of pairs) expect(pair.b).toBe(pair.a);
+  // Held pictures are given back once the page has moved on: six maps later
+  // the stage is still drawing over a held one (four are out at most).
+  const from = await results(page);
+  await expect
+    .poll(() => results(page), { timeout: 90_000 })
+    .toBeGreaterThan(from + 5);
+  expect((await fingerprint()).over, "still held after 6 maps").toBe("held");
 
   // With the map fully clear there is nothing to keep in step: the live
   // clip shows, and it moves.

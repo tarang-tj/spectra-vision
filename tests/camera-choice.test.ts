@@ -103,6 +103,22 @@ describe("what Start camera asks for", () => {
     expect(startWant(null, null, { deviceId: "webcam" })).toEqual({
       deviceId: "webcam",
       remembered: true,
+      sideUnknown: true,
+    });
+  });
+  it("marks a remembered camera whose side is not known, so no side is shown as chosen", () => {
+    // The Ruler is open and prefers the rear; the remembered webcam never
+    // said which way it faces. It starts, and the side is not a known fact.
+    expect(startWant(null, "environment", { deviceId: "w" })).toMatchObject({
+      deviceId: "w",
+      sideUnknown: true,
+    });
+    expect(startWant(null, null, remembered)).not.toHaveProperty("sideUnknown");
+    expect(startWant({ deviceId: "w" }, null, null)).not.toHaveProperty(
+      "sideUnknown",
+    );
+    expect(startWant({ facing: "user" }, null, { deviceId: "w" })).toEqual({
+      facing: "user",
     });
   });
   it("lets a side picked by hand overrule the remembered camera", () => {
@@ -132,6 +148,7 @@ describe("what Start camera asks for", () => {
       deviceId: "webcam-b",
       facing: "environment",
       remembered: true,
+      sideUnknown: true,
     });
     // A side picked by hand still wins over it.
     expect(startWant({ facing: "user" }, null, webcam)).toEqual({

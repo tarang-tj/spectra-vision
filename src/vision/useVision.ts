@@ -24,7 +24,8 @@ export function useVision(
     [status, setStatus] = useState("Loading model"),
     [error, setError] = useState("");
   const [restart, setRestart] = useState(0),
-    settings = useRef({ source, paused, confidence });
+    settings = useRef({ source, paused, confidence }),
+    settle = useRef<(shown: VisionResult | null) => void>(() => {});
   settings.current = { source, paused, confidence };
   useEffect(() => {
     setResult(null);
@@ -39,6 +40,8 @@ export function useVision(
     result.generation === source?.generation
       ? result
       : null;
+  // The page has rendered `current`: older held pictures are free again.
+  useEffect(() => settle.current(current), [current]);
   useEffect(() => {
     const base = new URL(import.meta.env.BASE_URL, location.href).href,
       specs = tasksOf(mode),
@@ -87,6 +90,10 @@ export function useVision(
     const holders = specs.map((spec) =>
       spec.holdFrame ? createFrameHolder() : null,
     );
+    settle.current = (shown) =>
+      holders.forEach((holder, i) =>
+        holder?.settle(shown?.tasks[kinds[i]]?.frame?.image ?? null),
+      );
     const runners: TaskRunner[] = specs.map((spec, index) =>
       createTaskRunner(spec, base, {
         onReady: report,
@@ -176,6 +183,7 @@ export function useVision(
     raf = requestAnimationFrame(tick);
     return () => {
       stopped = true;
+      settle.current = () => {};
       clearTimeout(timeout);
       cancelAnimationFrame(raf);
       offs.forEach((off) => off?.());

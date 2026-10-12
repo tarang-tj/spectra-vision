@@ -49,7 +49,7 @@ export class Tracker {
   /** One result. `faint` are detections that scored under the gate but
    * within the band kept below it (track-gate.ts): one may carry on a track
    * that exists, so an object whose score wavers round the gate keeps its box
-   * and its id, and none ever starts a track. */
+   * and its id, and none ever starts a track and none ever confirms one. */
   update(
     detections: Detection[],
     time: number,
@@ -157,7 +157,7 @@ export class Tracker {
           misses: 0,
           trail: [c],
         };
-      if (!track.id && (track.hits >= o.minHits || slow))
+      if (!track.id && di < strong && (track.hits >= o.minHits || slow))
         track.id = this.nextId++;
       live.push(track);
       if (track.id)

@@ -11,6 +11,8 @@ export type StandIn = {
   deviceId: string;
   label: string;
   facing?: "user" | "environment";
+  /** The sides the camera's capabilities list, where its settings say none. */
+  capable?: ("user" | "environment")[];
   width: number;
   height: number;
 };
@@ -34,6 +36,19 @@ export const WIDE: StandIn = {
   ...upright,
 };
 export const PHONE = [FRONT, BACK, WIDE];
+/** A camera that says nothing about which way it faces, by any route. */
+export const UNSIDED: StandIn = {
+  deviceId: "unsided-id",
+  label: "Camera 2",
+  ...upright,
+};
+/** A camera whose side is in its capabilities only. */
+export const CAPABLE: StandIn = {
+  deviceId: "capable-id",
+  label: "Camera 3",
+  capable: ["environment"],
+  ...upright,
+};
 
 type Failure = { name: string; message?: string; afterMs?: number };
 /** What a test can do to the stand-ins from inside the page. */
@@ -188,6 +203,8 @@ function install(options: {
       height: canvas.height,
       frameRate: 15,
     });
+    track.getCapabilities = () =>
+      camera.capable ? { facingMode: camera.capable } : {};
     Object.defineProperty(track, "label", { value: camera.label });
     live.set(track, camera.deviceId);
     bench.tracks.push(track);
