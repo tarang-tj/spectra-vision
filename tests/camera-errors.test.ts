@@ -95,7 +95,7 @@ describe("the words for each failure", () => {
       const { title, text, fix } = card(c);
       expect(text.startsWith(title)).toBe(false);
       expect(text.length).toBeGreaterThan(20);
-      expect(title + text + fix).not.toMatch(/[–—]/);
+      expect(title + text + fix).not.toMatch(/[\u2013\u2014]/);
     }
   });
   it("offers no retry where a retry cannot work", () => {

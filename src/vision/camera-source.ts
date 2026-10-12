@@ -91,6 +91,7 @@ export function useCameraSource(core: SourceCore, hooks: CameraHooks) {
           { from: "camera", failure: { code: "insecure", detail: "" } },
           token,
         );
+        hooks.onCamera(null);
         return;
       }
       const opened = await openCamera(want, (c) => media.getUserMedia(c));
