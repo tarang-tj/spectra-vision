@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useEffect } from "react";
+import { preferCamera } from "../../../vision/camera-choice";
 import { derive } from "../derive";
 import { useRuler } from "../state";
 import { currentRoom, stageView } from "./current";
@@ -52,6 +53,8 @@ export default function RoomSection() {
     room = useRoom(),
     { views } = useViews();
   useEffect(() => dropGrab, []);
+  // A room is photographed with the rear camera.
+  useEffect(() => preferCamera("room", "environment"), []);
   if (s.tool !== "room" && !room.points.length) return null;
   const here = stageView(s.generation),
     { solution } = currentRoom(views, room),
