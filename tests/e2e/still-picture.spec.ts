@@ -243,13 +243,18 @@ test("Depth on a moving clip draws each map over the frame it came from, and lea
         clip: document.querySelector("video")?.currentTime ?? null,
       };
     });
+  // A result is counted when it arrives and drawn on the next frame, so one
+  // read can fall between the two: the count has moved and the stage has
+  // not. Four reads 120 ms apart with one count have no arrival among them,
+  // and the middle two are a drawn frame clear of an arrival on either side.
   let pair: { a: number; b: number } | null = null;
-  for (let attempt = 0; attempt < 40 && !pair; attempt++) {
-    const first = await fingerprint();
+  const reads = [await fingerprint()];
+  for (let attempt = 0; attempt < 80 && !pair; attempt++) {
     await page.waitForTimeout(120);
-    const second = await fingerprint();
-    // Compared only when no new map arrived in between.
-    if (second.count === first.count) pair = { a: first.sum, b: second.sum };
+    reads.push(await fingerprint());
+    const last = reads.slice(-4);
+    if (last.length === 4 && last.every((r) => r.count === last[0].count))
+      pair = { a: last[1].sum, b: last[2].sum };
   }
   expect(pair).not.toBeNull();
   expect(pair!.b).toBe(pair!.a);
