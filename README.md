@@ -29,7 +29,7 @@ Use a current Chrome or Edge browser for the tested path. No account or API key 
 | Mode     | Actual inference                                                                                 | Visual interaction                                                                                                                          |
 | -------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | Objects  | EfficientDet-Lite0, common COCO categories                                                       | Class/score boxes, short-lived object IDs, motion trails, selectable detections                                                             |
-| Body     | BlazePose Lite, one person with 33 landmarks                                                     | Glowing skeleton, torso mesh, wrist and ankle motion trails                                                                                 |
+| Body     | BlazePose Lite, one person by default, with 33 landmarks                                         | Glowing skeleton, torso mesh, wrist and ankle motion trails                                                                                 |
 | Hands    | MediaPipe Hand Landmarker, up to two hands with 21 landmarks each                                | Finger skeletons, fingertip rings and pinch-to-paint light trails                                                                           |
 | Face     | MediaPipe Face Landmarker, one face with 478 landmarks, blendshape scores and a head-pose matrix | Face mesh with contours and irises; meters for smile, jaw, brows and blinks; yaw, pitch and roll in degrees                                 |
 | Segment  | MediaPipe multiclass selfie segmenter, six classes on a 256 x 256 mask                           | Person cut out from a darkened background; select Background to blur it instead, or a class to tint it                                      |
@@ -319,7 +319,7 @@ React and TypeScript manage controls and source ownership. Modes, effects and in
 ## Practical limits
 
 - This is an interactive vision demo, not a calibrated measurement or identity system. Scores are model outputs, not guarantees.
-- Lighting, occlusion, motion blur and model category coverage affect detection. Body mode follows one person. Hands can misclassify handedness; hand order can change after occlusion.
+- Lighting, occlusion, motion blur and model category coverage affect detection. Body mode follows one person by default and up to four with the People setting. Hands can misclassify handedness; hand order can change after occlusion.
 - Face follows one face and needs it reasonably large in the frame. Expression meters are blendshape scores from the model, not emotions. The head-pose angles come from the model's transformation matrix and have not been checked against a head turned to known angles.
 - Segment uses a model trained on selfie-style framing; on a wide shot it can lose parts of a person. It asks for the GPU. On CPU or a software renderer it runs much slower, and the mask then trails a moving subject.
 - Gestures recognizes the model's own seven categories only. Its bundled hand detector is not the one Hands uses and can find fewer hands in the same picture: on the hands demo image it finds one of the two.

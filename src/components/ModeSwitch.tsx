@@ -5,7 +5,7 @@ import { modeColumns } from "../shell/layout";
 import { MAX_MODE_KEYS } from "../shell/shortcuts";
 
 /** One button per registered mode. On a wide screen it is a single centred
- * segment; on a narrow one it becomes a grid of up to four columns so seven
+ * segment; on a narrow one it becomes a grid of up to four columns so eight
  * modes stay readable. Each button's number key is in its tooltip. */
 export default function ModeSwitch({
   mode,
