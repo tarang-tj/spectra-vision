@@ -1,6 +1,8 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { defaultMode } from "../modes";
+import { hasSides } from "../vision/camera-choice";
+import { facingOf, mirrorFor } from "../vision/camera-start";
 import { useSource } from "../vision/useSource";
 
 /** Shown as the stage's notice when a chosen file is not a picture. */
@@ -9,14 +11,23 @@ export const UNREADABLE_NOTICE =
 
 /** The mode, the source and the three switches that belong to them (paused,
  * mirror, motion demo), with the rules that tie them together: a new source
- * or mode resumes detection, a camera starts mirrored, and a demo source
- * follows the mode. */
+ * or mode resumes detection, a camera is mirrored unless it faces the room,
+ * and a demo source follows the mode. */
 export function useSourceControls(notice: (text: string) => void) {
   const [modeId, setModeId] = useState(defaultMode.id),
     [paused, setPaused] = useState(false),
     [mirror, setMirror] = useState(false),
     [motionDemo, setMotionDemo] = useState(false),
-    input = useSource();
+    input = useSource({
+      notice,
+      // Every camera that goes live sets the mirror from the way it faces,
+      // whichever path started it; a failed start leaves the mirror off.
+      onCamera: (granted) => {
+        setMirror(!!granted && mirrorFor(granted.facing));
+        if (granted) setPaused(false);
+      },
+    }),
+    { camera } = input;
   useEffect(() => {
     const video = input.source?.element;
     if (video instanceof HTMLVideoElement) {
@@ -28,7 +39,9 @@ export function useSourceControls(notice: (text: string) => void) {
             notice("Playback could not resume. Choose the file again."),
           );
     }
-  }, [paused, input.source, notice]);
+    // `camera.wake` goes up when a camera was unmuted or the tab came back:
+    // the browser may have paused the video without the person asking.
+  }, [paused, input.source, notice, camera.wake]);
   const onMode = (next: string) => {
     if (next === modeId) return;
     setModeId(next);
@@ -52,15 +65,24 @@ export function useSourceControls(notice: (text: string) => void) {
     if (input.source?.kind === "camera") onDemo();
     else {
       setMotionDemo(false);
-      setMirror(true);
-      void input.camera();
+      camera.start();
     }
   };
-  /** Open a camera by device id, or the default one (also the retry path). */
-  const openCamera = (deviceId?: string) => {
+  /** Retry the camera request that failed, exactly as it was asked. Only a
+   * camera failure has a retry: a demo that did not load offers the demo. */
+  const retrySource = () => {
     setPaused(false);
-    void input.camera(deviceId);
+    if (input.problem?.from === "camera") camera.retry();
   };
+  // True where Front and Rear mean something (see hasSides).
+  const cameraSides = useMemo(
+    () =>
+      hasSides(navigator.maxTouchPoints > 0, camera.count, [
+        ...camera.named.map((c) => facingOf({}, c.label)),
+        ...(camera.live ? [camera.live.facing] : []),
+      ]),
+    [camera.count, camera.named, camera.live],
+  );
   /** Open a file, and say so when it could not be read: the stage keeps
    * what it was showing, so without a word the press would look ignored.
    * The switches are reset only when the file does take the stage. */
@@ -102,7 +124,13 @@ export function useSourceControls(notice: (text: string) => void) {
     onDemo,
     onMotionDemo,
     onCamera,
-    openCamera,
+    retrySource,
+    /** Go to the other camera, where there is one to go to. */
+    flipCamera:
+      camera.flip && (navigator.maxTouchPoints > 0 || camera.count > 1)
+        ? camera.flip
+        : undefined,
+    cameraSides,
     onUpload,
     loadPicture,
   };
