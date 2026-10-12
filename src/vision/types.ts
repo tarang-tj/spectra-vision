@@ -1,3 +1,4 @@
+import type { Granted } from "./camera-start";
 import type { HeldFrame } from "./held-frame";
 
 /** A mode id. Modes are discovered at build time from src/modes, so this is a
@@ -181,5 +182,8 @@ export type Source = {
   kind: "demo" | "image" | "video" | "camera";
   label: string;
   generation: number;
+  /** For a camera: what the browser granted when it started (which camera,
+   * which way it faces, the picture's size). */
+  camera?: Granted;
 };
 export const COLORS = ["#a4ffd9", "#67aaff", "#ae94fa", "#ffd18d", "#ff8ab4"];

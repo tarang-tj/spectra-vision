@@ -1,28 +1,38 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { PointerEvent, ReactNode, RefObject } from "react";
-import {
-  Camera,
-  Expand,
-  FlipHorizontal,
-  LoaderCircle,
-  Pause,
-  Play,
-  RotateCcw,
-  Eraser,
-  Circle,
-  Square,
-} from "lucide-react";
+import type { CSSProperties, PointerEvent, ReactNode, RefObject } from "react";
+import { LoaderCircle, Pause, Play } from "lucide-react";
 import { downloadBlob } from "../download";
 import type { ModeDef } from "../modes";
 import { stageHooks } from "../stage/stage-hooks";
 import { useStageLoop } from "../stage/use-stage-loop";
 import type { FrameData } from "../vision/frame";
+import { grantedText } from "../vision/camera-start";
+import type { Granted } from "../vision/camera-start";
+import type { StageCard } from "../shell/stage-card";
 import { useClipRecorder } from "../shell/use-clip-recorder";
 import type { Clip } from "../shell/use-clip-recorder";
-import StageMessage from "./StageMessage";
+import StageMessage, { StageWaiting } from "./StageMessage";
+import StageTools from "./StageTools";
 
 /** What the keyboard shortcuts and the command palette may ask of the stage. */
 export type StageActions = { record(): void; screenshot(): void };
+
+/** What the stage shows and offers for a camera. */
+export type StageCamera = {
+  /** What the browser granted, while a camera is live. */
+  live: Granted | null;
+  /** The system paused the live camera (a call, another app). */
+  muted: boolean;
+  /** A camera request has gone unanswered long enough to say so. */
+  waiting: boolean;
+  onCancel: () => void;
+  /** Present when there is another camera to go to. */
+  onFlip?: () => void;
+};
+
+// A portrait camera picture gets a portrait stage on a phone, but never one
+// taller than this: the tools under the stage must stay within reach.
+const TALLEST = 3 / 4;
 
 export default function CameraStage(props: {
   mode: ModeDef;
@@ -32,9 +42,10 @@ export default function CameraStage(props: {
   onPause: () => void;
   onMirror: () => void;
   status: string;
-  error: string;
+  /** The error card, or null when nothing has failed. */
+  card: StageCard | null;
   onRetry: () => void;
-  retryLabel: string;
+  camera: StageCamera;
   onDemo: () => void;
   notice: (text: string) => void;
   /** Filled by the stage so the shell can trigger Record and Screenshot. */
@@ -44,8 +55,8 @@ export default function CameraStage(props: {
   /** Shell overlays that belong on the stage (the first-run tips). */
   children?: ReactNode;
 }) {
-  const { mode, paused, status, error, onRetry, onDemo, notice } = props,
-    { source, mirror } = props.data;
+  const { mode, paused, status, card, camera, onRetry, onDemo, notice } = props,
+    { source, mirror, aspect } = props.data;
   const canvas = useRef<HTMLCanvasElement>(null),
     stage = useRef<HTMLDivElement>(null),
     latest = useRef(props);
@@ -140,7 +151,7 @@ export default function CameraStage(props: {
   };
   const badge =
     source?.kind === "camera"
-      ? "CAMERA"
+      ? grantedText(camera.live ?? { facing: "unknown", width: 0, height: 0 })
       : source?.kind === "demo"
         ? source.element instanceof HTMLVideoElement
           ? "ANIMATED DEMO"
@@ -148,9 +159,15 @@ export default function CameraStage(props: {
         : source?.kind === "video"
           ? "LOCAL VIDEO"
           : "LOCAL IMAGE";
+  // Read by the narrow-screen rule in stage.css; wide screens ignore it.
+  const portrait =
+    source?.kind === "camera" && aspect < 1
+      ? ({ "--stage-portrait": Math.max(aspect, TALLEST) } as CSSProperties)
+      : undefined;
   return (
     <div
-      className={`camera-stage ${fullscreen ? "is-fullscreen" : ""}`}
+      className={`camera-stage ${fullscreen ? "is-fullscreen" : ""} ${card ? "has-card" : ""}`}
+      style={portrait}
       ref={stage}
     >
       <canvas
@@ -176,13 +193,15 @@ export default function CameraStage(props: {
           REC {String(capture.seconds).padStart(2, "0")} / 30s
         </div>
       )}
-      {error ? (
-        <StageMessage
-          error={error}
-          retryLabel={props.retryLabel}
-          onRetry={onRetry}
-          onDemo={onDemo}
-        />
+      {camera.muted && source?.kind === "camera" && (
+        <div className="stage-note" role="status">
+          Camera paused by the system. It resumes by itself.
+        </div>
+      )}
+      {card ? (
+        <StageMessage card={card} onRetry={onRetry} onDemo={onDemo} />
+      ) : camera.waiting ? (
+        <StageWaiting onCancel={camera.onCancel} />
       ) : status !== "Ready" ? (
         <div className="loading">
           <LoaderCircle className="spin" size={24} />
@@ -214,60 +233,26 @@ export default function CameraStage(props: {
             {paused && <small>Paused</small>}
           </span>
         </div>
-        <div className="stage-tools">
-          <button className="tool" onClick={onDemo} aria-label="Use demo image">
-            <RotateCcw size={20} />
-            <span>Demo</span>
-          </button>
-          {mode.clearable && (
-            <button
-              className="tool"
-              onClick={() => {
-                loop.clear();
-                notice("Light trails cleared.");
-              }}
-              aria-label="Clear light trails"
-            >
-              <Eraser size={20} />
-              <span>Clear</span>
-            </button>
-          )}
-          {/* Below 1100 px the tool captions are hidden, so each tool carries
-              its name itself. */}
-          <button
-            className="tool"
-            aria-label="Mirror"
-            aria-pressed={mirror}
-            onClick={props.onMirror}
-          >
-            <FlipHorizontal size={20} />
-            <span>Mirror</span>
-          </button>
-          <button
-            className="tool"
-            aria-label="Screenshot"
-            onClick={shot}
-            disabled={!source}
-            aria-keyshortcuts="S"
-          >
-            <Camera size={20} />
-            <span>Screenshot</span>
-          </button>
-          <button
-            className="tool record-tool"
-            aria-label={capture.recording ? "Stop recording" : "Record canvas"}
-            aria-pressed={capture.recording}
-            onClick={capture.toggle}
-            disabled={!canRecord}
-          >
-            {capture.recording ? <Square size={20} /> : <Circle size={20} />}
-            <span>{capture.recording ? "Stop" : "Record"}</span>
-          </button>
-          <button className="tool" aria-label="Fullscreen" onClick={expand}>
-            <Expand size={20} />
-            <span>Fullscreen</span>
-          </button>
-        </div>
+        <StageTools
+          hasSource={!!source}
+          mirror={mirror}
+          recording={capture.recording}
+          canRecord={canRecord}
+          onDemo={onDemo}
+          onClear={
+            mode.clearable
+              ? () => {
+                  loop.clear();
+                  notice("Light trails cleared.");
+                }
+              : undefined
+          }
+          onFlip={source?.kind === "camera" ? camera.onFlip : undefined}
+          onMirror={props.onMirror}
+          onShot={shot}
+          onRecord={capture.toggle}
+          onExpand={expand}
+        />
       </div>
     </div>
   );

@@ -1,65 +1,54 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { CameraOff, TriangleAlert } from "lucide-react";
-
-// What went wrong, read from the message the source controller reports. Each
-// cause gets its own heading and, where the user can fix it, the next step.
-const CAUSES = [
-  {
-    match: "Camera permission was denied",
-    title: "Camera access is blocked.",
-    fix: "Open the site settings from the address bar, set Camera to Allow, then retry. You can also carry on without a camera.",
-  },
-  {
-    match: "No camera found",
-    title: "No camera found.",
-    fix: "",
-  },
-  {
-    match: "Camera is busy",
-    title: "The camera is in use.",
-    fix: "",
-  },
-  {
-    // The start of OFFLINE_MESSAGE (src/vision/download-failure.ts).
-    match: "This device is offline",
-    title: "You are offline.",
-    fix: "",
-  },
-  {
-    match: "Camera disconnected",
-    title: "The camera went away.",
-    fix: "",
-  },
-] as const;
+import type { StageCard } from "../shell/stage-card";
 
 /** The stage's error state. It replaces the picture, says what happened in
- * plain words and always offers a way forward: retry, or the demo. */
+ * plain words and always offers a way forward: retry, or the demo. The words
+ * come from stage-card.ts, which knows the cause. */
 export default function StageMessage({
-  error,
-  retryLabel,
+  card,
   onRetry,
   onDemo,
 }: {
-  error: string;
-  retryLabel: string;
+  card: StageCard;
   onRetry: () => void;
   onDemo: () => void;
 }) {
-  const cause = CAUSES.find((c) => error.startsWith(c.match)),
-    // The camera icon is for camera trouble only, not for a missing model.
-    camera = /camera/i.test(cause?.match ?? error);
   return (
     <div className="stage-message error" role="alert">
-      {camera ? <CameraOff size={26} /> : <TriangleAlert size={26} />}
-      <strong>{cause?.title ?? "Let’s get you seeing."}</strong>
-      <p>{error}</p>
-      {cause?.fix && <p className="stage-fix">{cause.fix}</p>}
+      {card.camera ? <CameraOff size={26} /> : <TriangleAlert size={26} />}
+      <strong>{card.title}</strong>
+      <p>{card.text}</p>
+      {card.fix && <p className="stage-fix">{card.fix}</p>}
       <div>
-        <button className="button primary compact" onClick={onRetry}>
-          {retryLabel}
-        </button>
-        <button className="button compact" onClick={onDemo}>
-          Try demo
+        {card.retry && (
+          <button className="button primary compact" onClick={onRetry}>
+            {card.retry}
+          </button>
+        )}
+        {card.demo && (
+          <button className="button compact" onClick={onDemo}>
+            Try demo
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Shown when a camera request has sat unanswered for a while: the browser
+ * is asking, and its prompt is easy to miss. Cancel gives the page back. */
+export function StageWaiting({ onCancel }: { onCancel: () => void }) {
+  return (
+    <div className="stage-message" role="status">
+      <strong>Waiting for your answer.</strong>
+      <p>
+        Your browser is asking to use the camera. Look for its prompt near the
+        address bar and choose Allow.
+      </p>
+      <div>
+        <button className="button compact" onClick={onCancel}>
+          Cancel
         </button>
       </div>
     </div>

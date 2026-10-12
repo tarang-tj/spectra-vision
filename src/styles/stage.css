@@ -137,6 +137,19 @@
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+/* A short word about the live camera (the system paused it). */
+.stage-note {
+  position: absolute;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 90%;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: #071016d9;
+  font-size: 12px;
+  text-align: center;
+}
 .recording-badge i {
   width: 6px;
   height: 6px;
@@ -243,9 +256,16 @@
   }
 }
 @media (max-width: 760px) {
+  /* A portrait camera picture sets --stage-portrait (CameraStage.tsx), so a
+     phone held upright gets a stage of its own shape, not a strip in a
+     landscape box. */
   .camera-stage {
     width: 100%;
-    aspect-ratio: 4/3;
+    aspect-ratio: var(--stage-portrait, 4/3);
+  }
+  /* The error card needs room for its how-to, which a 4:3 stage lacks. */
+  .camera-stage.has-card {
+    aspect-ratio: 1;
   }
   .stage-top {
     top: 9px;
@@ -281,15 +301,21 @@
     width: 17px;
     height: 17px;
   }
+  /* The flip is pressed with a thumb while the phone is held up. */
+  .flip-tool {
+    min-width: 44px;
+    min-height: 44px;
+  }
   .stage-message {
     padding: 12px 16px;
     width: min(440px, 92%);
   }
-  /* The stage is short on a phone: keep the heading, the reason and the two
-     ways forward, and leave the longer how-to for wider screens. */
-  .stage-message > svg,
-  .stage-message .stage-fix {
+  /* The stage is short on a phone: the icon goes, the words stay. */
+  .stage-message > svg {
     display: none;
+  }
+  .stage-message .stage-fix {
+    margin-top: -6px;
   }
   .stage-message strong {
     font-size: 18px;
