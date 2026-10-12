@@ -1,25 +1,51 @@
-import { COLORS } from "../vision/types";
+import { taskStatus } from "../telemetry/task-status";
+import type { Frame } from "../vision/frame";
+import { modelOf } from "../vision/settings";
+import { COLORS, type TaskSpec } from "../vision/types";
 import { finerFor, finerOption, finerText } from "./lib/finer";
-import FinerSetting from "./lib/finer-setting";
 import { drawChip } from "./lib/hud";
+import { HELD, drawBox, drawnTracks, forgetDrawn } from "./lib/object-boxes";
+import { objectControls } from "./lib/object-controls";
 import { filterSummary, getFilter, shows } from "./lib/object-filter";
 import type { ModeDef } from "./types";
+
+const task: TaskSpec = {
+  kind: "object",
+  model: "efficientdet_lite0.tflite",
+  preciseModel: "efficientdet_lite2.tflite",
+  // On a real GPU the larger model runs by default (vision/model-choice.ts).
+  // Measured on an Apple M3 through a camera: 11.9 results a second against
+  // 14.4, and it holds a small vase at 60% that the smaller model scores
+  // around its 45% gate.
+  gpuModel: "efficientdet_lite2.tflite",
+  // From scripts/models.json; tests/vision-first-download.test.ts holds them
+  // to it.
+  sizes: {
+    "efficientdet_lite0.tflite": 7_254_339,
+    "efficientdet_lite2.tflite": 12_138_859,
+  },
+  options: { scoreThreshold: 0.1, maxResults: 20 },
+  // Finer names (modes/lib/finer.ts): off unless the user turns it on.
+  live: finerOption,
+  delegate: "AUTO",
+};
+
+export const LOOKING = "Looking for objects…";
+/** True between a moving source opening and its first result, once the model
+ * is loaded: the stage's own loading line has gone and no box can be drawn. */
+const looking = (frame: Frame) =>
+  !frame.result &&
+  !frame.paused &&
+  (frame.source?.kind === "camera" || frame.source?.kind === "video") &&
+  taskStatus(task.kind, modelOf(task))?.state === "ready";
 
 const objects: ModeDef = {
   id: "objects",
   label: "Object detection",
   short: "Objects",
   order: 10,
-  task: {
-    kind: "object",
-    model: "efficientdet_lite0.tflite",
-    preciseModel: "efficientdet_lite2.tflite",
-    options: { scoreThreshold: 0.1, maxResults: 20 },
-    // Finer names (modes/lib/finer.ts): off unless the user turns it on.
-    live: finerOption,
-    delegate: "AUTO",
-  },
-  controls: FinerSetting,
+  task,
+  controls: objectControls(task),
   hint: "Switch to Hands. Pinch to paint.",
   demo: {
     still: "demo/studio.png",
@@ -27,9 +53,10 @@ const objects: ModeDef = {
     label: "Demo studio",
   },
   tracked: true,
+  leave: forgetDrawn,
   // Tracked boxes with corner brackets and a label. A selected track dims the rest.
   drawBase(ctx, frame) {
-    const { rect, mirror } = frame,
+    const { rect } = frame,
       filter = getFilter(),
       // A selected box whose class is hidden selects nothing, so the boxes
       // that are shown are not all dimmed for a row nobody can see.
@@ -38,56 +65,34 @@ const objects: ModeDef = {
       )
         ? null
         : frame.settings.selected;
-    frame.tracks.forEach((t, index) => {
+    drawnTracks(frame).forEach((t, index) => {
       // A class the filter hides is not drawn. `index` stays the track's own,
       // which is what the effects look up.
       if (!shows(t.label, filter)) return;
-      const color = COLORS[(t.id - 1) % COLORS.length],
-        b = t.box,
-        q = frame.project({ x: mirror ? b.x + b.w : b.x, y: b.y }),
-        w = b.w * rect.w,
-        h = b.h * rect.h;
       const opacity = selected === null || selected === t.id ? 1 : 0.32;
       ctx.save();
       ctx.globalAlpha = opacity;
       // Effects that belong under this track's box (its trail) draw here.
       frame.emit("before", "object", index);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
-      ctx.globalAlpha = opacity * 0.55;
-      ctx.strokeRect(q.x, q.y, w, h);
-      ctx.globalAlpha = opacity;
-      ctx.lineWidth = 2.5;
-      const c = Math.min(20, w / 4, h / 4);
-      ctx.beginPath();
-      [
-        [q.x, q.y, 1, 1],
-        [q.x + w, q.y, -1, 1],
-        [q.x, q.y + h, 1, -1],
-        [q.x + w, q.y + h, -1, -1],
-      ].forEach(([x, y, sx, sy]) => {
-        ctx.moveTo(x + c * sx, y);
-        ctx.lineTo(x, y);
-        ctx.lineTo(x, y + c * sy);
-      });
-      ctx.stroke();
-      const finer = finerFor(t),
-        label = `${t.label}  ${(t.score * 100).toFixed(0)}% · ${finer ? `${finerText(finer)} · ` : ""}${String(t.id).padStart(2, "0")}`;
-      ctx.font = "600 12px Inter Variable, sans-serif";
-      const tw = ctx.measureText(label).width + 14,
-        lx = Math.min(Math.max(q.x, rect.x), rect.x + rect.w - tw),
-        ly = Math.max(rect.y + 8, q.y - 25);
-      ctx.fillStyle = color;
-      ctx.fillRect(lx, ly, tw, 23);
-      ctx.fillStyle = "#07130e";
-      ctx.fillText(label, lx + 7, ly + 16);
+      drawBox(ctx, frame, t, opacity);
       frame.emit("after", "object", index);
       ctx.restore();
     });
     // Say plainly that boxes are being hidden. Under the source badge at the
     // top left: the bottom corners hold the pause button and the stage tools.
-    const note = filterSummary(filter);
-    if (note) drawChip(ctx, frame, note, rect.x + 12, rect.y + 46, "#ffd18d");
+    // Before the first result of a moving source the same place says that
+    // the model is at work, where there would otherwise be bare video.
+    const wait = looking(frame),
+      note = wait ? LOOKING : filterSummary(filter);
+    if (note)
+      drawChip(
+        ctx,
+        frame,
+        note,
+        rect.x + 12,
+        rect.y + 46,
+        wait ? COLORS[0] : "#ffd18d",
+      );
   },
   inspector: (frame) =>
     frame.tracks
@@ -97,7 +102,8 @@ const objects: ModeDef = {
         return {
           key: t.id,
           label: t.label,
-          detail: `${Math.round(t.score * 100)}%${finer ? ` · ${finerText(finer)}` : ""}`,
+          // A held track was missed by the latest result: it has no score.
+          detail: `${t.held ? HELD : `${Math.round(t.score * 100)}%`}${finer ? ` · ${finerText(finer)}` : ""}`,
           point: { x: t.box.x + t.box.w / 2, y: t.box.y + t.box.h / 2 },
           color: COLORS[(t.id - 1) % COLORS.length],
         };
