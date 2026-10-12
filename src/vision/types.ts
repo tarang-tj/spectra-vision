@@ -175,6 +175,10 @@ export type Track = Detection & {
   id: number;
   lastSeen: number;
   trail: Point[];
+  /** The latest result did not find this object. The box is where the
+   * tracker's velocity puts it, and the label and score are those of
+   * `lastSeen` (vision/tracker.ts). Absent on a track the result found. */
+  held?: true;
 };
 export type Source = {
   element: HTMLImageElement | HTMLVideoElement;
