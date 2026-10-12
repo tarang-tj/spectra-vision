@@ -663,7 +663,7 @@ telemetry.on("result", (e) => {}); // { result, generation }  one per merged vis
 - **Source controls** (`use-source-controls.ts`): mode, source, pause, mirror and motion demo, with the rules that tie them together. `useSource().upload(file, onTake)` resolves with `Opened`: `{ ok: true, generation }` (the generation is null for a video, and for a picture a newer source overtook while it decoded) or `{ ok: false }`. A picture is decoded before the source on the stage is released, so a damaged image or a file that is neither an image nor a video leaves the stage, its taps and the switches as they were; `onTake` (which resets pause, mirror and the motion demo) does not run, and the stage's notice says the file could not be read. A damaged video still replaces the stage.
 - **Camera start** (`src/vision/camera-*.ts`). The decisions are plain functions with unit tests; `useCameraSource` (`camera-source.ts`) only runs them, inside `useSource`, with the same begin, commit and fail steps and the same generation token as every other source.
   - `camera-start.ts`: `cameraRequests(want)` is the request ladder: the chosen camera by exact id, then the camera that was live before (only after a named pick, so a failed switch comes back), then a side as `facingMode: { ideal }`, then bare `video: true`. `openCamera` moves down a rung only on `OverconstrainedError` or `NotFoundError`; a refusal or a busy camera stops it. `grantedOf` reads the live track into a `Granted` (`Source.camera`): device id, label, facing (from the track's settings, else the label, else `"unknown"`), size and frame rate. `mirrorFor(facing)` is false only for `"environment"`, and `use-source-controls.ts` sets the mirror from it on every camera commit, so a rear camera is never mirrored whichever path started it. `recoveryNote` is the notice shown when the camera that started is not the one asked for.
-  - `camera-choice.ts`: the last camera that started is kept as `{ deviceId, facing }` under `spectra.camera.v1` (the side as well as the id, because some browsers hand out new ids each visit). `startWant(picked, preferred, remembered)` is what Start camera asks for: a pick by hand, then a panel's preferred side, then the remembered camera. `flipWant` is the Flip tool's request. `preferCamera(owner, facing)` lets a panel ask for a side while it is on show; it returns the function that withdraws it.
+  - `camera-choice.ts`: the last camera that started is kept as `{ deviceId, facing }` under `spectra.camera.v1` (the side as well as the id, because some browsers hand out new ids each visit). `startWant(picked, preferred, remembered)` is what Start camera asks for: a pick by hand, then a panel's preferred side, then the remembered camera. `flipWant` is the Flip tool's request. `preferCamera(owner, facing)` lets a panel ask for a side while it is on show; it returns the function that withdraws it. The Ruler panel (`src/panels/ruler.tsx`, owner `ruler`) and its Room section (`ruler/room/room-section.tsx`, owner `room`) each call it with `"environment"` in an effect, so Start camera asks for the rear camera while the Ruler is the panel on show; `tests/ruler-camera-side.test.ts` fails without either line.
   - `camera-errors.ts`: `classify(error, { permission, waitedMs })` gives one of ten codes (`blocked`, `dismissed`, `system-blocked`, `refused`, `none`, `busy`, `gone`, `insecure`, `lost`, `unknown`) and `cameraCard(failure, platform)` gives the words. `src/shell/stage-card.ts` turns a `SourceProblem` or a model error into the one card `StageMessage` draws, and only a camera failure gets a camera retry: a demo that failed offers the demo again.
   - `camera-devices.ts`: `useCameraDevices` keeps the camera list and the permission state true with one `devicechange` listener and the permission status's `change` event, both removed on unmount. `camera-recover.ts` holds the two recoveries built on them: the error card starts the camera by itself when the permission is granted or a camera arrives, and a camera that ended while the tab was hidden is reopened on return. `camera-live.ts` attaches the track's `ended`, `mute` and `unmute` listeners and the video's `resize` listener before anything is awaited.
   - A request pending for 2 s shows a hint and Cancel (`StageWaiting`); Cancel bumps the generation, so a stream that arrives later is stopped. On a narrow screen a portrait camera picture sets `--stage-portrait` on the stage, bounded at 3:4. None of this has been run on a real phone: the browser tests use canvas stand-ins (`tests/helpers/stand-in-cameras.ts`).
@@ -697,10 +697,13 @@ The service worker is registered in production builds only, after `load`, as `<b
 ```
 public/vision-worker.js     one task per worker; the kind switch
 public/depth-worker.js      the Depth task on ONNX Runtime Web
+public/detector-worker.js   Objects' Sharper model (D-FINE-S) on ONNX Runtime Web, WebGPU only
 public/sw.js                offline cache rules
 src/registry.ts             collect(): shared discovery
 src/modes/                  types.ts, index.ts, objects.ts, body.ts, hands.ts, face.ts, segment.ts,
-                            gestures.ts, fusion.ts, depth.ts, lib/ (depth-* for Depth)
+                            gestures.ts, fusion.ts, depth.ts, lib/ (depth-* for Depth; for Objects
+                            object-boxes.ts, object-controls.tsx, object-model-setting.tsx,
+                            object-sharper-setting.tsx)
 src/effects/                types.ts, index.ts, trails.ts, constellation.ts, plasma-hands.ts,
                             ember-trail.ts, neon-ribbons.ts, aura.ts, hologram.ts, starfield-pull.ts,
                             echo.ts, face-light.ts, lib/
@@ -740,13 +743,17 @@ src/vision/                 types.ts, frame.ts, draw.ts, geometry.ts, tracker.ts
                             tracker-cost.ts, still.ts, still-holds.ts, held-frame.ts,
                             download-failure.ts, first-download.ts, camera-start.ts,
                             camera-choice.ts, camera-errors.ts, camera-devices.ts, camera-source.ts,
-                            camera-recover.ts, camera-live.ts
+                            camera-recover.ts, camera-live.ts, tracker-options.ts, track-gate.ts,
+                            track-smooth.ts, model-choice.ts
+src/vision/detector/        sharper.ts (the Sharper choice, its worker script and its fallback)
 src/vision/depth/           colormap.ts, affine-fit.ts, unproject.ts, orbit.ts (pure)
 src/measure/                one-euro.ts, series.ts, noise.ts, format.ts, angles.ts, camera.ts,
                             camera-fit.ts, camera-project.ts, vec.ts (pure; vec.ts is the one home
                             of solveLinear and invert3, the Ruler's plane solves included, and of
                             the plane helpers cross and dist)
 src/telemetry/              bus.ts, stats.ts, task-status.ts
+scripts/                    models.json, setup-assets.mjs, and checks run by hand, not in CI:
+                            depth-check.mjs, gpu-loss-check.mjs, detector-check.mjs
 src/shell/                  shortcuts, palette, layout, recorder, service worker registration
 src/components/             Header, ModeSwitch, CameraStage, StageTools, StageMessage, CameraPicker, Inspector,
                             StudioDeck, EffectsPicker, EffectIntensity, ShareCard, CoachMarks,
@@ -758,10 +765,12 @@ src/styles/                 index.css, base.css, shell.css, stage.css, inspector
 tests/                      unit: tracker, registry (with fixtures), vision, telemetry, modes, effects, lab,
                             shell, measure-*, stage-hooks, vision-smoothing, vision-settings, ruler-*,
                             fit-*, walls-*, room-*, depth-*, library-*, presence-*, session-export,
-                            licence-notices, inspect-controls; helpers/ (seeded noise, the worker
+                            licence-notices, inspect-controls, camera-*, tracker-*, vision-track-smooth,
+                            vision-model-choice, vision-sharper, vision-first-download, detector-worker,
+                            modes-objects, modes-worker-band; helpers/ (seeded noise, the worker
                             harness, room builders);
                             e2e: studio, modes, effects, lab, shell, mode-switch, no-webgl, measure,
                             ruler*, fit, walls, room, depth, demo-page, detection-models,
                             detection-stability, library, presence, error-boundary,
-                            still-picture, panel-layout, unreadable-file
+                            still-picture, panel-layout, unreadable-file, camera, detector-sharper
 ```
