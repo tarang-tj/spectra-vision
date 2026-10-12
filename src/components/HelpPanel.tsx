@@ -51,17 +51,20 @@ export default function HelpPanel() {
         checked against a tape measure in a real room.
       </p>
       <p>
-        Use HTTPS or localhost for camera access. Start with good light; keep
-        your full body visible in Body mode and your fingers unobstructed in
-        Hands. Video uploads loop and are muted. Pause stops inference; Stop
-        camera releases the camera. Demo images are still photos with real model
-        inference. A still picture is not inferred continuously: it is checked
-        about once a second, and once in Depth, and the frame-rate readout says
-        so. Motion demos pan those photos; Constellation isolates the tracking
-        geometry. Record saves up to 30 seconds of canvas video locally and
-        stops when source or mode changes. For best results use a current Chrome
-        or Edge browser. If a panel stops on an error, it shows a message and a
-        Try again button while the stage and the rest of the app keep working.
+        Use HTTPS or localhost for camera access. On a phone, choose Front or
+        Rear beside the stage before Start camera, or press Flip on the stage
+        while the camera is live. The Ruler asks for the rear camera unless you
+        chose a side. Start with good light; keep your full body visible in Body
+        mode and your fingers unobstructed in Hands. Video uploads loop and are
+        muted. Pause stops inference; Stop camera releases the camera. Demo
+        images are still photos with real model inference. A still picture is
+        not inferred continuously: it is checked about once a second, and once
+        in Depth, and the frame-rate readout says so. Motion demos pan those
+        photos; Constellation isolates the tracking geometry. Record saves up to
+        30 seconds of canvas video locally and stops when source or mode
+        changes. For best results use a current Chrome or Edge browser. If a
+        panel stops on an error, it shows a message and a Try again button while
+        the stage and the rest of the app keep working.
       </p>
       <h3>Keyboard</h3>
       <dl className="shortcut-list">
