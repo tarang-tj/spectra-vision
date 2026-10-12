@@ -1,0 +1,205 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+import { useEffect } from "react";
+import { useStudio } from "../../studio-context";
+import { preferCamera } from "../../vision/camera-choice";
+import { derive } from "./derive";
+import KnownSizes from "./known/known-sizes";
+import { EXTENSIONS, extensionEnv, extensionFor } from "./extensions";
+import LensSection from "./lens-section";
+import { longSideNote } from "./long-side";
+import PlanPanel from "./plan/plan-panel";
+import ReferencePicker from "./reference-picker";
+import ClearButton from "./room/clear-button";
+import ViewStrip from "./room/view-strip";
+import Results from "./results";
+import ShapeTools, { openShape } from "./shapes/shape-tools";
+import TapeTest from "./known/tape-test";
+import {
+  handleName,
+  isEmpty,
+  pendingRef,
+  setUnit,
+  toggleSwap,
+  undo,
+  useRuler,
+} from "./store";
+import { UNITS } from "./units";
+import { useRulerStage } from "./use-stage";
+import "./ruler.css";
+
+/** Measure distances on one flat surface from a picture, using a sheet of known
+ * size laid on that surface. Every result carries an error bar and says what
+ * the bar leaves out. */
+export default function Ruler() {
+  const s = useRuler(),
+    d = derive(s),
+    { paused, frame } = useStudio(),
+    hasSource = !!frame.source,
+    still =
+      hasSource &&
+      (paused || frame.source?.element instanceof HTMLImageElement),
+    { freeze, resume } = useRulerStage(still),
+    // Values belong to the picture they were measured on: not to a frame of
+    // another photo that has not been drawn over yet.
+    show = still && s.generation === frame.source?.generation,
+    pending = s.measures.some((m) => m.b === null),
+    ext = extensionFor(s.tool),
+    // A tool takes taps only once the reference is placed; until then taps
+    // and Undo belong to the reference corners.
+    toolActive = ext !== null && s.corners.length === 4,
+    open = openShape(s),
+    adding = pendingRef(s),
+    // Said only for the picture on screen, like the values it is about.
+    sideNote = show ? longSideNote(d.longSide, s.swap) : null;
+  // What gets measured is in front of the person, not behind the screen.
+  useEffect(() => preferCamera("ruler", "environment"), []);
+
+  let step: string;
+  if (!hasSource) step = "Choose a camera, photo or demo first.";
+  else if (!still)
+    step =
+      s.tool === "edge" || d.reference
+        ? "Freeze the picture, then tap on it. A moving picture cannot be measured."
+        : (d.problem ?? "");
+  else if (s.grab)
+    // The press landed on a handle, so it placed nothing: say so, or a tap
+    // meant as a new point looks as if it was lost.
+    step = s.grab.held
+      ? `Moving ${handleName(s.grab.handle, s)}. Tap elsewhere to place a point.`
+      : `That tap took hold of ${handleName(s.grab.handle, s)} and moved nothing. Drag it to adjust it, or tap elsewhere to place a point.`;
+  else if (s.tool === "edge")
+    step =
+      "Tap three or more points along an edge that is straight in reality, then press Finish edge. Do at least two edges.";
+  else if (!d.reference) step = d.problem ?? "";
+  else if (s.corners.length < 4)
+    step = `Tap corner ${s.corners.length + 1} of 4 of the ${d.reference.label}, in any order.`;
+  else if (d.problem) step = d.problem;
+  else if (adding >= 0 && !ext)
+    step = `Tap corner ${s.extraRefs[adding].corners.length + 1} of 4 of reference ${adding + 2} (${s.extraRefs[adding].label}), in any order. Undo takes a corner back.`;
+  else if (ext) step = ext.step(extensionEnv(s, d));
+  else if (s.tool === "path" || s.tool === "area") {
+    const n = open?.pts.length ?? 0,
+      finish = s.tool === "area" ? "Close outline" : "Finish path";
+    if (!n) {
+      // Say what the last one ended with: a count the user can check against
+      // the taps they made.
+      const last = s.shapes.filter((x) => x.kind === s.tool && x.done).pop(),
+        ended = last
+          ? `${s.tool === "area" ? "Outline closed" : "Path finished"} with ${last.pts.length} ${s.tool === "area" ? "corners" : "points"}. `
+          : "";
+      step = `${ended}Tap each point of ${ended ? "another" : "the"} ${s.tool === "area" ? "outline" : "path"} in order.`;
+    } else if (n < 3)
+      step = `${n} point${n === 1 ? "" : "s"} placed. Tap at least ${3 - n} more.`;
+    else step = `${n} points placed. Tap more, or press ${finish}.`;
+  } else if (pending) step = "Tap the other end of the span.";
+  else
+    step = "Tap two points to measure between them. Drag any handle to adjust.";
+
+  return (
+    <div className="ruler-panel">
+      <h2>
+        Ruler <span className="ruler-beta">Beta</span>
+      </h2>
+      <p className="ruler-note">
+        Lay a sheet of known size flat on the surface you want to measure, in
+        the same plane as the things you measure. Works on one flat surface
+        only. The further a span is from every known size, the larger its error:
+        for a room, add a second sheet or a tape-measured span under More known
+        sizes. Points under the stage buttons cannot be tapped.
+      </p>
+      <ViewStrip />
+      <ReferencePicker s={s} />
+      <p className="ruler-step" role="status" data-testid="ruler-step">
+        {step}
+      </p>
+      {d.referenceWarnings.map((w) => (
+        <p key={w} className="ruler-warn">
+          {w}
+        </p>
+      ))}
+      {sideNote && (
+        <p
+          className="ruler-warn"
+          data-testid="ruler-long-side"
+          data-how={d.longSide?.how}
+        >
+          {sideNote}
+        </p>
+      )}
+      <div className="ruler-group" role="group" aria-label="Ruler actions">
+        {hasSource && still && paused ? (
+          <button className="button" onClick={resume}>
+            Resume live view
+          </button>
+        ) : (
+          !still && (
+            <button className="button" onClick={freeze}>
+              Freeze frame
+            </button>
+          )
+        )}
+        <button
+          className="button"
+          onClick={toolActive ? ext.undo : undo}
+          disabled={isEmpty(s)}
+        >
+          Undo
+        </button>
+        <ClearButton />
+        {d.sheet && (
+          <button className="button" onClick={toggleSwap} aria-pressed={s.swap}>
+            Swap sides
+          </button>
+        )}
+      </div>
+      <section className="ruler-block" aria-label="Units">
+        <h3>Units</h3>
+        <div className="ruler-group" role="group" aria-label="Units">
+          {UNITS.map((u) => (
+            <button
+              key={u}
+              className="button"
+              aria-pressed={s.unit === u}
+              onClick={() => setUnit(u)}
+            >
+              {u}
+            </button>
+          ))}
+        </div>
+      </section>
+      <ShapeTools s={s} ready={!!d.sheet} />
+      {show && <KnownSizes s={s} d={d} />}
+      <Results s={s} d={d} show={show} />
+      {show && <TapeTest d={d} />}
+      {EXTENSIONS.map((e) => (
+        <e.Section key={e.tool} show={show} />
+      ))}
+      <PlanPanel s={s} d={d} show={show} />
+      <LensSection s={s} d={d} />
+      <ul className="ruler-guidance">
+        <li>
+          The long side of the reference is read from the picture's perspective
+          when that settles it, and guessed from how it looks when it does not;
+          the panel says which. If the labels on its edges are swapped, press
+          Swap sides.
+        </li>
+        <li>
+          For a whole room, one sheet of paper gives wide error bars, because
+          the bar grows with distance from the reference. A second sheet a few
+          metres away, or one span measured with a tape and used as a known
+          span, tightens them: the surface is then solved from all of them
+          together.
+        </li>
+        <li>
+          To check a reading, type what a tape measure read beside it. The tape
+          test lists each difference and says whether the tape value is inside
+          the bar. It changes nothing unless you press Use as known span.
+        </li>
+        <li>
+          Measure only points that lie on the same surface as the reference.
+          Anything raised above it reads wrong.
+        </li>
+      </ul>
+    </div>
+  );
+}
