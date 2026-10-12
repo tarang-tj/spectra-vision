@@ -66,6 +66,7 @@ export function startWant(
     deviceId: remembered.deviceId,
     remembered: true,
     ...(facing ? { facing } : {}),
+    ...(remembered.facing ? {} : { sideUnknown: true as const }),
   };
 }
 

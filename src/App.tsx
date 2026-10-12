@@ -233,7 +233,7 @@ export default function App() {
               live: input.camera.live,
               muted: input.camera.muted,
               waiting: input.camera.waiting,
-              onCancel: input.camera.cancel,
+              onCancel: controls.cancelCamera,
               onFlip: controls.flipCamera,
             }}
             onDemo={onDemo}

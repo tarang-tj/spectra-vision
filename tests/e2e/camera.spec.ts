@@ -406,7 +406,7 @@ test("Retry repeats the request that failed, and a demo that failed never starts
   await expect.poll(red(page)).toBe("left");
 });
 
-test("an unanswered prompt gets a hint and a Cancel that gives the page back", async ({
+test("an unanswered prompt gets a hint and a Cancel that puts the demo back", async ({
   page,
 }) => {
   await standInCameras(page);
@@ -420,7 +420,12 @@ test("an unanswered prompt gets a hint and a Cancel that gives the page back", a
   await expect(waiting).toHaveCount(0);
   await expect(startButton(page)).toBeEnabled();
   await expect(alert(page)).toHaveCount(0);
-  await expect(page.locator(".camera-stage")).toContainText(
+  // The page is not left empty: the demo is back, and a line says so.
+  await expect(badge(page)).toHaveText("DEMO IMAGE");
+  await expect(toast(page)).toHaveText(
+    "Stopped waiting for the camera. Showing the demo.",
+  );
+  await expect(page.locator(".camera-stage")).not.toContainText(
     "Choose your view.",
   );
   // The answer arrives after all: the camera is let go, not shown.
@@ -431,7 +436,7 @@ test("an unanswered prompt gets a hint and a Cancel that gives the page back", a
   await expect
     .poll(() => bench(page, (b) => b.tracks.map((t) => t.readyState)))
     .toEqual(["ended"]);
-  await expect(badge(page)).toHaveText("NO SOURCE");
+  await expect(badge(page)).toHaveText("DEMO IMAGE");
   // And the next press starts a camera as usual.
   await start(page);
   await expect(badge(page)).toContainText("CAMERA · FRONT");
@@ -484,4 +489,6 @@ test("one webcam on a desk starts mirrored, with its size shown and no camera ch
   await expect(page.getByRole("button", { name: "Flip camera" })).toHaveCount(
     0,
   );
+  // A desk has no sides to get wrong, so nothing is said about the mirror.
+  await expect(toast(page)).toHaveCount(0);
 });
