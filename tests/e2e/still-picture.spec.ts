@@ -243,9 +243,9 @@ test("Depth on a moving clip draws each map over the frame it came from, and lea
         clip: document.querySelector("video")?.currentTime ?? null,
       };
     });
-  // A result is counted when it arrives and drawn on the next frame, so one
-  // read can fall between the two: the count has moved and the stage has
-  // not. Four reads 120 ms apart with one count have no arrival among them,
+  // A result is counted when it arrives and drawn a render and a frame
+  // later, so one read can fall between the two: the count has moved and the
+  // stage has not. Four reads 120 ms apart with one count have no arrival among them,
   // and the middle two are a drawn frame clear of an arrival on either side.
   let pair: { a: number; b: number } | null = null;
   const reads = [await fingerprint()];
