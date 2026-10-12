@@ -32,13 +32,18 @@ import {
   setSharper,
   sharperBlocked,
   sharperChosen,
+  sharperFor,
   sharperOffered,
   sharperRefusal,
   sharperWatchers,
   workerScript,
 } from "../src/vision/detector/sharper";
 import { firstDownloadNote } from "../src/vision/first-download";
-import { GUARD_RESULTS, resetModelChoice } from "../src/vision/model-choice";
+import {
+  GUARD_RESULTS,
+  holdStandardModel,
+  resetModelChoice,
+} from "../src/vision/model-choice";
 import { modelOf, setPrecision } from "../src/vision/settings";
 import { MIN_FRAME_GAP, createTaskRunner } from "../src/vision/task-runner";
 import type { TaskResult, TaskSpec } from "../src/vision/types";
@@ -419,10 +424,50 @@ describe("Objects: the Sharper setting", () => {
       "Sharper is not running: the WebGPU device was lost (the driver reset). The standard model is running instead. Switch Sharper off and on to try it again.",
     );
   });
+  it("says a Lab benchmark set it aside, with no advice to switch it off and on", () => {
+    setSharper(true);
+    holdStandardModel(true);
+    const html = text({ model: SMALL, delegate: "GPU" });
+    expect(html).toContain(
+      "Sharper is not running: a Lab benchmark is running. The standard model is running instead.",
+    );
+    expect(html).not.toContain("try it again");
+  });
   it("says nothing of the kind while it runs", () => {
     setSharper(true);
     expect(text({ model: SHARPER_MODEL, delegate: "GPU" })).not.toContain(
       "not running",
     );
+  });
+});
+
+describe("Sharper during a Lab benchmark", () => {
+  it("stands aside while the standard model is held, and says why", () => {
+    setSharper(true);
+    expect(sharperFor(spec, "GPU")).toBe(SHARPER_MODEL);
+    holdStandardModel(true);
+    expect(sharperFor(spec, "GPU")).toBeNull();
+    expect(sharperBlocked("object", "GPU")).toBe("a Lab benchmark is running");
+    expect(modelOf(spec, "fast", "GPU")).toBe(SMALL);
+    // The checks that come first keep their own reasons.
+    expect(sharperBlocked("object", "CPU")).toBe("Objects is on CPU here");
+    // The choice itself is not changed.
+    expect(sharperChosen()).toBe(true);
+    holdStandardModel(false);
+    expect(sharperBlocked("object", "GPU")).toBeNull();
+    expect(sharperFor(spec, "GPU")).toBe(SHARPER_MODEL);
+  });
+  it("hands a running task to the standard model, and takes it back after", () => {
+    setSharper(true);
+    const { workers, runner } = harness();
+    expect(workers[0].url).toBe(SHARP_WORKER);
+    holdStandardModel(true);
+    expect(workers[0].terminated).toBe(true);
+    expect(workers[1].url).toBe(MEDIAPIPE_WORKER);
+    expect(init(workers[1])).toMatchObject({ model: SMALL, delegate: "GPU" });
+    holdStandardModel(false);
+    expect(workers[2].url).toBe(SHARP_WORKER);
+    expect(init(workers[2]).model).toBe(SHARPER_MODEL);
+    runner.dispose();
   });
 });

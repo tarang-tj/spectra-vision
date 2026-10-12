@@ -32,7 +32,7 @@ vi.mock("../src/vision/camera-choice", async (original) => {
   };
 });
 
-import ruler from "../src/panels/ruler";
+import Ruler from "../src/panels/ruler/panel";
 import RoomSection from "../src/panels/ruler/room/room-section";
 import { StudioContext, type Studio } from "../src/studio-context";
 import { preferredFacing, startWant } from "../src/vision/camera-choice";
@@ -71,7 +71,7 @@ beforeEach(() => {
 describe("the measuring panels and the camera's side", () => {
   it("asks for the rear camera while the Ruler is on show", () => {
     expect(preferredFacing()).toBeNull();
-    const leave = mount(ruler.Component as ComponentType<{ show: boolean }>);
+    const leave = mount(Ruler as ComponentType<{ show: boolean }>);
     expect(kept.asked).toContainEqual(["ruler", "environment"]);
     expect(preferredFacing()).toBe("environment");
     leave();
@@ -85,7 +85,7 @@ describe("the measuring panels and the camera's side", () => {
     expect(preferredFacing()).toBeNull();
   });
   it("still gives way to a side the person chose", () => {
-    const leave = mount(ruler.Component as ComponentType<{ show: boolean }>),
+    const leave = mount(Ruler as ComponentType<{ show: boolean }>),
       remembered = { deviceId: "front-id", facing: "user" as const };
     expect(startWant(null, preferredFacing(), remembered)).toEqual({
       facing: "environment",

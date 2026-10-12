@@ -1,34 +1,13 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import BenchmarkPanel from "./lab/benchmark-panel";
-import LiveCharts from "./lab/live-charts";
-import { LoadTimes, ModelCards } from "./lab/model-cards";
-import Stability from "./lab/stability";
+// The Lab tab. Its body (lab/panel.tsx) is fetched when the tab is first
+// opened; the entry script carries only this definition.
+import { lazyPanel } from "./shared/lazy-panel";
 import type { PanelDef } from "./types";
-import "./lab/lab.css";
-
-/** The performance lab: live charts, the delegate switch, a benchmark and the
- * model cards. Every number on it is measured in this browser. Nothing here
- * runs while another tab of the inspector is showing. */
-function Lab() {
-  return (
-    <div className="lab-panel">
-      <h2>Lab</h2>
-      <p className="lab-note">
-        Measured in this browser, on this device. Nothing is sent anywhere.
-      </p>
-      <LiveCharts />
-      <Stability />
-      <LoadTimes />
-      <BenchmarkPanel />
-      <ModelCards />
-    </div>
-  );
-}
 
 const lab: PanelDef = {
   id: "lab",
   label: "Lab",
   order: 30,
-  Component: Lab,
+  Component: lazyPanel("Lab", () => import("./lab/panel")),
 };
 export default lab;

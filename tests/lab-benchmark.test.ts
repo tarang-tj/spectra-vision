@@ -92,6 +92,12 @@ describe("benchmark exports", () => {
     expect(md).toContain("- Canvas: 2190 x 1368 px (device pixel ratio 2)");
     expect(md).toContain("20 s measured after 2 s warm-up (excluded)");
     expect(md).not.toContain("SHORTENED");
+    // The protocol's own note is printed, and the footer says what the
+    // rows of one mode have in common.
+    expect(md).toContain("warm-up (excluded). Fixed source.\n");
+    expect(md).toContain(
+      "nothing is smoothed. Rows of one mode ran the same model file on each delegate; the Model column names it.\n",
+    );
     const line = md.split("\n").find((l) => l.startsWith("| Hands"))!;
     expect(line.split("|").map((c) => c.trim())).toEqual([
       "",
