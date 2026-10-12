@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-// Small 3-vector and 3x3 helpers for the camera model. Matrices are row-major
-// arrays of nine numbers. Pure: no DOM, no clock, no randomness.
+// Small 3-vector and 3x3 helpers for the camera model, and the two plane
+// helpers the panels share. Matrices are row-major arrays of nine numbers.
+// Pure: no DOM, no clock, no randomness.
 
 export type V3 = readonly [number, number, number];
 export type M3 = readonly number[];
@@ -142,3 +143,12 @@ export function solveLinear(
   }
   return !checked || x.every(Number.isFinite) ? x : null;
 }
+
+type P2 = { x: number; y: number };
+
+/** Twice the signed area of the triangle o, a, b: its sign says which side
+ * of the line from o to a the point b is on. */
+export const cross = (o: P2, a: P2, b: P2) =>
+  (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+
+export const dist = (a: P2, b: P2) => Math.hypot(a.x - b.x, a.y - b.y);

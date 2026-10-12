@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Plane geometry for the Ruler, in source pixels (never normalized units, so
 // the aspect ratio is right). Pure: no DOM, no clock, no randomness.
-import { solveLinear } from "../../measure/vec";
+import { dist, solveLinear } from "../../measure/vec";
 import type { Fused } from "./known/fused-trials";
 
 /** `s` is the tap uncertainty (one sd, source pixels) the point was placed
@@ -100,8 +100,6 @@ export function applyHomography(h: Mat3, p: Pt): Pt | null {
     y: (h[3] * p.x + h[4] * p.y + h[5]) / w,
   };
 }
-
-const dist = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y);
 
 /** Four taps in any order to one consistent winding: clockwise on screen
  * (image y points down), starting at the corner nearest the top left. The

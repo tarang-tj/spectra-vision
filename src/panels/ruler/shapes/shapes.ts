@@ -3,6 +3,7 @@
 // geometric value from the tapped points; its error is 2 standard deviations
 // of the seeded Monte Carlo that perturbs every tapped point (the four
 // reference corners and every vertex) and recomputes the value each time.
+import { cross } from "../../../measure/vec";
 import {
   applyHomography,
   solveHomography,
@@ -35,9 +36,6 @@ export type ShapeResult = {
   /** Share of simulated taps that could be used (1 means none dropped). */
   kept: number;
 };
-
-const cross = (o: Pt, a: Pt, b: Pt) =>
-  (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
 
 /** Do segments p1p2 and p3p4 cross properly (touching ends do not count)? */
 function crosses(p1: Pt, p2: Pt, p3: Pt, p4: Pt): boolean {

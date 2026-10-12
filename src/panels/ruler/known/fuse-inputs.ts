@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Which further references and known spans can go into the fused solve, and
 // a plain reason for each one that cannot. Pure: points in, a sheet out.
+import { cross, dist } from "../../../measure/vec";
 import type { FuseInput } from "./fused";
 import { fuseOnce, makeFused } from "./fused-trials";
 import {
@@ -35,8 +36,6 @@ export function chiLimit(spare: number): number {
   return Math.sqrt((1 - k + 3.09 * Math.sqrt(k)) ** 3);
 }
 
-const cross = (o: Pt, a: Pt, b: Pt) =>
-  (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
 const inside = (q: Pt[], p: Pt) => {
   const signs = q.map((a, i) => Math.sign(cross(a, q[(i + 1) % 4], p)));
   return signs.every((v) => v >= 0) || signs.every((v) => v <= 0);
@@ -58,8 +57,6 @@ export function quadsOverlap(a: Pt[], b: Pt[]): boolean {
     }
   return false;
 }
-
-const dist = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y);
 
 /** Fuse what can be fused. `sheet` is the first reference's own solve (with
  * `raw` taps); points in `rects` and `spans` are as tapped. */

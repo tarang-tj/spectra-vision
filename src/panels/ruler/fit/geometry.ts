@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Plane geometry for the Box tool, all in mm on the reference plane: the
 // box's footprint and how much room it has inside an outline. Pure.
+import { cross } from "../../../measure/vec";
 
 export type P = { x: number; y: number };
 export type Footprint = {
@@ -34,9 +35,6 @@ export function footprintCorners(b: Footprint): P[] {
     return { x: b.x + u * c - v * s, y: b.y + u * s + v * c };
   });
 }
-
-const cross = (o: P, a: P, b: P) =>
-  (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
 
 /** Distance from a point to a segment. */
 export function pointToSegment(p: P, a: P, b: P): number {
