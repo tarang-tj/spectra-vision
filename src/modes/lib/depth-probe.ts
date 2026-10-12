@@ -38,6 +38,8 @@ if (typeof window !== "undefined" && testHooksEnabled())
           content: drawn.extra.content ?? null,
           over: drawn.over,
           lag: drawn.lag,
+          // When the drawn result's held picture was read: one per result.
+          capturedAt: drawn.task.frame?.capturedAt ?? null,
         },
       /** The map's value at an image-normalized point. */
       at: (x: number, y: number) =>
