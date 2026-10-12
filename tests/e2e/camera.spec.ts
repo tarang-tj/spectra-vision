@@ -413,18 +413,22 @@ test("an unanswered prompt gets a hint and a Cancel that puts the demo back", as
   await open(page);
   await bench(page, (b) => (b.hang = true));
   await start(page);
-  const waiting = page.getByRole("status").filter({ hasText: "Waiting" });
+  // The whole heading: the toast after Cancel also has "waiting" in it.
+  const waiting = page
+    .getByRole("status")
+    .filter({ hasText: "Waiting for your answer." });
   await expect(waiting).toContainText("Look for its prompt");
   await expect(page.getByRole("button", { name: "Opening…" })).toBeDisabled();
   await waiting.getByRole("button", { name: "Cancel" }).click();
-  await expect(waiting).toHaveCount(0);
-  await expect(startButton(page)).toBeEnabled();
-  await expect(alert(page)).toHaveCount(0);
-  // The page is not left empty: the demo is back, and a line says so.
-  await expect(badge(page)).toHaveText("DEMO IMAGE");
+  // The page is not left empty: a line says the demo is coming back (read
+  // first, it stays a few seconds), and it does.
   await expect(toast(page)).toHaveText(
     "Stopped waiting for the camera. Showing the demo.",
   );
+  await expect(waiting).toHaveCount(0);
+  await expect(badge(page)).toHaveText("DEMO IMAGE");
+  await expect(startButton(page)).toBeEnabled();
+  await expect(alert(page)).toHaveCount(0);
   await expect(page.locator(".camera-stage")).not.toContainText(
     "Choose your view.",
   );
