@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 /** The stage's one WebGL2 surface. It is an off-DOM canvas that "gl" effects
  * draw into; the renderer then copies it onto the main 2d canvas, so Record
  * and Screenshot capture shader effects with no extra work.

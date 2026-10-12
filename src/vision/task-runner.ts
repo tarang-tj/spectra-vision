@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { telemetry } from "../telemetry/bus";
 import { beginStatus } from "../telemetry/task-status";
 import {

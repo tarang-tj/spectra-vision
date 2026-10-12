@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import type { EffectDef } from "../../../src/effects";
 
 // Registry fixture: an effect limited to one mode.

@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import type { ModeDef } from "../modes";
 import { telemetry } from "../telemetry/bus";
 import { createFrame, updateFrame } from "../vision/frame";

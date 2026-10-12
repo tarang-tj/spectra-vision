@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useEffect, useRef, useState } from "react";
 import { tasksOf } from "../modes";
 import { telemetry } from "../telemetry/bus";

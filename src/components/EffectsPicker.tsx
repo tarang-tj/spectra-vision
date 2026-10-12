@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useMemo } from "react";
 import { effectsFor } from "../effects";
 import { useStudio } from "../studio-context";

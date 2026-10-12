@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { panels } from "../panels";
 import { useStudio } from "../studio-context";
 import ErrorBoundary from "./ErrorBoundary";

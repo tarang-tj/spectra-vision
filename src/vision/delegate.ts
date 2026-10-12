@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import type { Delegate, TaskKind, TaskSpec } from "./types";
 import { probeWebgl } from "./webgl-probe";
 

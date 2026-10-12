@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, PointerEvent, ReactNode, RefObject } from "react";
 import { LoaderCircle, Pause, Play } from "lucide-react";

@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import type { Point } from "./types";
 // `out` lets the per-frame caller reuse one rectangle instead of allocating.
 export function fit(

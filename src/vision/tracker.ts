@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import type { Box, Detection, Point, Track } from "./types";
 import { assign, centre, iou, pairGain } from "./tracker-cost";
 import { DEFAULT_TRACKER, type TrackerOptions } from "./tracker-options";

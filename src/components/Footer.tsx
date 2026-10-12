@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { Fragment, useSyncExternalStore } from "react";
 import { CircleHelp, Download, X } from "lucide-react";
 import { modes } from "../modes";

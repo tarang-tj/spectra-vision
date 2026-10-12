@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import type { ModeDef } from "../../../src/modes";
 
 // Registry fixture: the smallest valid mode. It is discovered only by tests.

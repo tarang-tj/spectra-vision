@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import type { Granted } from "./camera-start";
 import type { HeldFrame } from "./held-frame";
 

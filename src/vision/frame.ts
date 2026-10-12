@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { fit, project } from "./geometry";
 import type { Point, Source, TaskKind, Track, VisionResult } from "./types";
 

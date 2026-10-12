@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { downloadText } from "./download";
 
 /** Limits of one exported session. A Face or Fusion frame is tens of

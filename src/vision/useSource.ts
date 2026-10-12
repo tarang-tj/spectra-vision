@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { defaultMode, getMode } from "../modes";
 import { useCameraSource } from "./camera-source";

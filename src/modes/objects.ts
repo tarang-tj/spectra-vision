@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { taskStatus } from "../telemetry/task-status";
 import { SHARPER_MODEL } from "../vision/detector/sharper";
 import type { Frame } from "../vision/frame";

@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect, beforeEach } from "vitest";
 import { headMatrix } from "../src/measure/angles";
 import { presenceStore } from "../src/panels/presence/presence-store";

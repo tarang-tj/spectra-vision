@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { telemetry } from "../src/telemetry/bus";
 import { WINDOW_MS, openLabStore } from "../src/panels/lab/lab-store";
