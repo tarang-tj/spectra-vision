@@ -239,6 +239,17 @@ describe("the task runner and the larger model", () => {
     expect(gpuModelRefusal("object")).toBeNull();
     runner.dispose();
   });
+  it("stops judging when Precise is chosen while the trial runs", () => {
+    const { workers, runner } = harness();
+    work(workers[0], 10, 400);
+    // The same file under both settings: nothing is loaded again.
+    setPrecision("precise");
+    expect(workers).toHaveLength(1);
+    work(workers[0], GUARD_RESULTS, 400);
+    expect(workers).toHaveLength(1);
+    expect(gpuModelRefusal("object")).toBeNull();
+    runner.dispose();
+  });
   it("follows the switch while running, and switching on tries a refused model again", () => {
     const { workers, runner, events } = harness();
     work(workers[0], 2, 60);

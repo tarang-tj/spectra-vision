@@ -234,6 +234,11 @@ export function createTaskRunner(
   // the same delegate.
   const judge = (latency: number) => {
     if (!trial) return;
+    // Precise was chosen meanwhile: the same file is now the person's choice.
+    if (!onTrial()) {
+      trial = null;
+      return;
+    }
     trial.push(latency);
     if (trial.length < GUARD_RESULTS) return;
     const median = medianOf(trial);
