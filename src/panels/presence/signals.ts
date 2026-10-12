@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { headPose } from "../../measure/angles";
+import { dist } from "../../measure/vec";
 import { faceExtra } from "../../modes/lib/task-extras";
 import { faceMeters } from "../../modes/lib/face-metrics";
 import { seen } from "../../modes/lib/fusion-figure";
@@ -14,7 +15,6 @@ const PALM = [0, 5, 9, 13, 17];
 const CHANGED = ["smile", "brow", "jaw"];
 
 type Pt = { x: number; y: number };
-const dist = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y);
 const mean = (values: number[]) =>
   values.length ? values.reduce((s, v) => s + v, 0) / values.length : NaN;
 

@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect, vi } from "vitest";
 import { createBus } from "../src/telemetry/bus";
 

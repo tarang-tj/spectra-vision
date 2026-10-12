@@ -3,7 +3,7 @@
 // jittered taps so that anything built on it can carry an honest error bar.
 import { fitCamera, type Camera } from "../../measure/camera";
 import type { Derived } from "./derive";
-import { fusedRuns } from "./fused-trials";
+import { fusedRuns } from "./known/fused-trials";
 import { solveHomography, type Mat3, type Pt } from "./homography";
 import { applyLens } from "./lens";
 import {

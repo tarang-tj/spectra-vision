@@ -4,7 +4,8 @@
 // camera toward itself. To judge a pair fairly the camera is fitted again
 // without it, and the point is compared with the plumb line that camera draws
 // through the corner.
-import { fitCamera, heightAbove, type Camera } from "../../../measure/camera";
+import { fitCamera, type Camera } from "../../../measure/camera";
+import { heightAbove } from "../../../measure/camera-project";
 import { tapSigma } from "../camera-of";
 import type { Derived } from "../derive";
 import { applyHomography, type Pt } from "../homography";

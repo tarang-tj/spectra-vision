@@ -13,12 +13,16 @@ import {
   type ShapeKind,
   type Tool,
 } from "./state";
-import { moveRefCorner, placeRefCorner, undoRefCorner } from "./store-known";
+import {
+  moveRefCorner,
+  placeRefCorner,
+  undoRefCorner,
+} from "./known/store-known";
 import { onPicture } from "./tap";
 
 export * from "./grab";
 export * from "./state";
-export * from "./store-known";
+export * from "./known/store-known";
 
 /** Keep the point on the picture and stamp it with the tap uncertainty (one
  * sd in source pixels) it was placed with, so a later resize cannot change

@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import React from "react";
 import { createRoot } from "react-dom/client";
 import "@fontsource-variable/inter";

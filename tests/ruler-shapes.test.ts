@@ -12,7 +12,7 @@ import {
   measureShape,
   polygonArea,
   selfIntersects,
-} from "../src/panels/ruler/shapes";
+} from "../src/panels/ruler/shapes/shapes";
 import { lcgNormal } from "./helpers/seeded";
 
 // A tilted plane (plane mm to image px) and a Letter sheet on it.

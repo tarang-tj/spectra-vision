@@ -3,7 +3,7 @@
 // Reads the Ruler's state; changes nothing.
 import type { Pt } from "./homography";
 import { getState, type Handle, type RulerState } from "./state";
-import { pendingRef, refCorners } from "./store-known";
+import { pendingRef, refCorners } from "./known/store-known";
 import { grabRadius } from "./tap";
 
 /** True while something is part built: the first reference, a further

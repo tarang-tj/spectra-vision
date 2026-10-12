@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import {
   GPU_FIRST_RESULT_LIMIT_MS,

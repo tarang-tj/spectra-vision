@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import type { Frame } from "./frame";
 import type { Point } from "./types";
 

@@ -2,9 +2,10 @@
 // A room's shell from one picture: the floor outline through the plane map,
 // and a ceiling height above each corner through the camera. Pure: no DOM, no
 // clock, no randomness. Lengths are mm, areas mm2, volume mm3.
-import { heightAbove, type Camera, type P2 } from "../../../measure/camera";
+import type { Camera, P2 } from "../../../measure/camera";
+import { heightAbove } from "../../../measure/camera-project";
 import { applyHomography, type Mat3 } from "../homography";
-import { legLengths, polygonArea, selfIntersects } from "../shapes";
+import { legLengths, polygonArea, selfIntersects } from "../shapes/shapes";
 
 export type ShellInput = {
   /** Flat picture points to plane mm. */

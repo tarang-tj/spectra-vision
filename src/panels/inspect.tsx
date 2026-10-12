@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useEffect, useSyncExternalStore } from "react";
 import { ChevronRight, Lightbulb } from "lucide-react";
 import ErrorBoundary from "../components/ErrorBoundary";

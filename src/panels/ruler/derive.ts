@@ -5,8 +5,8 @@ import {
   tapeTest,
   type KnownSizes,
   type TapeTest,
-} from "./derive-known";
-import { shapeRows, type ShapeRow } from "./derive-shapes";
+} from "./known/derive-known";
+import { shapeRows, type ShapeRow } from "./shapes/derive-shapes";
 import { applyLens, fitRadial, lensFor, type Lens, type LensFit } from "./lens";
 import {
   degenerateReason,

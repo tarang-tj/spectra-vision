@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import type { ComponentType } from "react";
 import { isRecord } from "../registry";
 import type { Frame, FrameData } from "../vision/frame";

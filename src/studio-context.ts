@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { createContext, useContext } from "react";
 import type { InspectorRow, ModeDef } from "./modes";
 import type { StageHooks } from "./stage/stage-hooks";

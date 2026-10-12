@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { effectsFor } from "../effects";
 import type { EffectDef, EffectInstance } from "../effects";
 import type { ModeDef } from "../modes";

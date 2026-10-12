@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect } from "vitest";
 import { Tracker, iou } from "../src/vision/tracker";
 import { fit, project, isPinching } from "../src/vision/geometry";

@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect } from "vitest";
 import { Calibrator } from "../src/panels/presence/calibration";
 import { recordSignals } from "../src/panels/presence/recording";

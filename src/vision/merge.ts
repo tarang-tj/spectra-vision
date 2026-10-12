@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import type { Mode, TaskKind, TaskResult, VisionResult } from "./types";
 
 /** Fold one task's new result into the latest results of a mode's other tasks.

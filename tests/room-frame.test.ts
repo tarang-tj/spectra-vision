@@ -1,11 +1,11 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { beforeEach, describe, expect, it } from "vitest";
 import { applyHomography } from "../src/panels/ruler/homography";
+import { applyRigid } from "../src/panels/ruler/room/room-frame";
 import {
-  applyRigid,
   reflections,
   symmetries,
-} from "../src/panels/ruler/room/room-frame";
+} from "../src/panels/ruler/room/room-symmetry";
 import { solveRoom } from "../src/panels/ruler/room/room-solve";
 import { dropFrames } from "../src/panels/ruler/room/view-frame";
 import {

@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // How a fit verdict is told apart at a glance: a word, a mark and a colour,
 // so nothing rests on colour alone. Shared by the panel and the stage.
-import { EDGE, LINE, REF } from "../overlay-parts";
+import { EDGE, LINE, REF } from "../overlay/overlay-parts";
 import type { Kind, Row } from "./verdict";
 
 /** A tick, a cross and a tilde, as plain text. */

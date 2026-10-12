@@ -18,7 +18,7 @@ import {
   restoreKnown,
   snapshotKnown,
   type KnownSnapshot,
-} from "../store-known";
+} from "../known/store-known";
 import { restoreWalls, snapshotWalls, type WallsState } from "../walls/store";
 
 export type ViewSnap = {

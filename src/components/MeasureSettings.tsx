@@ -19,7 +19,9 @@ export default function MeasureSettings({ mode }: { mode: ModeDef }) {
     [precision, setPrecision] = usePrecision(),
     specs = tasksOf(mode),
     landmarks = specs.some((spec) => LANDMARKS.has(spec.kind)),
-    precise = specs.some((spec) => spec.preciseModel);
+    precise = specs.some((spec) => spec.preciseModel),
+    // Objects: on a real GPU, Fast already runs the larger model.
+    larger = specs.some((spec) => spec.gpuModel);
   if (!landmarks && !precise) return null;
   return (
     <div className="measure-settings">
@@ -52,8 +54,9 @@ export default function MeasureSettings({ mode }: { mode: ModeDef }) {
             ))}
           </div>
           <p>
-            Fast runs the smaller model. Precise loads a larger one on first
-            use, which is slower.
+            {larger
+              ? "Fast runs the smaller model on CPU and, unless it is switched off below, the larger one on a real graphics processor. Precise loads the larger one on any device, which is slower."
+              : "Fast runs the smaller model. Precise loads a larger one on first use, which is slower."}
           </p>
         </>
       )}

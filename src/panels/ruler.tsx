@@ -1,17 +1,19 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+import { useEffect } from "react";
 import { useStudio } from "../studio-context";
+import { preferCamera } from "../vision/camera-choice";
 import { derive } from "./ruler/derive";
-import KnownSizes from "./ruler/known-sizes";
+import KnownSizes from "./ruler/known/known-sizes";
 import { EXTENSIONS, extensionEnv, extensionFor } from "./ruler/extensions";
 import LensSection from "./ruler/lens-section";
 import { longSideNote } from "./ruler/long-side";
-import PlanPanel from "./ruler/plan-panel";
+import PlanPanel from "./ruler/plan/plan-panel";
 import ReferencePicker from "./ruler/reference-picker";
 import ClearButton from "./ruler/room/clear-button";
 import ViewStrip from "./ruler/room/view-strip";
 import Results from "./ruler/results";
-import ShapeTools, { openShape } from "./ruler/shape-tools";
-import TapeTest from "./ruler/tape-test";
+import ShapeTools, { openShape } from "./ruler/shapes/shape-tools";
+import TapeTest from "./ruler/known/tape-test";
 import {
   handleName,
   isEmpty,
@@ -50,6 +52,8 @@ function Ruler() {
     adding = pendingRef(s),
     // Said only for the picture on screen, like the values it is about.
     sideNote = show ? longSideNote(d.longSide, s.swap) : null;
+  // What gets measured is in front of the person, not behind the screen.
+  useEffect(() => preferCamera("ruler", "environment"), []);
 
   let step: string;
   if (!hasSource) step = "Choose a camera, photo or demo first.";

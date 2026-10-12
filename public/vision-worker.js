@@ -10,6 +10,9 @@
 //   finer names: a second model, an image classifier, run on the crop of each
 //   detected object. It is read from `init` and `options` and never reaches MediaPipe.
 //   in  { type: "frame", bitmap, time, generation, confidence } out { type: "result", result: TaskResult }
+//   Objects only: `detections` holds what scored at or above `confidence`. What scored up to
+//   KEEP_BELOW under it is returned apart, as `extra.faint`, for the tracker alone
+//   (src/vision/track-gate.ts); the key is absent when nothing scored there.
 //   any failure                                                 out { type: "error", error }
 // A failed GPU start is not retried here: the page decides, and restarts this
 // worker on CPU (src/vision/delegate.ts), which also discards any broken GL state.
@@ -45,6 +48,21 @@ const read = (output, bitmap, confidence) => ({
   ),
 });
 const detect = (task, bitmap, time) => task.detectForVideo(bitmap, time);
+
+// Objects: how far under the Confidence value a detection is still handed to
+// the page. The same figure as STAY_BELOW in src/vision/track-gate.ts.
+const KEEP_BELOW = 0.15;
+// What reached the Confidence value stays in `detections`; the band under it
+// moves to `extra.faint`. A result with nothing in the band is left as it is.
+function splitBand(fields, confidence) {
+  const faint = fields.detections.filter((d) => d.score < confidence);
+  if (!faint.length) return fields;
+  return {
+    ...fields,
+    detections: fields.detections.filter((d) => d.score >= confidence),
+    extra: { ...fields.extra, faint },
+  };
+}
 
 // Pose and hand: the landmarks as above, plus MediaPipe's world landmarks
 // (metres, same indexing as `landmarks`) in `extra.world`. A result without
@@ -455,6 +473,9 @@ function withFiner(fields, bitmap) {
 //   run         runs it on one frame
 //   confidence  maps the Confidence slider to task options (null: filter in `read`)
 //   read        normalizes the raw output into the TaskResult fields
+//   band        true: also return the detections just under the Confidence value (splitBand)
+//   stateless   true: the task carries nothing from one frame to the next, so a
+//               new source needs no reset
 function handlerFor(kind) {
   switch (kind) {
     case "object":
@@ -464,6 +485,8 @@ function handlerFor(kind) {
         run: detect,
         confidence: null,
         read,
+        band: true,
+        stateless: true,
       };
     case "pose":
       return {
@@ -600,12 +623,17 @@ self.onmessage = async ({ data }) => {
         await task.setOptions(handler.confidence(confidence));
         threshold = confidence;
       }
-      // A new source must not inherit the preceding video's tracking crop.
       if (generation !== sourceGeneration) {
         // Names belong to the picture they were computed on.
         memory = [];
-        await task.setOptions({ runningMode: "IMAGE" });
-        await task.setOptions({ runningMode: "VIDEO" });
+        // A new source must not inherit the preceding video's tracking crop.
+        // A task that has none is left alone: the switch makes its next
+        // inference a slow one, which on a GPU was most of a second without
+        // boxes after a camera opened.
+        if (!handler.stateless) {
+          await task.setOptions({ runningMode: "IMAGE" });
+          await task.setOptions({ runningMode: "VIDEO" });
+        }
         sourceGeneration = generation;
       }
       // A lost GPU does not make the model throw: it goes on returning empty
@@ -620,11 +648,20 @@ self.onmessage = async ({ data }) => {
       try {
         const output = handler.run(task, bitmap, time),
           latency = performance.now() - start;
-        // `transfer` lists buffers (masks) to move to the page instead of copying.
-        const { transfer = [], ...fields } = withFiner(
-          handler.read(output, bitmap, confidence),
+        // The band under the gate is read and named like the rest, so a box
+        // that dips into it keeps its finer name, and then set apart.
+        const all = withFiner(
+          handler.read(
+            output,
+            bitmap,
+            handler.band ? confidence - KEEP_BELOW : confidence,
+          ),
           bitmap,
         );
+        // `transfer` lists buffers (masks) to move to the page instead of copying.
+        const { transfer = [], ...fields } = handler.band
+          ? splitBand(all, confidence)
+          : all;
         self.postMessage(
           {
             type: "result",

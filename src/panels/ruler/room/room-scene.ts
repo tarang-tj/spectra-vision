@@ -4,10 +4,10 @@
 // and the room's own points and outline. A picture that is not on the plan
 // contributes nothing. The canvas and the saved SVG draw from this.
 import type { Pt } from "../homography";
-import { COLORS } from "../plan-layout";
-import { buildScene, type PlanItem, type PlanScene } from "../plan-scene";
+import { COLORS } from "../plan/plan-layout";
+import { buildScene, type PlanItem, type PlanScene } from "../plan/plan-scene";
 import { readingText, shortReading } from "../reading";
-import { toPlane } from "../shapes";
+import { toPlane } from "../shapes/shapes";
 import type { Unit } from "../units";
 import { ROOM } from "./overlay";
 import { applyRigid } from "./room-frame";

@@ -2,7 +2,7 @@
 // The Walls numbers as a CSV: every value with its bar, its unit and whether
 // it was measured or assumed, then the basis. Text only; nothing is uploaded.
 import type { Measured } from "../../../measure/noise";
-import { csvField } from "../export-plan";
+import { csvField } from "../plan/export-plan";
 import type { Unit } from "../units";
 import type { Numbers, Q } from "./numbers";
 import { areaOf, lengthOf, volumeOf } from "./text";

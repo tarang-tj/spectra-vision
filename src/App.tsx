@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import {
   useEffect,
   useMemo,
@@ -20,6 +21,7 @@ import type { StageActions } from "./components/CameraStage";
 import { effects } from "./effects";
 import { getMode, modes } from "./modes";
 import { paletteCommands } from "./shell/palette-commands";
+import { stageCard } from "./shell/stage-card";
 import { useNarrow } from "./shell/use-narrow";
 import { useOfflineCache } from "./shell/use-studio-effects";
 import { useShell } from "./shell/use-shell";
@@ -31,6 +33,7 @@ import { stageHooks } from "./stage/stage-hooks";
 import { StudioContext } from "./studio-context";
 import type { Studio } from "./studio-context";
 import { useSession } from "./vision/useSession";
+import { platformOf } from "./vision/camera-errors";
 import { useVision } from "./vision/useVision";
 import { webgl2Missing } from "./vision/webgl-probe";
 import type { FrameData } from "./vision/frame";
@@ -64,13 +67,25 @@ export default function App() {
     );
     notice("Session exported.");
   };
+  // A camera reports a new size through `input.camera.live`, which redraws
+  // this, so the shape is never a render behind. A video with no size yet
+  // counts as square rather than 0 / 0.
   const element = input.source?.element,
     aspect =
       element instanceof HTMLVideoElement
-        ? element.videoWidth / element.videoHeight
+        ? element.videoWidth / element.videoHeight || 1
         : element instanceof HTMLImageElement
           ? element.naturalWidth / element.naturalHeight
           : 1;
+  const card = useMemo(
+    () =>
+      stageCard(
+        input.problem,
+        vision.error,
+        platformOf(navigator.userAgent, navigator.maxTouchPoints),
+      ),
+    [input.problem, vision.error],
+  );
   // The canvas-free frame state shared by the stage, the inspector and panels.
   // It is rebuilt only when one of its parts changes, never per drawn frame.
   const settings = useMemo(
@@ -168,16 +183,13 @@ export default function App() {
   // The tips card opens from the Tips pill, in the page flow above the
   // workspace: it never sits on the stage or the rail. It steps aside while
   // the stage is reporting an error, and comes back once that is resolved.
-  const tips = shell.coach !== null &&
-    !shell.immersive &&
-    !input.error &&
-    !vision.error && (
-      <CoachMarks
-        step={shell.coach}
-        onStep={shell.setCoach}
-        onDone={shell.endCoach}
-      />
-    );
+  const tips = shell.coach !== null && !shell.immersive && !card && (
+    <CoachMarks
+      step={shell.coach}
+      onStep={shell.setCoach}
+      onDone={shell.endCoach}
+    />
+  );
   return (
     <StudioContext.Provider value={studio}>
       <main
@@ -200,9 +212,11 @@ export default function App() {
         />
         {tips}
         <CameraPicker
-          source={input.source}
-          cameras={input.cameras}
-          onPick={controls.openCamera}
+          live={input.camera.live}
+          asking={input.camera.asking}
+          named={input.camera.named}
+          sides={controls.cameraSides}
+          onPick={input.camera.pick}
         />
         <div className="workspace">
           <CameraStage
@@ -213,9 +227,15 @@ export default function App() {
             onPause={controls.togglePaused}
             onMirror={controls.toggleMirror}
             status={studio.status}
-            error={input.error || vision.error}
-            onRetry={input.error ? () => controls.openCamera() : vision.retry}
-            retryLabel={input.error ? "Retry camera" : "Retry model"}
+            card={card}
+            onRetry={input.problem ? controls.retrySource : vision.retry}
+            camera={{
+              live: input.camera.live,
+              muted: input.camera.muted,
+              waiting: input.camera.waiting,
+              onCancel: input.camera.cancel,
+              onFlip: controls.flipCamera,
+            }}
             onDemo={onDemo}
             notice={notice}
             actions={stageActions}

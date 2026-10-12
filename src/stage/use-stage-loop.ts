@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
 import { StageRenderer } from "./renderer";

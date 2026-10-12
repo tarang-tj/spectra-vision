@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { collect, report } from "../registry";
 import { isEffect } from "./types";
 import type { EffectDef } from "./types";

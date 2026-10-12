@@ -2,8 +2,8 @@
 // The room plan's own marks as drawing primitives, and which pictures give
 // it pixels. The canvas and the saved SVG are both written from these.
 import type { Pt } from "../homography";
-import { COLORS, type Prim } from "../plan-layout";
-import type { Fit } from "../topdown";
+import { COLORS, type Prim } from "../plan/plan-layout";
+import type { Fit } from "../plan/topdown";
 import { toRoomMap, type Layer } from "./room-plan";
 import type { Extra, RoomScene } from "./room-scene";
 import type { RoomSolution } from "./room-solve";

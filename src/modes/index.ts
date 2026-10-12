@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { collect, report } from "../registry";
 import { isMode } from "./types";
 import type { ModeDef } from "./types";

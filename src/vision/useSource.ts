@@ -1,5 +1,9 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { defaultMode, getMode } from "../modes";
+import { useCameraSource } from "./camera-source";
+import type { CameraHooks } from "./camera-source";
+import type { CameraFailure } from "./camera-errors";
 import type { Mode, Source } from "./types";
 
 /** What became of a file given to `upload`. `generation` is the one a picture
@@ -9,11 +13,16 @@ import type { Mode, Source } from "./types";
 export type Opened = { ok: true; generation: number | null } | { ok: false };
 const UNREADABLE: Opened = { ok: false };
 
-export function useSource() {
+/** Why there is no source: a camera failure with its cause worked out, or a
+ * demo or a file that could not be shown, in words. */
+export type SourceProblem =
+  | { from: "camera"; failure: CameraFailure }
+  | { from: "demo" | "file"; text: string };
+
+export function useSource(hooks: CameraHooks) {
   const [source, setSource] = useState<Source | null>(null),
-    [error, setError] = useState(""),
-    [pending, setPending] = useState(false),
-    [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+    [problem, setProblem] = useState<SourceProblem | null>(null),
+    [pending, setPending] = useState(false);
   const generation = useRef(0),
     current = useRef<Source | null>(null),
     url = useRef<string | null>(null),
@@ -39,7 +48,7 @@ export function useSource() {
     generation.current++;
     dispose();
     setSource(null);
-    setError("");
+    setProblem(null);
     setPending(true);
     return generation.current;
   }, [dispose]);
@@ -49,6 +58,7 @@ export function useSource() {
       kind: Source["kind"],
       label: string,
       token: number,
+      camera?: Source["camera"],
     ) => {
       if (token !== generation.current) {
         if (element instanceof HTMLVideoElement)
@@ -57,7 +67,7 @@ export function useSource() {
             .forEach((t) => t.stop());
         return;
       }
-      const value = { element, kind, label, generation: token };
+      const value = { element, kind, label, generation: token, camera };
       current.current = value;
       setSource(value);
       setPending(false);
@@ -65,14 +75,35 @@ export function useSource() {
     [],
   );
   const fail = useCallback(
-    (reason: unknown, token: number) => {
+    (reason: SourceProblem, token: number) => {
       if (token !== generation.current) return;
       dispose();
       setSource(null);
       setPending(false);
-      setError(reason instanceof Error ? reason.message : String(reason));
+      setProblem(reason);
     },
     [dispose],
+  );
+  /** Give up on a source that is still opening (an unanswered camera prompt).
+   * Whatever arrives later belongs to an old generation and is released. */
+  const cancel = useCallback(() => {
+    generation.current++;
+    dispose();
+    setPending(false);
+  }, [dispose]);
+  const camera = useCameraSource(
+    {
+      generation,
+      current,
+      source,
+      problem,
+      setProblem,
+      begin,
+      commit,
+      fail,
+      cancel,
+    },
+    hooks,
   );
   const demo = useCallback(
     async (mode: Mode = defaultMode.id, motion = false) => {
@@ -103,88 +134,15 @@ export function useSource() {
         commit(image, "demo", spec.label, token);
       } catch {
         fail(
-          new Error("Demo image could not load. Try reloading the page."),
+          {
+            from: "demo",
+            text: "Demo image could not load. Try reloading the page.",
+          },
           token,
         );
       }
     },
     [begin, commit, fail],
-  );
-  const camera = useCallback(
-    async (deviceId?: string) => {
-      const token = begin();
-      try {
-        if (!navigator.mediaDevices?.getUserMedia)
-          throw new Error(
-            "Camera needs HTTPS or localhost and a supported browser.",
-          );
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            ...(deviceId
-              ? { deviceId: { exact: deviceId } }
-              : { facingMode: "user" }),
-          },
-          audio: false,
-        });
-        if (token !== generation.current) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        const video = document.createElement("video");
-        video.muted = true;
-        video.playsInline = true;
-        video.srcObject = stream;
-        // Keep ownership while play is pending so cancellation also releases the stream.
-        current.current = {
-          element: video,
-          kind: "camera",
-          label: "Camera",
-          generation: token,
-        };
-        await video.play();
-        commit(
-          video,
-          "camera",
-          stream.getVideoTracks()[0]?.label || "Camera",
-          token,
-        );
-        try {
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          if (token === generation.current)
-            setCameras(devices.filter((d) => d.kind === "videoinput"));
-        } catch {
-          /* Camera can work even when device enumeration is unavailable. */
-        }
-        stream.getVideoTracks()[0]?.addEventListener(
-          "ended",
-          () => {
-            if (token === generation.current) {
-              dispose();
-              setSource(null);
-              setError("Camera disconnected. Reconnect it or try a demo.");
-            }
-          },
-          { once: true },
-        );
-      } catch (e) {
-        const name = (e as DOMException).name;
-        fail(
-          new Error(
-            name === "NotAllowedError"
-              ? "Camera permission was denied. Allow camera access in your browser, or use Upload / Demo."
-              : name === "NotFoundError"
-                ? "No camera found. Connect a camera, or use Upload / Demo."
-                : name === "NotReadableError"
-                  ? "Camera is busy. Close other camera apps and try again."
-                  : (e as Error).message,
-          ),
-          token,
-        );
-      }
-    },
-    [begin, commit, dispose, fail],
   );
   const upload = useCallback(
     async (file: File, onTake?: () => void): Promise<Opened> => {
@@ -241,9 +199,10 @@ export function useSource() {
         commit(video, "video", file.name, token);
       } catch {
         fail(
-          new Error(
-            "This file could not be opened. Try a PNG/JPEG image or a browser-supported video (MP4/WebM).",
-          ),
+          {
+            from: "file",
+            text: "This file could not be opened. Try a PNG/JPEG image or a browser-supported video (MP4/WebM).",
+          },
           token,
         );
       }
@@ -258,5 +217,5 @@ export function useSource() {
       dispose();
     };
   }, [demo, dispose]);
-  return { source, error, pending, cameras, demo, camera, upload };
+  return { source, problem, pending, demo, camera, upload };
 }

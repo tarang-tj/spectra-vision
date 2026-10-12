@@ -1,3 +1,5 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+import type { Granted } from "./camera-start";
 import type { HeldFrame } from "./held-frame";
 
 /** A mode id. Modes are discovered at build time from src/modes, so this is a
@@ -47,6 +49,19 @@ export type TaskSpec = {
    * `model` while the Precision setting is "Precise". Listed in
    * scripts/models.json like any other model. */
   preciseModel?: string;
+  /** A larger model that costs little on a real GPU. It runs instead of
+   * `model` while the task is on GPU, and gives way to `model` on CPU, after
+   * a GPU to CPU fallback, and where it proves slow (vision/model-choice.ts).
+   * Listed in scripts/models.json like any other model. */
+  gpuModel?: string;
+  /** A stronger model on another runtime, run instead of every other model
+   * of the task while the person has chosen it and it can run
+   * (vision/detector/sharper.ts). Listed in scripts/models.json like any
+   * other model. */
+  sharpModel?: string;
+  /** The size in bytes of each model file this task may load, by file name,
+   * for the first-download line (vision/first-download.ts). */
+  sizes?: Readonly<Record<string, number>>;
   options: Record<string, unknown>;
   /** Options that win over `options` and can change while the task runs. */
   live?: LiveOptions;
@@ -175,11 +190,18 @@ export type Track = Detection & {
   id: number;
   lastSeen: number;
   trail: Point[];
+  /** The latest result did not find this object. The box is where the
+   * tracker's velocity puts it, and the label and score are those of
+   * `lastSeen` (vision/tracker.ts). Absent on a track the result found. */
+  held?: true;
 };
 export type Source = {
   element: HTMLImageElement | HTMLVideoElement;
   kind: "demo" | "image" | "video" | "camera";
   label: string;
   generation: number;
+  /** For a camera: what the browser granted when it started (which camera,
+   * which way it faces, the picture's size). */
+  camera?: Granted;
 };
 export const COLORS = ["#a4ffd9", "#67aaff", "#ae94fa", "#ffd18d", "#ff8ab4"];

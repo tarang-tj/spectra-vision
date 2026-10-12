@@ -2,7 +2,7 @@
 // Each room picture's pixels for the plan, decoded once from the bytes held
 // in memory and kept while the picture is in the room. At most 1200 pixels on
 // a side each, so four phone photos stay small.
-import type { Raster } from "../topdown";
+import type { Raster } from "../plan/topdown";
 import { rasterOf } from "./picture";
 import type { View } from "./views-store";
 

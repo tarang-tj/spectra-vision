@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import type { Delegate, TaskKind, VisionResult } from "../vision/types";
 
 /** Measured events only: every number here comes from a model run or a clock. */

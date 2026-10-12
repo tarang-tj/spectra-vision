@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { mergeResults } from "../src/vision/merge";
 import { chooseDelegate, fallbackDelegate } from "../src/vision/delegate";

@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import {
   readFile,
   writeFile,
@@ -46,10 +47,12 @@ await cp(
 await cp(join(runtime, "wasm"), join(root, "public/runtime/wasm"), {
   recursive: true,
 });
-// ONNX Runtime Web, for the Depth mode's own worker (public/depth-worker.js).
-// Only the files that worker loads are copied: one script and one wasm pair
-// for each execution provider (which files each provider loads was read from
-// the browser's network requests, scripts/depth-check.mjs). The script and the
+// ONNX Runtime Web, for the Depth mode's own worker (public/depth-worker.js)
+// and for Objects' Sharper model (public/detector-worker.js), which loads the
+// GPU files only. Only the files those workers load are copied: one script
+// and one wasm pair for each execution provider (which files each provider
+// loads was read from the browser's network requests,
+// scripts/depth-check.mjs). The script and the
 // wasm must come from the same build, so the folder carries the version and
 // folders of other versions are removed.
 const ORT_FILES = [

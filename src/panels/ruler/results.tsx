@@ -4,9 +4,9 @@ import BasisDetails from "./basis-details";
 import { resultsText, type Derived } from "./derive";
 import { DEFAULT_SAMPLES, TAP_SIGMA_SCREEN_PX } from "./monte-carlo";
 import { isUncertainText } from "./reading";
-import ShapeResults from "./shape-results";
+import ShapeResults from "./shapes/shape-results";
 import type { RulerState } from "./store";
-import TapeEntry from "./tape-entry";
+import TapeEntry from "./known/tape-entry";
 
 /** Measured, not assumed (tests/ruler-coverage.test.ts): the lowest and the
  * highest share of true lengths inside the bar, in whole times in 100, over

@@ -9,12 +9,11 @@ import type { Pt } from "../homography";
 import {
   IDENTITY,
   placeView,
-  reflections,
-  symmetries,
   type Anchor,
   type Placement,
   type Rigid,
 } from "./room-frame";
+import { reflections, symmetries } from "./room-symmetry";
 import {
   combine,
   covOf,

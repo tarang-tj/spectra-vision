@@ -2,7 +2,8 @@
 // From the box in plane mm to lines in the picture: its eight corners, its
 // edges and faces, and each edge cut back to the part in front of the camera.
 // Pure: the drawing itself is in draw.ts.
-import { projectPoint, type Camera } from "../../../measure/camera";
+import type { Camera } from "../../../measure/camera";
+import { projectPoint } from "../../../measure/camera-project";
 import { invert3 } from "../../../measure/vec";
 import type { ExtensionEnv } from "../extension-types";
 import type { BoxState } from "./box-state";

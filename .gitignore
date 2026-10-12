@@ -3,8 +3,7 @@ dist/
 public/models/
 public/runtime/
 public/licenses/dependencies.txt
-test-results/
-playwright-report/
 *.tsbuildinfo
 .DS_Store
 .env*
+.claude/

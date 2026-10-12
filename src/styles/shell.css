@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 .app {
   max-width: 1600px;
   margin: auto;
@@ -303,19 +304,45 @@ kbd {
 .camera-picker {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   font-size: 12px;
   color: var(--muted);
   margin-bottom: 12px;
 }
-.camera-picker select {
+/* Every control here is at least 44 px tall, a comfortable target for a
+   thumb, and its text is 16 px: iOS zooms the page on a smaller field. */
+.camera-picker select,
+.camera-sides button {
+  min-height: 44px;
   color: white;
   background: var(--surface);
-  padding: 6px 10px;
+  padding: 6px 14px;
   border: 1px solid var(--border);
+  font-size: 16px;
+}
+.camera-picker select {
   border-radius: 4px;
-  font-size: 12px;
-  max-width: 350px;
+  min-width: 0;
+  max-width: min(350px, 100%);
+}
+.camera-sides {
+  display: flex;
+}
+.camera-sides button {
+  min-width: 72px;
+}
+.camera-sides button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+.camera-sides button:last-child {
+  border-radius: 0 4px 4px 0;
+  border-left: 0;
+}
+.camera-sides button[aria-pressed="true"] {
+  background: #a4ffd925;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 @media (min-width: 1400px) {
   .stat {

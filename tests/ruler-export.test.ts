@@ -6,14 +6,14 @@ import {
   planCsv,
   planSvg,
   wrap,
-} from "../src/panels/ruler/export-plan";
+} from "../src/panels/ruler/plan/export-plan";
 import {
   applyHomography,
   type Mat3,
   type Pt,
 } from "../src/panels/ruler/homography";
-import { layoutScene, niceLength } from "../src/panels/ruler/plan-layout";
-import { buildScene } from "../src/panels/ruler/plan-scene";
+import { layoutScene, niceLength } from "../src/panels/ruler/plan/plan-layout";
+import { buildScene } from "../src/panels/ruler/plan/plan-scene";
 import {
   bindSource,
   finishShape,
@@ -23,7 +23,7 @@ import {
   setTool,
   setUnit,
 } from "../src/panels/ruler/store";
-import { fitBox } from "../src/panels/ruler/topdown";
+import { fitBox } from "../src/panels/ruler/plan/topdown";
 
 // A mild perspective, as in a photo taken standing over the floor.
 const MAP: Mat3 = [1.5, 0.12, 80, 0.05, 1.4, 60, 0.00012, 0.00025, 1];

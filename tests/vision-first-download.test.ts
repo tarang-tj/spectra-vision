@@ -2,12 +2,14 @@
 import { describe, expect, it } from "vitest";
 import catalogue from "../scripts/models.json";
 import depth from "../src/modes/depth";
+import objects from "../src/modes/objects";
 import { tasksOf } from "../src/modes/types";
 import {
   downloadNote,
   firstDownloadNote,
   megabytes,
 } from "../src/vision/first-download";
+import { noteDelegate, resetModelChoice } from "../src/vision/model-choice";
 
 const BASE = "https://site.example/app/";
 const storing = (stored: string[]) => ({
@@ -82,5 +84,53 @@ describe("the first-download line", () => {
     // 99 MB, the figure the on-screen audit measured on the wire (98.75 MB).
     expect(megabytes(listed.bytes)).toBe("99 MB");
     expect(downloadNote(listed.bytes, true)).toContain("99 MB");
+  });
+});
+
+describe("Objects' first download", () => {
+  const spec = tasksOf(objects)[0],
+    env = (stored: string[]) => ({
+      caches: storing(stored),
+      registered: async () => false,
+    });
+  it("states sizes that are the manifest's", () => {
+    for (const [file, bytes] of Object.entries(spec.sizes!))
+      expect([file, bytes]).toEqual([
+        file,
+        catalogue.find((entry) => entry.file === file)!.bytes,
+      ]);
+    expect(Object.keys(spec.sizes!).sort()).toEqual(
+      [spec.model, spec.gpuModel!, spec.sharpModel!].sort(),
+    );
+    // The size is not handed to MediaPipe as a task option.
+    expect(spec.options).not.toHaveProperty("bytes");
+  });
+  it("gives the size of the model the task is loading, per delegate", async () => {
+    resetModelChoice();
+    try {
+      const cpu = env([]);
+      expect(await firstDownloadNote([spec], BASE, cpu)).toBe(
+        "Downloading this mode's model: 7 MB, one time",
+      );
+      expect(cpu.caches.asked).toEqual([`${BASE}models/${spec.model}`]);
+      // Its runner is on a real GPU: the larger file is what is fetched.
+      noteDelegate("object", "GPU");
+      const gpu = env([`${BASE}models/${spec.model}`]);
+      expect(await firstDownloadNote([spec], BASE, gpu)).toBe(
+        "Downloading this mode's model: 12 MB, one time",
+      );
+      expect(gpu.caches.asked).toEqual([`${BASE}models/${spec.gpuModel}`]);
+    } finally {
+      resetModelChoice();
+    }
+  });
+  it("says nothing once that model is stored", async () => {
+    expect(
+      await firstDownloadNote(
+        [spec],
+        BASE,
+        env([`${BASE}models/${spec.model}`]),
+      ),
+    ).toBeNull();
   });
 });

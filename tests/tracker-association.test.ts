@@ -99,12 +99,23 @@ describe("confirmation", () => {
 
   it("confirms an object found on alternate frames at 15 fps", () => {
     const t = new Tracker(STEADY_TRACKER),
-      shown: number[][] = [];
+      shown: { id: number; held?: true }[][] = [];
     for (let i = 0; i < 40; i++)
-      shown.push(ids(t.update(i % 2 ? [] : [det(0.4)], i * 66)));
-    // Hidden only on its first sighting, then shown on every frame it is found.
-    expect(shown.filter((x) => x.length).length).toBe(19);
-    expect(new Set(shown.flat())).toEqual(new Set([1]));
+      shown.push(t.update(i % 2 ? [] : [det(0.4)], i * 66));
+    // Changed on purpose in 2.5. Until then a missed result took the box off
+    // the screen at once, so this object was shown on 19 results of 40 and
+    // blinked on every other one. Now it is hidden on its first sighting and
+    // the result after it, then shown on all 38 that follow: found on 19 of
+    // them and held, marked as such, on the 19 between.
+    expect(shown.map((x) => x.length)).toEqual([0, 0, ...Array(38).fill(1)]);
+    expect(shown.flat().filter((x) => x.held)).toHaveLength(19);
+    expect(
+      shown
+        .filter((_, i) => i % 2)
+        .flat()
+        .every((x) => x.held),
+    ).toBe(true);
+    expect(new Set(ids(shown.flat()))).toEqual(new Set([1]));
   });
 
   it("confirms an object found only every 5th frame at 15 fps", () => {

@@ -1,3 +1,4 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { strokePath } from "../vision/draw";
 import { HAND_EDGES, isPinching } from "../vision/geometry";
 import { COLORS } from "../vision/types";

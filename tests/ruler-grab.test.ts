@@ -5,7 +5,7 @@
 // the canvas; the helper turns them into the event the stage would send.
 import { beforeEach, describe, it, expect } from "vitest";
 import { endDrag, onRulerPointer } from "../src/panels/ruler/pointer";
-import { addReference } from "../src/panels/ruler/store-known";
+import { addReference } from "../src/panels/ruler/known/store-known";
 import {
   bindSource,
   building,
