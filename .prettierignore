@@ -5,3 +5,4 @@ public/runtime
 public/licenses/dependencies.txt
 pnpm-lock.yaml
 *.tsbuildinfo
+.claude
