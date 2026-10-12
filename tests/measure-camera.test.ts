@@ -1,15 +1,13 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect } from "vitest";
+import { fitCamera, toCamera, type Plumb } from "../src/measure/camera";
 import {
-  fitCamera,
   heightAbove,
   horizontalFov,
   pixelRay,
   projectByPose,
   projectPoint,
-  toCamera,
-  type Plumb,
-} from "../src/measure/camera";
+} from "../src/measure/camera-project";
 import { invert3, mulMat, rodrigues } from "../src/measure/vec";
 import { solveHomography, type Pt } from "../src/panels/ruler/homography";
 import { gaussian, seededRandom } from "../src/panels/ruler/monte-carlo";
