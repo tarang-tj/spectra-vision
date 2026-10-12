@@ -623,12 +623,17 @@ self.onmessage = async ({ data }) => {
         await task.setOptions(handler.confidence(confidence));
         threshold = confidence;
       }
-      // A new source must not inherit the preceding video's tracking crop.
       if (generation !== sourceGeneration) {
         // Names belong to the picture they were computed on.
         memory = [];
-        await task.setOptions({ runningMode: "IMAGE" });
-        await task.setOptions({ runningMode: "VIDEO" });
+        // A new source must not inherit the preceding video's tracking crop.
+        // A task that has none is left alone: the switch makes its next
+        // inference a slow one, which on a GPU was most of a second without
+        // boxes after a camera opened.
+        if (!handler.stateless) {
+          await task.setOptions({ runningMode: "IMAGE" });
+          await task.setOptions({ runningMode: "VIDEO" });
+        }
         sourceGeneration = generation;
       }
       // A lost GPU does not make the model throw: it goes on returning empty
