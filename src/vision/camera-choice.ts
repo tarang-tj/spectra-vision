@@ -47,8 +47,8 @@ export function writeChoice(granted: Granted): void {
 }
 
 /** What Start camera asks for. A side picked by hand wins; then the side the
- * open panel prefers; then the remembered camera. The remembered id is used
- * only when it is on the side being asked for. */
+ * open panel prefers; then the remembered camera. The remembered id is not
+ * used when it is known to be on the other side. */
 export function startWant(
   picked: CameraWant | null,
   preferred: Facing | null,
@@ -56,8 +56,12 @@ export function startWant(
 ): CameraWant {
   if (picked?.deviceId) return picked;
   const facing = picked?.facing ?? preferred ?? remembered?.facing;
-  if (!remembered?.deviceId || (facing && remembered.facing !== facing))
-    return facing ? { facing } : {};
+  // A remembered camera that never said which way it faces (a desk webcam)
+  // gives way to a side picked by hand, but not to a panel's preference.
+  const clash =
+    facing &&
+    (remembered?.facing ? remembered.facing !== facing : !!picked?.facing);
+  if (!remembered?.deviceId || clash) return facing ? { facing } : {};
   return {
     deviceId: remembered.deviceId,
     remembered: true,

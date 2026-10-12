@@ -126,6 +126,18 @@ describe("what Start camera asks for", () => {
       remembered: true,
     });
   });
+  it("keeps a remembered webcam with no known side when a panel prefers the rear", () => {
+    const webcam = { deviceId: "webcam-b" };
+    expect(startWant(null, "environment", webcam)).toEqual({
+      deviceId: "webcam-b",
+      facing: "environment",
+      remembered: true,
+    });
+    // A side picked by hand still wins over it.
+    expect(startWant({ facing: "user" }, null, webcam)).toEqual({
+      facing: "user",
+    });
+  });
   it("asks for a camera picked by name as it is", () => {
     expect(startWant({ deviceId: "wide" }, "environment", remembered)).toEqual({
       deviceId: "wide",
