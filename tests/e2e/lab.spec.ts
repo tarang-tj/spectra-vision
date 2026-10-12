@@ -293,6 +293,13 @@ test("shortened benchmark exports reproducible JSON and Markdown and restores th
   );
   expect(md).toContain("hand_landmarker.task");
   expect(md).toContain("(matches record)");
+  // What a run holds fixed is said twice: in the protocol and under the table.
+  expect(md).toContain(
+    "Each task ran one model file on every delegate: a task's larger GPU model and Sharper are set aside for the run, so CPU and GPU rows time the same file.",
+  );
+  expect(md).toContain(
+    "Rows of one mode ran the same model file on each delegate; the Model column names it.",
+  );
 
   // The benchmark put everything back: mode, delegate choice, one worker.
   await expect(tab(page, "Objects")).toHaveAttribute("aria-pressed", "true");

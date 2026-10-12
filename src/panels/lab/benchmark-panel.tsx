@@ -66,7 +66,7 @@ export default function BenchmarkPanel() {
         shortened: measureMs !== MEASURE_MS || warmupMs !== WARMUP_MS,
         inferenceCapFps: Math.round(10000 / MIN_FRAME_GAP) / 10,
         notes:
-          "Fixed source: the one on the stage (each mode's own demo input when the demo is in use). The warm-up starts at the first result after the model is ready.",
+          "Fixed source: the one on the stage (each mode's own demo input when the demo is in use). The warm-up starts at the first result after the model is ready. Each task ran one model file on every delegate: a task's larger GPU model and Sharper are set aside for the run, so CPU and GPU rows time the same file.",
       },
       device: describeDevice(),
       canvas: stageCanvasSize(),
