@@ -607,8 +607,14 @@ test("the service worker registers only in production and caches models on deman
   // model that ran are stored, although all of them were fetched before the
   // worker took control. Models that were never used are not.
   await expect.poll(() => cached(/\/spectra-vision\/$/)).toEqual([shell]);
-  await expect.poll(() => cached(/assets\/.*\.js$/)).toEqual([shell]);
-  await expect.poll(() => cached(/assets\/.*\.css$/)).toEqual([shell]);
+  // Several scripts and styles now (panels are fetched on demand): each one
+  // is stored, and all in this build's shell cache.
+  const stores = async (name: RegExp) => [...new Set(await cached(name))];
+  await expect.poll(() => stores(/assets\/.*\.js$/)).toEqual([shell]);
+  await expect.poll(() => stores(/assets\/.*\.css$/)).toEqual([shell]);
+  await expect
+    .poll(async () => (await cached(/assets\/.*\.js$/)).length)
+    .toBeGreaterThan(1);
   await expect.poll(() => cached(/vision-worker\.js$/)).toEqual([shell]);
   await expect.poll(() => cached(/demo\/studio\.png$/)).toEqual([shell]);
   for (const file of [

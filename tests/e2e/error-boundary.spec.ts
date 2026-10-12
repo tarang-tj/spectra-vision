@@ -71,6 +71,8 @@ test("a panel that throws shows a message in its own place, is logged once, and 
   // Another panel is not affected, and coming back starts clean.
   await tab(page, "Lab").click();
   await expect(alert).toHaveCount(0);
+  // The Lab's body is fetched on demand; its loading line is not the panel.
+  await expect(page.locator(".panel-loading")).toHaveCount(0);
   await expect(page.locator('.panel-body[data-panel="lab"]')).not.toBeEmpty();
   await tab(page, "Ruler").click();
   await expect(alert).toHaveCount(1);
