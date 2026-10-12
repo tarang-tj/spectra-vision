@@ -1,11 +1,11 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // What the top-down drawing contains, in plane millimetres with ready-made
 // label text. The canvas and the SVG export both draw from this one scene.
-import type { Derived } from "./derive";
-import { shortReading } from "./reading";
-import { toPlane } from "./shapes";
-import type { Pt } from "./homography";
-import type { RulerState } from "./state";
+import type { Derived } from "../derive";
+import { shortReading } from "../reading";
+import { toPlane } from "../shapes";
+import type { Pt } from "../homography";
+import type { RulerState } from "../state";
 
 export type PlanItem =
   | { kind: "reference"; pts: Pt[]; label: string }

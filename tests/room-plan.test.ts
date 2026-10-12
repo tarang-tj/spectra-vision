@@ -1,14 +1,14 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { beforeEach, describe, expect, it } from "vitest";
 import { derive } from "../src/panels/ruler/derive";
-import { fitBox, type Raster } from "../src/panels/ruler/topdown";
+import { fitBox, type Raster } from "../src/panels/ruler/plan/topdown";
 import { ROOM_CSV_HEADER, roomCsv } from "../src/panels/ruler/room/room-export";
 import {
   mergeTopDown,
   toRoomMap,
   type Layer,
 } from "../src/panels/ruler/room/room-plan";
-import { layoutScene } from "../src/panels/ruler/plan-layout";
+import { layoutScene } from "../src/panels/ruler/plan/plan-layout";
 import {
   keepInside,
   layoutExtras,

@@ -1,15 +1,15 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useStudio } from "../../studio-context";
-import type { Derived } from "./derive";
-import { downloadText } from "../../download";
+import { useStudio } from "../../../studio-context";
+import type { Derived } from "../derive";
+import { downloadText } from "../../../download";
 import { planCsv, planSvg } from "./export-plan";
-import { view } from "./overlay";
+import { view } from "../overlay";
 import { drawPrims } from "./plan-draw";
 import { LEGEND, layoutScene, type Prim } from "./plan-layout";
 import { buildScene, type PlanScene } from "./plan-scene";
 import { rasterOf } from "./snapshot";
-import type { RulerState } from "./store";
+import type { RulerState } from "../store";
 import { fitBox, renderTopDown, type Fit } from "./topdown";
 
 type Drawn = {

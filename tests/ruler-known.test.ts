@@ -4,7 +4,7 @@
 import { beforeEach, describe, it, expect } from "vitest";
 import { cameraOf, cameraTrials } from "../src/panels/ruler/camera-of";
 import { derive, resultsText } from "../src/panels/ruler/derive";
-import { planCsv } from "../src/panels/ruler/export-plan";
+import { planCsv } from "../src/panels/ruler/plan/export-plan";
 import { quadsOverlap } from "../src/panels/ruler/known/fuse-inputs";
 import { REFERENCES } from "../src/panels/ruler/references";
 import {

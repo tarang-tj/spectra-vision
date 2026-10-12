@@ -3,7 +3,7 @@
 // bar and the pictures it rests on, one per room point with where each
 // picture puts it, one per picture saying whether it is on the plan and why.
 // Built as text; the panel hands it to the browser as a local download.
-import { csvField } from "../export-plan";
+import { csvField } from "../plan/export-plan";
 import type { Pt } from "../homography";
 import { toPlane } from "../shapes";
 import { areaFromMm2, areaUnit, fromMm, type Unit } from "../units";

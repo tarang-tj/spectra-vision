@@ -9,10 +9,10 @@ import {
 } from "react";
 import { downloadText } from "../../../download";
 import { useStudio } from "../../../studio-context";
-import { planSvg } from "../export-plan";
-import { drawPrims } from "../plan-draw";
-import { LEGEND, layoutScene, type Prim } from "../plan-layout";
-import { fitBox, type Fit } from "../topdown";
+import { planSvg } from "../plan/export-plan";
+import { drawPrims } from "../plan/plan-draw";
+import { LEGEND, layoutScene, type Prim } from "../plan/plan-layout";
+import { fitBox, type Fit } from "../plan/topdown";
 import type { Unit } from "../units";
 import { keepOnly, pixelsOf, rasterVersion, subscribeRasters } from "./rasters";
 import { roomCsv } from "./room-export";

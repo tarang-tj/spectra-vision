@@ -2,14 +2,14 @@
 // "Save plan": an SVG of the top-down drawing and a CSV of every measurement.
 // Both are built here as text; the panel hands them to the browser as local
 // downloads. Nothing is uploaded.
-import type { Derived } from "./derive";
+import type { Derived } from "../derive";
 import { LEGEND, type Prim } from "./plan-layout";
 import type { PlanScene } from "./plan-scene";
-import type { RulerState } from "./state";
-import { droppedNote } from "./monte-carlo";
-import { toPlane } from "./shapes";
+import type { RulerState } from "../state";
+import { droppedNote } from "../monte-carlo";
+import { toPlane } from "../shapes";
 import type { Fit } from "./topdown";
-import { areaFromMm2, areaUnit, fromMm } from "./units";
+import { areaFromMm2, areaUnit, fromMm } from "../units";
 
 const esc = (t: string) =>
   t

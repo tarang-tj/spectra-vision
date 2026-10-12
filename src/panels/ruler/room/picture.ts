@@ -2,7 +2,7 @@
 // A room picture as bytes and as pixels. Everything here stays in memory: a
 // picture is read from the stage or from a file the user chose, and nothing
 // is sent anywhere.
-import type { Raster } from "../topdown";
+import type { Raster } from "../plan/topdown";
 
 const THUMB_SIDE = 160;
 /** The merged plan reads each picture from a copy this size at most, the cap

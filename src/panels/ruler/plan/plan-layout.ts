@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // Turns a scene into drawing primitives in output pixels. Both the canvas
 // drawing and the SVG file are written from these, so they cannot disagree.
-import { fromMm, toMm, type Unit } from "./units";
+import { fromMm, toMm, type Unit } from "../units";
 import type { Fit } from "./topdown";
 import type { PlanScene } from "./plan-scene";
 

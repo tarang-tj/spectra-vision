@@ -5,7 +5,7 @@ import KnownSizes from "./ruler/known/known-sizes";
 import { EXTENSIONS, extensionEnv, extensionFor } from "./ruler/extensions";
 import LensSection from "./ruler/lens-section";
 import { longSideNote } from "./ruler/long-side";
-import PlanPanel from "./ruler/plan-panel";
+import PlanPanel from "./ruler/plan/plan-panel";
 import ReferencePicker from "./ruler/reference-picker";
 import ClearButton from "./ruler/room/clear-button";
 import ViewStrip from "./ruler/room/view-strip";

@@ -11,7 +11,7 @@ import { dot, INK, LINE, REF, tag } from "./overlay-parts";
 import { drawRefs } from "./overlay-refs";
 import { drawShapes } from "./overlay-shapes";
 import { shortReading } from "./reading";
-import { takeSnapshot, type Snapshot } from "./snapshot";
+import { takeSnapshot, type Snapshot } from "./plan/snapshot";
 import { bindSource, bindStillness, getState } from "./store";
 
 /** Shared between the overlay and the pointer code. */

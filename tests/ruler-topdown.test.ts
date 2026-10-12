@@ -13,7 +13,7 @@ import {
   renderTopDown,
   SMEAR_LIMIT,
   type Raster,
-} from "../src/panels/ruler/topdown";
+} from "../src/panels/ruler/plan/topdown";
 
 // Plane mm to picture px, in the sheet's own frame (its first corner is the
 // origin). The picture is 800 x 600.
