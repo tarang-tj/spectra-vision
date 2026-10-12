@@ -22,7 +22,7 @@ export const named = (text: string, file: string): boolean =>
 
 describe("third party notices", () => {
   it("has models to check", () => {
-    expect(models.length).toBeGreaterThanOrEqual(10);
+    expect(models.length).toBeGreaterThanOrEqual(11);
   });
   it.each(models.map((m) => [m.file, m] as const))(
     "names %s by its file name beside a licence, and the manifest records one",
@@ -45,15 +45,40 @@ describe("third party notices", () => {
     // The manifest marks two licences "(inferred)". The gesture recognizer's
     // is inferred too but recorded plain with a note, which
     // tests/session-export.test.ts pins; the notices call all three inferred.
+    // The Sharper detector is recorded the same way: the card of the ONNX
+    // conversion that is downloaded states no licence, and the licence is
+    // the one its authors and its base model's card state.
     const inferred = models
       .filter((m) => /inferred/.test(m.license ?? ""))
       .map((m) => m.file);
     expect(inferred).toHaveLength(2);
-    for (const file of [...inferred, "gesture_recognizer.task"]) {
+    for (const file of [
+      ...inferred,
+      "gesture_recognizer.task",
+      "dfine_s_coco.onnx",
+    ]) {
       const entry = models.find((m) => m.file === file)!,
         line = notices.split("\n").find((l) => l.startsWith(`| \`${file}\``));
       expect(line, file).toMatch(/see note/);
       expect(entry.licenseNote ?? "", file).not.toBe("");
     }
+  });
+  it("names the source, the authors and the missing licence of the Sharper detector", () => {
+    const entry = models.find((m) => m.file === "dfine_s_coco.onnx")!,
+      note = notices.split("\n").find((l) => l.startsWith("- **D-FINE-S"))!;
+    // The authors' repository, the base model's card and the conversion.
+    for (const source of [
+      "github.com/Peterande/D-FINE",
+      "huggingface.co/ustc-community/dfine_s_coco",
+      "huggingface.co/onnx-community/dfine_s_coco-ONNX",
+    ])
+      expect(note, source).toContain(source);
+    expect(note).toMatch(/conversion that is downloaded states no license/);
+    expect(entry.licenseNote).toMatch(/own card states no licence/);
+    // Only the checkpoint trained on COCO alone may be pinned.
+    expect((entry as Entry & { url: string }).url).toMatch(
+      /\/dfine_s_coco-ONNX\/resolve\/[0-9a-f]{40}\/onnx\/model\.onnx$/,
+    );
+    expect(JSON.stringify(models)).not.toMatch(/obj2coco-ONNX|obj365-ONNX/);
   });
 });

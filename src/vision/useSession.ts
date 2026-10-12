@@ -4,6 +4,7 @@ import { tasksOf } from "../modes";
 import type { ModeDef } from "../modes";
 import { exportedSize, frameLimit } from "../session-export";
 import { onStillState, stillState } from "./still";
+import { faintOf } from "./track-gate";
 import { STEADY_TRACKER, Tracker } from "./tracker";
 import type { Source, Track, VisionResult } from "./types";
 
@@ -65,9 +66,11 @@ export function useSession(
     const instant =
       rateFrom.current === null ? null : 1000 / (r.time - rateFrom.current);
     previous.current = rateFrom.current = r.time;
-    // Only a mode whose detections are separate objects gets track ids.
+    // Only a mode whose detections are separate objects gets track ids. The
+    // band under the Confidence value goes to the tracker and nowhere else:
+    // the entry below keeps what reached the slider's value.
     const tracks = mode.tracked
-      ? tracker.current.update(r.detections, r.time)
+      ? tracker.current.update(r.detections, r.time, faintOf(r.tasks.object))
       : NO_TRACKS;
     setLive((old) => ({
       key,

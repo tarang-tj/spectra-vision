@@ -5,10 +5,14 @@
 //              result feed always keep the raw values). On by default.
 //   precision  "fast" runs each task's `model`; "precise" runs its
 //              `preciseModel` where it has one. Fast by default, so CI and
-//              slow machines keep the small models on CPU.
+//              slow machines keep the small models on CPU. On Fast, a task
+//              that names a `gpuModel` runs that on a real GPU
+//              (model-choice.ts).
 import { useSyncExternalStore } from "react";
 import { readFlag, writeFlag } from "../shell/storage";
-import type { TaskSpec } from "./types";
+import { sharperFor } from "./detector/sharper";
+import { gpuModelFor } from "./model-choice";
+import type { Delegate, TaskSpec } from "./types";
 
 export type Precision = "fast" | "precise";
 
@@ -76,9 +80,18 @@ export function usePrecision(): [Precision, (value: Precision) => void] {
   ];
 }
 
-/** The model file a task runs under the current Precision setting. */
+/** The model file a task runs under the current Precision setting. On Fast,
+ * a task that names a larger model for a real GPU runs it there
+ * (model-choice.ts); `delegate` defaults to the one its runner is on now.
+ * A Sharper model the person chose wins over both wherever it can run
+ * (detector/sharper.ts). */
 export const modelOf = (
-  spec: Pick<TaskSpec, "model" | "preciseModel">,
+  spec: Pick<TaskSpec, "model" | "preciseModel"> &
+    Partial<Pick<TaskSpec, "kind" | "gpuModel" | "sharpModel">>,
   level: Precision = precision.get(),
+  delegate?: Delegate,
 ): string =>
-  level === "precise" && spec.preciseModel ? spec.preciseModel : spec.model;
+  sharperFor(spec, delegate) ??
+  (level === "precise" && spec.preciseModel
+    ? spec.preciseModel
+    : (gpuModelFor(spec, delegate) ?? spec.model));

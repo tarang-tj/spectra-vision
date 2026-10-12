@@ -1,41 +1,10 @@
 import type { Box, Detection, Point, Track } from "./types";
 import { assign, centre, iou, pairGain } from "./tracker-cost";
+import { DEFAULT_TRACKER, type TrackerOptions } from "./tracker-options";
 export { iou };
+export { DEFAULT_TRACKER, STEADY_TRACKER } from "./tracker-options";
+export type { TrackerOptions } from "./tracker-options";
 
-/** How tracks are matched and kept. Times are in the clock of `update`. */
-export type TrackerOptions = {
-  /** Sightings a new object needs before it gets an id and is returned. 1
-   * shows every detection at once. The sightings need not follow each other:
-   * a tentative object is kept for `confirmWindowMs` after its last sighting,
-   * so an object found only on every 4th or 5th frame is still confirmed. */
-  minHits: number;
-  /** A confirmed track survives this many missed frames in a row. */
-  maxMisses: number;
-  /** A tentative track also survives this many misses, whatever their timing. */
-  tentativeMisses: number;
-  /** A tentative track is forgotten when not seen for this long (ms). */
-  confirmWindowMs: number;
-  /** A tentative track only takes a detection overlapping its box by more than
-   * this (IoU); with no velocity yet, a loose gate would chain flickers. */
-  tentativeIou: number;
-  /** When results arrive further apart than this (ms), a new object is
-   * confirmed at once: waiting a whole extra result costs more than a flicker. */
-  slowGapMs: number;
-  /** A track not seen for this long (ms) is forgotten. The limit grows to 2.5
-   * times the last gap between results, and a track is never forgotten before
-   * it has had one result to match. */
-  maxAgeMs: number;
-  /** A detection may join a track when its box overlaps the track's by more
-   * than this (IoU), or when the centres are closer than `maxCentre`. */
-  minIou: number;
-  maxCentre: number;
-  /** Weight of the newest velocity sample in the running velocity (0..1), for
-   * a result 1/15 s after the previous one. Low means a steady velocity that
-   * jittery boxes cannot swing. */
-  velocityBlend: number;
-  /** The box is moved along its velocity for at most this long (ms). */
-  maxPredictMs: number;
-};
 /** Smoothing of the centre, same 1/15 s reference as `velocityBlend`. The
  * prediction is built from this smoothed centre, so box jitter cannot decide
  * which of two overlapping boxes belongs to which track. */
@@ -45,30 +14,12 @@ const CENTRE_BLEND = 0.3;
 const REACH_MS = 150;
 const REACH_MAX = 3;
 const REFERENCE_GAP_MS = 1000 / 15;
-export const DEFAULT_TRACKER: TrackerOptions = {
-  minHits: 1,
-  maxMisses: 10,
-  tentativeMisses: 2,
-  confirmWindowMs: 1000,
-  tentativeIou: 0.5,
-  slowGapMs: 400,
-  maxAgeMs: 900,
-  minIou: 0.15,
-  maxCentre: 0.075,
-  velocityBlend: 0.08,
-  maxPredictMs: 400,
-};
-/** The settings the app is measured with: DEFAULT_TRACKER plus a two-frame
- * confirmation, so one-frame false detections get no id. */
-export const STEADY_TRACKER: TrackerOptions = {
-  ...DEFAULT_TRACKER,
-  minHits: 2,
-};
 
 type Live = {
   id: number; // 0 until confirmed
   label: string;
   box: Box;
+  seen: Detection; // the detection it was last matched to
   fx: number; // smoothed centre
   fy: number;
   vx: number; // centre velocity, image fractions per ms
@@ -94,8 +45,18 @@ export class Tracker {
     this.prevTime = NaN;
     this.lastGap = 0;
   }
-  update(detections: Detection[], time: number): Track[] {
+  /** One result. `faint` are detections that scored under the gate but
+   * within the band kept below it (track-gate.ts): one may carry on a track
+   * that exists, so an object whose score wavers round the gate keeps its box
+   * and its id, and none ever starts a track. */
+  update(
+    detections: Detection[],
+    time: number,
+    faint: Detection[] = [],
+  ): Track[] {
     const o = this.o,
+      strong = detections.length,
+      all = faint.length ? [...detections, ...faint] : detections,
       limit = Math.max(o.maxAgeMs, 2.5 * this.lastGap),
       gap = time - this.prevTime,
       slow = gap > o.slowGapMs,
@@ -117,7 +78,7 @@ export class Tracker {
       };
     });
     const gain = previous.map((t, ti) =>
-      detections.map((d) =>
+      all.map((d) =>
         pairGain(
           { ...t, confirmed: t.id > 0 },
           predicted[ti],
@@ -129,7 +90,7 @@ export class Tracker {
       ),
     );
     const column = previous.length
-        ? assign(gain, previous.length, detections.length)
+        ? assign(gain, previous.length, all.length)
         : [],
       owner = new Map<number, Live>(),
       matched = new Set<Live>();
@@ -141,9 +102,11 @@ export class Tracker {
     });
     const current: Track[] = [],
       live: Live[] = [];
-    detections.forEach((d, di) => {
+    all.forEach((d, di) => {
       const old = owner.get(di),
         c = centre(d.box);
+      // A faint detection that no track took is dropped.
+      if (!old && di >= strong) return;
       let track: Live;
       if (old) {
         const dt = time - old.lastSeen,
@@ -157,6 +120,7 @@ export class Tracker {
         track = {
           ...old,
           box: d.box,
+          seen: d,
           lastSeen: time,
           hits: old.hits + 1,
           misses: 0,
@@ -182,6 +146,7 @@ export class Tracker {
           id: 0,
           label: d.label,
           box: d.box,
+          seen: d,
           fx: c.x,
           fy: c.y,
           vx: 0,
@@ -202,15 +167,24 @@ export class Tracker {
           trail: track.trail,
         });
     });
-    // Missed tracks are retained for association only, never rendered as fresh
-    // detections.
-    for (const t of previous)
-      if (
-        !matched.has(t) &&
-        // A tentative track is pruned by age when the next result arrives.
-        (t.id ? t.misses < o.maxMisses : true)
-      )
-        live.push({ ...t, misses: t.misses + 1 });
+    // Missed tracks are retained for association, never returned as fresh
+    // detections. A confirmed one is returned as held for a few results, at
+    // the place its velocity predicts and marked so the mode can say so.
+    previous.forEach((t, ti) => {
+      if (matched.has(t)) return;
+      // A tentative track is pruned by age when the next result arrives.
+      if (t.id && t.misses >= o.maxMisses) return;
+      live.push({ ...t, misses: t.misses + 1 });
+      if (t.id && t.misses < o.holdMisses && time - t.lastSeen <= o.holdMs)
+        current.push({
+          ...t.seen,
+          box: predicted[ti],
+          id: t.id,
+          lastSeen: t.lastSeen,
+          trail: t.trail,
+          held: true,
+        });
+    });
     if (Number.isFinite(this.prevTime)) this.lastGap = Math.max(0, gap);
     this.prevTime = time;
     this.tracks = live;

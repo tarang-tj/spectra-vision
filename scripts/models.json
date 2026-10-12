@@ -82,5 +82,14 @@
     "license": "Apache-2.0",
     "card": "https://huggingface.co/onnx-community/depth-anything-v2-small",
     "licenseNote": "Depth Anything V2 Small, fp32 ONNX export, pinned to commit 4472b7362082ad9968fee890ca0f1e5aca36b93d. Apache-2.0 is stated by the authors for the Small model (the Base, Large and Giant models are CC-BY-NC-4.0 and are not used) and in the front matter of this ONNX export's card, read on 2026-10-10."
+  },
+  {
+    "file": "dfine_s_coco.onnx",
+    "url": "https://huggingface.co/onnx-community/dfine_s_coco-ONNX/resolve/a3cf03147a9b86c78475139115c8ac142577352d/onnx/model.onnx",
+    "sha256": "cd8a49a945feda6d28c6304ae8ae85c2759ba1d78a5a83a22c5ce8db82ef7238",
+    "bytes": 41535197,
+    "license": "Apache-2.0",
+    "card": "https://huggingface.co/ustc-community/dfine_s_coco",
+    "licenseNote": "D-FINE-S, the checkpoint trained on COCO only, fp32 ONNX conversion, pinned to commit a3cf03147a9b86c78475139115c8ac142577352d of onnx-community/dfine_s_coco-ONNX. The conversion's own card states no licence; it names ustc-community/dfine_s_coco as its base model. Apache-2.0 is the licence of the authors' repository (Peterande/D-FINE) and is stated on the base model's card (license: apache-2.0), both read on 2026-10-12. The authors' checkpoints trained with Objects365 (_obj365, _obj2coco) are not used."
   }
 ]
