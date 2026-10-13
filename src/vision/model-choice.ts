@@ -5,6 +5,7 @@
 // to CPU fallback, the task's standard model runs. The Precision setting
 // wins over all of this (settings.ts, `modelOf`). A Lab benchmark holds the
 // standard model on every delegate while it runs, so its rows time one file.
+import { touchFirst } from "../shell/device";
 import { readFlag, writeFlag } from "../shell/storage";
 import type { Delegate, TaskKind, TaskSpec } from "./types";
 
@@ -29,9 +30,17 @@ const announce = () => {
   for (const listener of [...listeners]) listener();
 };
 
-/** Whether a task's larger model may run on a GPU. On unless switched off;
- * remembered on this device. */
-export const largerOnGpu = (): boolean => (on ??= readFlag(KEY) !== "off");
+/** Whether a task's larger model may run on a GPU. A stored choice always
+ * wins. With nothing stored it is on, except where touch is the main way in
+ * (shell/device.ts): nobody has timed the larger model on a phone's GPU, and
+ * the smaller one is the smaller first download. */
+export function largerOnGpu(): boolean {
+  if (on === undefined) {
+    const stored = readFlag(KEY);
+    on = stored === null ? !touchFirst() : stored !== "off";
+  }
+  return on;
+}
 /** Switching it on also forgets that the larger model was given up, so it is
  * tried again. */
 export function setLargerOnGpu(next: boolean) {
