@@ -2,9 +2,21 @@
 import { useSyncExternalStore } from "react";
 import { plumbVersion, subscribePlumbs } from "../../panels/ruler/plumbs";
 import { useRuler } from "../../panels/ruler/state";
+import {
+  acceptDownload,
+  consentVersion,
+  consentWords,
+  onConsent,
+} from "../../shell/download-consent";
 import { useStudio } from "../../studio-context";
 import { onDemandState, onOnDemandState } from "../../vision/on-demand";
-import { measureOn, onMeasureChange, setMeasure } from "./object-measure";
+import { DEPTH_MODEL, depthTask } from "./depth-task";
+import {
+  measureOn,
+  measureWanted,
+  onMeasureChange,
+  setMeasure,
+} from "./object-measure";
 import {
   latestMeasured,
   measureStatus,
@@ -28,10 +40,15 @@ export default function ObjectMeasureSetting({
   useRuler();
   useSyncExternalStore(subscribePlumbs, plumbVersion);
   useSyncExternalStore(onOnDemandState, () => onDemandState("depth"));
+  useSyncExternalStore(onConsent, consentVersion);
   const latest = useSyncExternalStore(onMeasured, latestMeasured),
     // Only Objects measures: in another mode there is nothing to report.
     status = mode.id === "objects" ? measureStatus(frame.source) : null,
     ready = status?.state === "ready",
+    // Where touch is the main way in, the 99 MB model waits for a yes
+    // (shell/download-consent.ts), asked once the Ruler is ready.
+    wanted = status ? measureWanted(frame.source) : null,
+    asking = !!wanted && !wanted.wanted && wanted.why === "consent",
     selected =
       ready && latest?.measurement.metric
         ? latest.measurement.boxes.find(
@@ -59,6 +76,15 @@ export default function ObjectMeasureSetting({
         <p role="status" data-testid="measure-status" data-state={status.state}>
           {status.text}
         </p>
+      )}
+      {asking && (
+        <button
+          className="button compact"
+          data-testid="measure-download"
+          onClick={() => acceptDownload(DEPTH_MODEL)}
+        >
+          {consentWords("", Number(depthTask.options.bytes), false).accept}
+        </button>
       )}
       {ready && compact && (
         <p role="status" data-testid="library-measured">

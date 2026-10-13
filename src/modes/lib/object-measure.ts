@@ -8,6 +8,7 @@ import { cameraOf } from "../../panels/ruler/camera-of";
 import { derive } from "../../panels/ruler/derive";
 import { subscribePlumbs } from "../../panels/ruler/plumbs";
 import { getState, subscribe } from "../../panels/ruler/state";
+import { downloadGate, onConsent } from "../../shell/download-consent";
 import { readFlag, writeFlag } from "../../shell/storage";
 import type { OnDemandTask } from "../../vision/on-demand";
 import type { Source } from "../../vision/types";
@@ -36,8 +37,18 @@ export const resetMeasure = () => {
 
 /** Why the depth model is not wanted: the switch is off, there is no
  * picture, the picture moves, the Ruler has no solved reference on it, or
- * that reference does not pin the focal length down. */
-export type Why = "off" | "none" | "moving" | "reference" | "focal";
+ * that reference does not pin the focal length down. Last, and only where
+ * touch is the main way in (shell/download-consent.ts): the browser is being
+ * asked whether the model is already stored ("checking"), or it is not and
+ * the person has not yet said yes to the download ("consent"). */
+export type Why =
+  | "off"
+  | "none"
+  | "moving"
+  | "reference"
+  | "focal"
+  | "checking"
+  | "consent";
 export type Wanted = { wanted: true } | { wanted: false; why: Why };
 const no = (why: Why): Wanted => ({ wanted: false, why });
 
@@ -57,7 +68,12 @@ export function measureWanted(source: Source | null): Wanted {
   const d = derive(s),
     camera = cameraOf(s, d);
   if (!d.sheet || !camera) return no("reference");
-  return camera.focalResolved ? { wanted: true } : no("focal");
+  if (!camera.focalResolved) return no("focal");
+  // Asked last, so the question comes when the download would start.
+  const gate = downloadGate(depthTask);
+  return gate === "clear"
+    ? { wanted: true }
+    : no(gate === "ask" ? "consent" : "checking");
 }
 
 /** Objects' on-demand task: Depth's own spec, run only while wanted. */
@@ -69,6 +85,7 @@ export const measureTask: OnDemandTask = {
       onMeasureChange(listener),
       subscribe(listener),
       subscribePlumbs(listener),
+      onConsent(listener),
     ];
     return () => offs.forEach((off) => off());
   },

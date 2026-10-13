@@ -9,6 +9,7 @@ import {
   resetMeasure,
   setMeasure,
 } from "../src/modes/lib/object-measure";
+import { DEPTH_MODEL } from "../src/modes/lib/depth-task";
 import { measureStatus } from "../src/modes/lib/object-measure-frame";
 import {
   detailOf,
@@ -20,6 +21,8 @@ import {
   measureTracks,
   type BoxReading,
 } from "../src/modes/lib/object-measured";
+import { resetDevice } from "../src/shell/device";
+import { acceptDownload, resetConsent } from "../src/shell/download-consent";
 import {
   bindSource,
   finishShape,
@@ -344,6 +347,41 @@ describe("when the depth model is wanted for measuring", () => {
     expect(heard).toHaveBeenCalledTimes(1);
     expect(measureWanted(source)).toEqual({ wanted: true });
     off();
+  });
+
+  it("waits for a yes to the 99 MB download where touch is the main way in", async () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    vi.stubGlobal("location", { href: "https://site.example/app/" });
+    resetDevice();
+    resetConsent();
+    try {
+      // With no reference the Ruler is what is missing, not the yes.
+      expect(measureWanted(source)).toEqual({
+        wanted: false,
+        why: "reference",
+      });
+      tapRuler();
+      const heard = vi.fn(),
+        off = measureTask.subscribe(heard);
+      expect(measureWanted(source)).toEqual({ wanted: false, why: "checking" });
+      await new Promise((done) => setTimeout(done, 0));
+      expect(heard).toHaveBeenCalled();
+      expect(measureWanted(source)).toEqual({ wanted: false, why: "consent" });
+      expect(measureTask.wanted(source)).toBe(false);
+      expect(measureStatus(source)).toMatchObject({ state: "waiting" });
+      expect(measureStatus(source).text).toContain(
+        "Nothing is downloaded until you press the button below",
+      );
+      heard.mockClear();
+      acceptDownload(DEPTH_MODEL);
+      expect(heard).toHaveBeenCalledTimes(1);
+      expect(measureWanted(source)).toEqual({ wanted: true });
+      off();
+    } finally {
+      vi.unstubAllGlobals();
+      resetDevice();
+      resetConsent();
+    }
   });
 
   it("is never wanted on a camera or a video, whatever the Ruler holds", () => {

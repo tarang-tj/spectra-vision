@@ -43,6 +43,10 @@ export const WAITING = {
     "Not measuring yet: the Ruler has no reference on this photo. Open the Ruler, tap the four corners of a sheet lying on the floor, then outline a patch of floor from near to far with the Area tool. The depth model is not downloaded until then.",
   focal:
     "Not measuring yet: this picture does not pin down the camera's focal length. Tilt the camera so the reference shows perspective, or mark a plumb edge in the Ruler.",
+  checking:
+    "Checking whether the depth model is already stored on this device.",
+  consent:
+    "Not measuring yet: the Ruler is ready, and the depth model is not on this device. Nothing is downloaded until you press the button below.",
 };
 export const STATUS = {
   loading: "Loading the depth model. The first time this is a 99 MB download.",

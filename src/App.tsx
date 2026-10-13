@@ -15,6 +15,7 @@ import Footer from "./components/Footer";
 import StudioDeck from "./components/StudioDeck";
 import ShareCard from "./components/ShareCard";
 import CoachMarks from "./components/CoachMarks";
+import DownloadConsent from "./components/DownloadConsent";
 import CommandPalette from "./components/CommandPalette";
 import ImmersiveDock from "./components/ImmersiveDock";
 import type { StageActions } from "./components/CameraStage";
@@ -22,6 +23,7 @@ import { effects } from "./effects";
 import { getMode, modes } from "./modes";
 import { paletteCommands } from "./shell/palette-commands";
 import { stageCard } from "./shell/stage-card";
+import { useDownloadConsent } from "./shell/use-download-consent";
 import { useNarrow } from "./shell/use-narrow";
 import { useOfflineCache } from "./shell/use-studio-effects";
 import { useShell } from "./shell/use-shell";
@@ -52,6 +54,10 @@ export default function App() {
   const controls = useSourceControls(notice),
     { input, modeId, paused, mirror, motionDemo, onMode, onDemo } = controls,
     mode = getMode(modeId),
+    // Every way of choosing a mode asks here first: on a touch-first device
+    // a large first download waits for a yes (shell/use-download-consent.ts).
+    consent = useDownloadConsent(onMode),
+    setMode = consent.requestMode,
     vision = useVision(mode, input.source, paused, confidence),
     { tracks, fps, history } = useSession(mode, input.source, vision.result);
   useEffect(() => {
@@ -119,7 +125,7 @@ export default function App() {
   };
   const studio: Studio = {
     mode,
-    setMode: onMode,
+    setMode,
     frame: data,
     rows,
     count,
@@ -148,7 +154,7 @@ export default function App() {
       : shell.toggleTray(fromKeyboard);
   useShortcuts(modes.length, shell.palette, (action) => {
     if (action.type === "palette") shell.setPalette(!shell.palette);
-    else if (action.type === "mode") onMode(modes[action.index].id);
+    else if (action.type === "mode") setMode(modes[action.index].id);
     else if (action.type === "record") stageActions.current?.record();
     else if (action.type === "screenshot") stageActions.current?.screenshot();
     else if (action.type === "mirror") controls.toggleMirror();
@@ -162,7 +168,7 @@ export default function App() {
     effectsOn,
     paused,
     immersive: shell.immersive,
-    setMode: onMode,
+    setMode,
     toggleEffect,
     actions: {
       record: () => stageActions.current?.record(),
@@ -190,6 +196,18 @@ export default function App() {
       onDone={shell.endCoach}
     />
   );
+  // On one column the camera chooser comes after the stage, so the picture
+  // is first; the markup follows, as it does for the rail.
+  const picker = (
+    <CameraPicker
+      key="picker"
+      live={input.camera.live}
+      asking={input.camera.asking}
+      named={input.camera.named}
+      sides={controls.cameraSides}
+      onPick={input.camera.pick}
+    />
+  );
   return (
     <StudioContext.Provider value={studio}>
       <main
@@ -198,7 +216,7 @@ export default function App() {
       >
         <Header
           mode={mode}
-          onMode={onMode}
+          onMode={setMode}
           cameraActive={input.source?.kind === "camera"}
           onCamera={controls.onCamera}
           onUpload={controls.onUpload}
@@ -210,14 +228,15 @@ export default function App() {
             onToggle: shell.toggleCoach,
           }}
         />
+        {consent.ask && (
+          <DownloadConsent
+            ask={consent.ask}
+            onAccept={consent.accept}
+            onDecline={consent.decline}
+          />
+        )}
         {tips}
-        <CameraPicker
-          live={input.camera.live}
-          asking={input.camera.asking}
-          named={input.camera.named}
-          sides={controls.cameraSides}
-          onPick={input.camera.pick}
-        />
+        {!narrow && picker}
         <div className="workspace">
           <CameraStage
             key="stage"
@@ -241,6 +260,7 @@ export default function App() {
             actions={stageActions}
             onClip={(clip) => shell.setShare({ mode: modeId, ...clip })}
           />
+          {narrow && picker}
           {!narrow && rail}
           <StudioDeck
             key="deck"

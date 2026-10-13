@@ -3,8 +3,20 @@
    page is taken out of the layout. Nothing is scroll-locked: with only a
    fixed stage left, the document has nothing to scroll. */
 .app.immersive
-  > *:not(.workspace):not(.immersive-dock):not(.toast):not(.palette-backdrop) {
+  > *:not(.workspace):not(.immersive-dock):not(.toast):not(
+    .palette-backdrop
+  ):not(.download-ask) {
   display: none;
+}
+/* The card that asks before a large download stays reachable here: the
+   dock's mode list can ask for Depth. */
+.app.immersive > .download-ask {
+  position: fixed;
+  top: 104px;
+  left: 12px;
+  z-index: 31;
+  width: min(440px, calc(100% - 24px));
+  margin: 0;
 }
 .app.immersive .workspace > :not(.camera-stage) {
   display: none;
