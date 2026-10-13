@@ -106,7 +106,7 @@ describe("the foot of a box", () => {
     expect(reasonOf(read(noisy(), beside).reading)).toMatch(FOOT);
   });
 
-  it("keeps a solid thing: a tight box, a box a fifth too large, and a thing the model reads 6% off", () => {
+  it("keeps a solid thing: a tight box, a box a fifth too large, a box running a quarter past the foot, and a thing the model reads 6% off", () => {
     const { box } = scene,
       loose = {
         x: box.x - 0.1 * box.w,
@@ -114,9 +114,13 @@ describe("the foot of a box", () => {
         w: 1.2 * box.w,
         h: 1.2 * box.h,
       },
+      // The floor in front of the board fills the foot of this box and reads
+      // 3% nearer than the board: under half the bar (12%), so it is kept.
+      low = { ...box, h: 1.25 * box.h },
       cases: [DepthMap, Box][] = [
         [noisy(), box],
         [noisy(), loose],
+        [noisy(), low],
         [noisy(undefined, 0.06), box],
         [noisy(undefined, -0.06), box],
       ];
@@ -128,6 +132,13 @@ describe("the foot of a box", () => {
         Math.abs(reading.distance.value * 1000 - scene.truth.distance),
       ).toBeLessThanOrEqual(reading.distance.error * 1000);
     }
+  });
+
+  it("gives up a right distance when the box runs 40% past the foot of its object", () => {
+    // The cost of the check: here the middle is the board and the number
+    // would have been right, but the foot is floor well in front of it.
+    const low = { ...scene.box, h: 1.4 * scene.box.h };
+    expect(reasonOf(read(noisy(), low).reading)).toMatch(FOOT);
   });
 
   it("says what the check is in the distance's basis and gives the foot in the export", () => {
