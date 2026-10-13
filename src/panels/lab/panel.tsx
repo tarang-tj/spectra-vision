@@ -2,11 +2,12 @@
 import BenchmarkPanel from "./benchmark-panel";
 import LiveCharts from "./live-charts";
 import { LoadTimes, ModelCards } from "./model-cards";
+import Scorecard from "./scorecard/scorecard-panel";
 import Stability from "./stability";
 import "./lab.css";
 
-/** The performance lab: live charts, the delegate switch, a benchmark and the
- * model cards. Every number on it is measured in this browser. Nothing here
+/** The performance lab: live charts, the delegate switch, a benchmark, the
+ * detector scorecard and the model cards. Every number on it is measured in this browser. Nothing here
  * runs while another tab of the inspector is showing. */
 export default function Lab() {
   return (
@@ -19,6 +20,7 @@ export default function Lab() {
       <Stability />
       <LoadTimes />
       <BenchmarkPanel />
+      <Scorecard />
       <ModelCards />
     </div>
   );

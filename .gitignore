@@ -1,6 +1,7 @@
 node_modules/
 dist/
 public/models/
+public/eval/*.jpg
 public/runtime/
 public/licenses/dependencies.txt
 *.tsbuildinfo

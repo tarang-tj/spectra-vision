@@ -60,7 +60,17 @@ One model was added in version 2.5 for the optional Sharper choice in Objects. I
 
 Model download URLs, file sizes and SHA-256 digests are pinned in [scripts/models.json](scripts/models.json). The MediaPipe models are downloaded from official Google storage and the depth model and the Sharper detector from Hugging Face, each at a pinned commit; all are hash-verified and served without weight modifications. The Apache license text is included in [public/licenses/Apache-2.0.txt](public/licenses/Apache-2.0.txt) and deployed at `licenses/Apache-2.0.txt`. The metadata-bearing TensorFlow listing documents the EfficientDet-Lite model family; the exact MediaPipe float16 artifact is identified separately by its URL and digest in the manifest.
 
-The COCO training dataset and its original photographs are not included in this repository. Demo photos were generated specifically for SPECTRA.
+The COCO training dataset is not included in this repository, and no model here was trained by SPECTRA. 100 photographs from COCO's validation set are downloaded at setup and served for the Lab's scorecard; see "Scorecard pictures and labels" below. Demo photos were generated specifically for SPECTRA.
+
+## Scorecard pictures and labels
+
+The Lab's scorecard scores the object detectors against 100 photographs from the validation split of COCO 2017 (val2017). Neither the photographs nor their labels are SPECTRA's work, and nothing in them is relicensed by the [notice](LICENSE) on SPECTRA's own material.
+
+- **Labels.** The boxes and class names in `public/eval/set.json` are copied unchanged from COCO's `instances_val2017.json` (SHA-256 `e8c7f7908f1d7278341fae127d0da654f102f11bd7b21d8aeefa635b8c810b6f`, from http://images.cocodataset.org/annotations/annotations_trainval2017.zip). They belong to the COCO Consortium and are licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); see the [COCO terms of use](https://cocodataset.org/#termsofuse) (read on 2026-10-12). Only the records of the 100 pictures were kept.
+- **Pictures.** Each photograph belongs to its author and is used under [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/). Every one is credited by author, title and link to its Flickr page in `public/eval/set.json` and beside the picture where the app shows it, and is served unchanged, byte for byte as COCO serves it: boxes are drawn over a picture on the page, never into the file.
+- **How the licence was checked.** COCO's own record gives each of the 100 the licence "Attribution License" (CC BY 2.0). COCO's terms say the Consortium does not own the images, so each picture's Flickr page was read again on 2026-10-12 and the picture was kept only if the page still stated CC BY 2.0 on that date. The page address and the date are in the file beside each picture.
+- **No people.** No picture in which COCO labels a person is used, and a picture was left out if a recognisable face could be seen in it.
+- **Not kept in this repository.** The photographs are not kept in this repository. `pnpm run setup` downloads each from COCO's server into `public/eval/` and refuses a file whose SHA-256 differs from the one pinned in `public/eval/set.json`.
 
 ## UI and development dependencies
 
