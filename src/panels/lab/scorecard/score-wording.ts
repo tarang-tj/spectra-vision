@@ -8,6 +8,7 @@ import type { Difference, Figure } from "./bootstrap";
 import { MIN_OBJECTS, RESAMPLES } from "./bootstrap";
 import type { PointItem } from "./operating-point";
 import type { Progress } from "./score-run";
+import { SET_BYTES } from "./score-set";
 import { FLOOR, MAX_BOXES } from "./score-worker";
 
 /** What the page knows about the set once its list has been read. */
@@ -29,9 +30,7 @@ export const intro = (set: SetFacts | null) =>
     set
       ? `${set.pictures} labelled photographs`
       : "a set of labelled photographs"
-  }, in this browser. Speed says how fast a model runs here; this says how often it is right. The photographs${
-    set ? ` (${megabytes(set.bytes)} MB)` : ""
-  } are downloaded only when you press Run.`;
+  }, in this browser. Speed says how fast a model runs here; this says how often it is right. The photographs (${megabytes(set ? set.bytes : SET_BYTES)} MB) are downloaded only when you press Run.`;
 export const UNDER_BUTTON =
   "The stage is paused while this runs and resumes after. Each model is given every picture once, after one pass that is not counted.";
 export const shortenedNote = (short: Shortened) =>
@@ -90,7 +89,7 @@ export const speedCell = (p50: number, p95: number) =>
 export const didNotRun = (reason: string) => `did not run: ${reason}`;
 
 export const caption = (scored: number, objects: number) =>
-  `A spot check on ${scored} photographs holding ${objects} labelled objects, not a benchmark result. The range in brackets is where each figure falls in 95 of 100 redraws of these pictures (${RESAMPLES.toLocaleString("en-US")} resamples of whole pictures). It covers the luck of which pictures were picked. It does not cover how different your camera's pictures are from these.`;
+  `A spot check on ${scored} photographs holding ${objects} labelled objects, not a benchmark result. The range in brackets is where each figure falls in 95 of 100 redraws of these pictures (${RESAMPLES.toLocaleString("en-US")} resamples of whole pictures). It covers the luck of which pictures were picked. The AP ranges are not symmetric about the figure: on a set this small a redraw's AP tends to come out above it, so read the low end as close and the high end as loose. It does not cover how different your camera's pictures are from these.`;
 
 /** The basis lines under the caption, in order. */
 export const basisLines = (
@@ -136,7 +135,7 @@ export function comparison(
             ? `on AP50 ${CANNOT}`
             : `AP50 is ${ap50.verdict === "more" ? "higher" : "lower"}`
         }.`;
-  return `${run} against ${against}: found ${gap(found, whole, " points")}, AP50 ${gap(ap50, (v) => v.toFixed(2))}. ${verdicts}`;
+  return `${run} against ${against}: found ${gap(found, whole, " points")}, AP50 ${gap(ap50, (v) => v.toFixed(3))}. ${verdicts}`;
 }
 
 export const otherClasses = (count: number) =>

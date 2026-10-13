@@ -4,6 +4,9 @@
 // eval/ is made by importing this file.
 import type { Label } from "./match";
 
+/** The photographs' total size, said on the page before the list is read.
+ * Held to public/eval/set.json by tests/score-report.test.ts. */
+export const SET_BYTES = 16_429_956;
 export const SET_PATH = "eval/set.json";
 
 /** A labelled box in the picture's own pixels, as COCO gives it. */

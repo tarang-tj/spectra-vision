@@ -1,4 +1,5 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+import { readFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
 import maps from "../src/panels/library/label-maps.json";
 import { drawWeights } from "../src/panels/lab/scorecard/bootstrap";
@@ -11,6 +12,7 @@ import { cocoId, prepare } from "../src/panels/lab/scorecard/score-prepare";
 import { buildReport } from "../src/panels/lab/scorecard/score-report";
 import type { RunRaw, RunResult } from "../src/panels/lab/scorecard/score-run";
 import type { ScoreSet, SetItem } from "../src/panels/lab/scorecard/score-set";
+import { SET_BYTES } from "../src/panels/lab/scorecard/score-set";
 import {
   basisLines,
   caption,
@@ -231,8 +233,11 @@ describe("the exports", () => {
 });
 
 describe("the wording", () => {
-  it("does not print the set's size before the list has been read", () => {
-    expect(intro(null)).not.toMatch(/\d/);
+  it("says the download's size before Run, from a constant equal to the set's own total", () => {
+    const set = JSON.parse(readFileSync("public/eval/set.json", "utf8"));
+    expect(SET_BYTES).toBe(set.bytes);
+    expect(intro(null)).toContain("The photographs (16.4 MB) are downloaded");
+    expect(intro(null)).not.toContain("100");
     expect(
       intro({ pictures: 100, boxes: 438, bytes: 16_429_956, checked: "" }),
     ).toContain("100 labelled photographs, in this browser");
@@ -255,8 +260,18 @@ describe("the wording", () => {
         d(0.08, -0.01, 0.17, "cannot tell"),
       ),
     ).toBe(
-      "B on GPU against A on CPU: found +9 points (+2 to +16), AP50 +0.08 (-0.01 to +0.17). Found more; on AP50 these pictures cannot tell them apart.",
+      "B on GPU against A on CPU: found +9 points (+2 to +16), AP50 +0.080 (-0.010 to +0.170). Found more; on AP50 these pictures cannot tell them apart.",
     );
+    // A low end just above zero must not print as zero beside "higher".
+    expect(
+      comparison(
+        "B",
+        "A",
+        d(0, -0.01, 0.01, "cannot tell"),
+        d(0.03596, 0.00178, 0.07602, "more"),
+      ),
+    ).toContain("AP50 +0.036 (+0.002 to +0.076)");
+    expect(caption(100, 438)).toContain("not symmetric about the figure");
   });
   it("says in words what each box in a picture is", () => {
     const box = { x: 0, y: 0, w: 1, h: 1 };
