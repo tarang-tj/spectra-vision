@@ -400,7 +400,9 @@ describe("a refusal says what to do about each cause", () => {
   });
 });
 
-describe("with noisy taps, 200 retakes each", () => {
+// 200 solves a case: seconds alone, but the whole suite running beside it on
+// a busy machine has pushed one case past the 20 s default three times.
+describe("with noisy taps, 200 retakes each", { timeout: 120_000 }, () => {
   const RETAKES = 200;
   type Tally = {
     right: number;
