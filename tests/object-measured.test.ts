@@ -1,7 +1,14 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import { beforeEach, describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { retakesOf, type Retake } from "../src/modes/lib/depth-measured";
 import { depthScale } from "../src/modes/lib/depth-metric";
+import {
+  measureTask,
+  measureWanted,
+  onMeasureChange,
+  resetMeasure,
+  setMeasure,
+} from "../src/modes/lib/object-measure";
 import {
   detailOf,
   exportMeasured,
@@ -299,5 +306,79 @@ describe("a box measured against the Ruler's floor", () => {
     expect(first).not.toHaveProperty("width");
     expect(first).not.toHaveProperty("height");
     expect(String(exported.basis)).toContain("not the object's outline");
+  });
+});
+
+describe("when the depth model is wanted for measuring", () => {
+  const video = {
+    ...source,
+    element: { videoWidth: IMAGE.w, videoHeight: IMAGE.h },
+  } as unknown as Source;
+  beforeEach(() => {
+    resetRuler();
+    resetMeasure();
+    setMeasure(true);
+  });
+  afterEach(() => {
+    setMeasure(false);
+    resetMeasure();
+  });
+
+  it("is off until it is switched on, and says so to whoever listens", () => {
+    setMeasure(false);
+    tapRuler();
+    expect(measureWanted(source)).toEqual({ wanted: false, why: "off" });
+    const heard = vi.fn(),
+      off = onMeasureChange(heard);
+    setMeasure(true);
+    setMeasure(true);
+    expect(heard).toHaveBeenCalledTimes(1);
+    expect(measureWanted(source)).toEqual({ wanted: true });
+    off();
+  });
+
+  it("is never wanted on a camera or a video, whatever the Ruler holds", () => {
+    tapRuler();
+    expect(measureWanted(video)).toEqual({ wanted: false, why: "moving" });
+    expect(measureTask.wanted(video)).toBe(false);
+    expect(measureWanted(null)).toEqual({ wanted: false, why: "none" });
+  });
+
+  it("is not wanted before the Ruler has a solved reference on this photo", () => {
+    expect(measureWanted(source)).toEqual({ wanted: false, why: "reference" });
+    // Three corners are not a reference.
+    bindSource(GENERATION, IMAGE.w, IMAGE.h, 1);
+    boardCorners()
+      .slice(0, 3)
+      .forEach((corner) => place(corner));
+    expect(measureWanted(source)).toEqual({ wanted: false, why: "reference" });
+    resetRuler();
+    tapRuler();
+    expect(measureWanted(source)).toEqual({ wanted: true });
+    expect(measureTask.wanted(source)).toBe(true);
+    // The Ruler's points belong to one photo: another one has none.
+    expect(measureWanted({ ...source, generation: GENERATION + 1 })).toEqual({
+      wanted: false,
+      why: "reference",
+    });
+  });
+
+  it("tells the on-demand task to look again when the switch or the Ruler changes", () => {
+    const look = vi.fn(),
+      off = measureTask.subscribe(look);
+    setMeasure(false);
+    expect(look).toHaveBeenCalledTimes(1);
+    tapRuler();
+    expect(look.mock.calls.length).toBeGreaterThan(4);
+    off();
+    const before = look.mock.calls.length;
+    setMeasure(true);
+    resetRuler();
+    expect(look).toHaveBeenCalledTimes(before);
+  });
+
+  it("runs the very task Depth runs", async () => {
+    const depth = (await import("../src/modes/depth")).default;
+    expect(measureTask.spec).toBe(depth.task);
   });
 });
