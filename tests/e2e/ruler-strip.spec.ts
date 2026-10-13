@@ -2,8 +2,10 @@
 import { test, expect, type Page } from "@playwright/test";
 import { drawRoom, H, IMAGE, ROOM, SHEET } from "../fixtures/ruler-room-scene";
 
-// The stage's own controls sit in a strip along its bottom edge. The empty
-// space around them must pass taps through to the picture.
+// On a wide screen the stage's own controls sit in a strip along its bottom
+// edge, and the empty space around them must pass taps through to the
+// picture. On a narrow one they are in a bar under the picture, so the whole
+// of that strip belongs to the picture.
 for (const width of [1536, 390]) {
   test(`Ruler accepts a tap in the empty bottom strip at ${width} px`, async ({
     page,
@@ -67,12 +69,21 @@ for (const width of [1536, 390]) {
   });
 }
 
-/** A point between the playback label and the tools row, level with the tools row. */
+/** A point between the playback label and the tools row, level with the tools
+ * row. On a narrow screen neither group is a box (the buttons are in the bar
+ * under the picture): the point is then in the picture's bottom strip, where
+ * the tools row used to lie. */
 async function emptyStripPoint(page: Page) {
-  const label = (await page.locator(".playback").boundingBox())!,
-    tools = (await page.locator(".stage-tools").boundingBox())!;
+  const label = await page.locator(".playback").boundingBox(),
+    tools = await page.locator(".stage-tools").boundingBox();
+  if (label && tools)
+    return {
+      x: (label.x + label.width + tools.x) / 2,
+      y: tools.y + tools.height / 2,
+    };
+  const stage = (await page.locator(".camera-stage").boundingBox())!;
   return {
-    x: (label.x + label.width + tools.x) / 2,
-    y: tools.y + tools.height / 2,
+    x: stage.x + stage.width * 0.75,
+    y: stage.y + stage.height - 28,
   };
 }
