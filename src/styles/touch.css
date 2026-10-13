@@ -1,0 +1,53 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+/* Where the main pointer is a finger: everything pressed is at least 44 by
+   44 CSS px, and a text field is 16 px so iOS does not zoom the page on it.
+   A link in the middle of a sentence is left at the size of its words. The
+   rule is page-wide, so a control a mode or a panel adds later gets it too.
+   Under `:root .app` to out-rank the component stylesheets, which load
+   later. */
+@media (pointer: coarse) {
+  :root
+    .app
+    :is(
+      button,
+      select,
+      summary,
+      a.icon-button,
+      a.brand,
+      label.button,
+      .button
+    ) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  :root
+    .app
+    :is(
+      input:not([type="checkbox"], [type="radio"], [type="range"]),
+      select,
+      textarea
+    ) {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  /* The slider's 7 px track stays where inspector.css put it. */
+  :root .app input[type="range"] {
+    height: 44px;
+    margin-top: -18px;
+  }
+  :root .app label:has(> input:is([type="checkbox"], [type="radio"])) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
+  }
+  :root .app footer a,
+  :root .app .help > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  :root .app .stage-tools {
+    gap: 0;
+  }
+}

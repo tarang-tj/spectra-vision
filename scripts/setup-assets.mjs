@@ -38,6 +38,42 @@ for (const model of manifest) {
   await writeFile(path, bytes);
   console.log(`Downloaded and verified ${model.file}`);
 }
+// The Lab scorecard's photographs: other people's pictures, pinned in
+// public/eval/set.json and not kept in the repository. Each is fetched from
+// COCO's server and refused unless it is byte for byte the pinned file.
+const pictures = JSON.parse(
+  await readFile(join(root, "public/eval/set.json"), "utf8"),
+).items;
+for (const picture of pictures) {
+  const path = join(root, "public/eval", picture.file);
+  let existing;
+  try {
+    existing = await readFile(path);
+  } catch {}
+  if (existing && hash(existing) === picture.sha256) {
+    console.log(`Verified ${picture.file}`);
+    continue;
+  }
+  // A hundred requests to one server: a dropped one is tried twice more. A
+  // wrong hash is never retried.
+  let bytes;
+  for (let attempt = 1; !bytes; attempt += 1) {
+    try {
+      const response = await fetch(picture.url, {
+        signal: AbortSignal.timeout(120000),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      bytes = Buffer.from(await response.arrayBuffer());
+    } catch (error) {
+      if (attempt === 3) throw new Error(`${picture.file}: ${error.message}`);
+      await new Promise((done) => setTimeout(done, 2000 * attempt));
+    }
+  }
+  if (hash(bytes) !== picture.sha256)
+    throw new Error(`${picture.file}: SHA-256 mismatch; picture not saved.`);
+  await writeFile(path, bytes);
+  console.log(`Downloaded and verified ${picture.file}`);
+}
 const runtime = join(root, "node_modules/@mediapipe/tasks-vision");
 await mkdir(join(root, "public/runtime"), { recursive: true });
 await cp(

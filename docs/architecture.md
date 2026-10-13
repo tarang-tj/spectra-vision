@@ -107,6 +107,7 @@ type ModeDef = {
   short: string; // "Objects": mode switch
   order: number;
   task: TaskSpec | TaskSpec[]; // several = fusion, one worker each; the first is primary
+  onDemand?: OnDemandTask[]; // models run only while each one's wanted(source) is true: see "Added in 2.6.0"
   hint: string; // tip under the inspector
   demo: { still: string; motion?: string; label: string }; // paths under public/
   clearable?: boolean; // show the stage's Clear tool
@@ -159,7 +160,7 @@ The model file must be listed in `scripts/models.json` with its SHA-256, and the
 
 - **`count`.** The footer's Tracked figure and the inspector heading show how many things the mode follows, not how many rows it lists. Face returns the number of faces (its rows are meters), Gestures the number of hands (its rows include a log), Segment the classes found without the background. The other modes use the default.
 - **`tracked`.** Only Objects sets it. Its detections go through the tracker (`src/vision/tracker.ts`) and come back as `frame.tracks` with ids and trails, which the motion map draws. Gestures and Segment also report detections (a hand box, a class box), but those are not separate objects, so they get no track ids and no trails.
-- **`exportFrame`.** Each processed frame is stored for the session export with the five v1 keys (`elapsedMs`, `latencyMs`, `detections`, `landmarks`, `handedness`). A mode may add optional keys; it cannot replace a v1 key. Face adds `face` (blendshapes, head pose), Gestures `gestures`, Segment `segmentation` (class shares), Fusion `tasks` (each model's own result). The README documents the fields.
+- **`exportFrame`.** Each processed frame is stored for the session export with the five v1 keys (`elapsedMs`, `latencyMs`, `detections`, `landmarks`, `handedness`). A mode may add optional keys; it cannot replace a v1 key. Face adds `face` (blendshapes, head pose), Gestures `gestures`, Segment `segmentation` (class shares), Fusion `tasks` (each model's own result), Depth `depth`, and Objects `measured` while Measure objects is on. The README documents the fields.
 - **Demo.** A mode with no `demo.motion` clip gets no motion demo button.
 - **`leave`.** The stage calls it once on the first frame after another mode is chosen, and when the stage unmounts. A mode that holds something between frames gives it back there: Depth releases its 3D renderer and that view's pointer handler. It does not wait for the next mode's model to load. A `leave` that throws is logged and the stage goes on.
 
@@ -371,6 +372,8 @@ type Studio = {
 Five panels ship: Inspect (`src/panels/inspect.tsx`), which is the v1 rail content, Lab (`src/panels/lab.tsx` with its parts in `src/panels/lab/`), and Library, Ruler and Presence, each a `.tsx` file with its parts in a folder of the same name. The last two are measuring panels built on the measurement layer below. Each panel is rendered inside an `ErrorBoundary` (`src/components/ErrorBoundary.tsx`), and so is a mode's `controls` component in the Inspect panel: a throw while one of them renders shows a plain message in its place with a "Try again" button, is logged once with the name of what failed, and leaves the stage and the rest of the rail working. With one visible panel there is no tab bar. With more, `src/components/Inspector.tsx` shows a tab bar (`.panel-tabs`) and the chosen panel; the tabs wrap onto a second row inside the rail when they do not fit on one. Beside the stage the rail takes the stage's height and the panel scrolls inside it; between 761 and 1,100 px wide the rail also runs down beside the effects tray and the result card, which take the stage's column there. Inspect lists every row with no scroll box of its own, and draws the Confidence slider and the motion map only where `locatesThings(mode)` is true: a mode with at least one task that is not `depth`.
 
 The Lab subscribes to the telemetry bus only while it is open, keeps fixed-size rings of samples (`lab-store.ts`), computes percentiles with `src/telemetry/stats.ts`, and runs the benchmark protocol in `benchmark.ts` (20 s measured after a 2 s warm-up per mode and delegate, exported as JSON or Markdown by `benchmark-report.ts`). It owns no timer while merely open: it is driven by the stage's `frame` events.
+
+The Lab's first block is **This device** (`device-block.tsx`): what the browser reports, stated as read and not measured. After the benchmark comes the **Scorecard** (`src/panels/lab/scorecard/`), described under "Added in 2.6.0".
 
 Adding a panel, `src/panels/about.tsx`:
 
@@ -644,6 +647,34 @@ function Sway() {
 - **A faint detection never confirms a track** (`src/vision/tracker.ts`). The band under the Confidence value can carry a confirmed track and can no longer be the sighting that gives a track its id. `trackResult` in `track-gate.ts` is the one path a result takes into a tracker: `useSession` and the Lab's stability meter both call it, and `tests/tracker-gate.test.ts` covers it.
 - **Camera side** (`src/vision/camera-start.ts`, `camera-choice.ts`). The side is read from the track's `getCapabilities()` where its settings give none. A camera that names no side on a device that has sides is mirrored on a guess and `unknownSideNote` says so; for a remembered camera with no side (`sideUnknown`) the chooser shows neither Front nor Rear as pressed. The unanswered permission prompt's **Cancel** ends with "Stopped waiting for the camera. Showing the demo."
 
+## Added in 2.6.0
+
+**Measure objects.**
+
+- **`ModeDef.onDemand`** (`src/modes/types.ts`, `src/vision/on-demand.ts`). Models a mode runs only while each one's `wanted(source)` is true. They are not part of `tasksOf`, so the status line, the latency, the Lab and the model cards see only `task`. `createOnDemand` gives one slot per task: a slot has a task runner only while wanted, sends one frame per source generation and never of a video, and keeps its loading and its failure in its own state (`onDemandState(kind)`: `idle`, `loading`, `mapping`, `ready` or `failed`). `attach(result)` puts its result under `result.tasks[kind]` when the generations match and changes nothing else. `feedFrame`, the frame hand-off, lives there too and is shared with `useVision`, which creates the slots, calls `tick` from its one animation-frame loop, attaches on every merged result and disposes of them with the runners. There is no new loop or timer.
+- **The task** (`src/modes/lib/depth-task.ts`, `object-measure.ts`). `depthTask` is the one depth spec: Depth runs it as its own model and Objects names it in `onDemand` through `measureTask`. `measureWanted(source)` is true only when the switch is on (`spectra.measure-objects.v1`, off by default), the source is a photo, the Ruler has a solved reference on that photo and its camera has `focalResolved`, and `downloadGate` is clear. So the 99 MB model can be fetched before the floor is outlined, and is never fetched on a camera or a video.
+- **Sample and geometry** (`src/measure/box-size.ts`, pure). `sampleBox` reads two samples of a box from the depth map: the middle half in each direction (its median is the distance, its 16th and 84th percentiles the spread) and the foot, the lowest `FOOT_ROWS` (an eighth) of its rows over the middle half of its columns. `boxGeometry` gives the straight-line distance, the box's width across the view and the plumb height from that depth and the Ruler's camera.
+- **Bars** (`src/measure/box-bars.ts`, pure). Each bar adds its terms in quadrature, every standard deviation stated as two: the retakes of the Ruler's taps, twice the fit's scatter on the marked floor, the spread of depth in the middle of the box, `OFF_FLOOR_ALLOWANCE` (0.11, twice the model's published mean relative error on NYU Depth v2, not measured on the picture) and, for the sizes, one cell of the detector's input on each edge (`DETECTOR_SIDE`: 320 for Lite0, 448 for Lite2, 640 for Sharper).
+- **Readings and refusals** (`src/modes/lib/object-measured.ts`). A box is `pending`, `refused` with a reason, or `measured`. Refused, in this order: a held track; under `MIN_BOX_CELLS` (28) map cells either way; reaching the bars round the picture; a spread over `MAX_SPREAD` (0.25); deeper than `REACH` (1.5) times the marked floor's far edge or nearer than its near edge over 1.5; too few retakes; a distance bar over half the distance; and a foot that reads nearer than the middle by more than `FOOT_SHARE` (0.5) of the distance's relative bar, where the middle is taken to show what is behind the object. Reach is judged on depth along the camera's axis and the words say so beside the straight-line distance. A measured box may still have its width or height refused alone (it touches an edge of the picture, the camera looks too nearly straight down, or that bar is too wide).
+- **Words and export** (`object-measure-text.ts`, `object-measure-frame.ts`, `object-measure-setting.tsx`, `object-measure.css`). Every sentence, the label and row pieces and `exportMeasured` are in the text file; a size is always worded as the box's. `object-measure-frame.ts` memoises the readings per photo and Ruler state and holds the status line. The setting is imported on demand by `object-controls.tsx`, and the Library shows its compact form. `objects.ts` adds the `measured` key through `exportFrame` only while the switch is on and a depth map of that source generation exists; the README has its shape.
+- **Checked on** `tests/measure-box-size.test.ts`, `tests/object-measured.test.ts`, `tests/object-refusals.test.ts`, `tests/vision-on-demand.test.ts` and `tests/e2e/measured-objects.spec.ts`: synthetic scenes with known sizes whose background is the floor, on one synthetic camera. No real photo has a truth. A wall close behind a hollow thing can leave the foot and the middle within half a bar, and the box then gets a number.
+
+**The Lab's scorecard** (`src/panels/lab/scorecard/`).
+
+- **The set.** `public/eval/set.json` pins 100 COCO val2017 photographs: COCO id, file, SHA-256, size, the Flickr page, author, title, licence, the date the licence was read, and COCO's boxes in source pixels (438 objects and 5 crowd regions, 16.4 MB of pictures). `scripts/build-score-set.mjs` built it once, with the Flickr reading in `scripts/score-set-flickr.mjs`; the selection rule is in its header and neither setup nor the gate runs it. The photographs are not in the repository: `pnpm run setup` downloads each from COCO's server and refuses a wrong hash, `.gitignore` leaves them out, and `public/sw.js` never stores anything under `eval/`. `score-set.ts` checks the list when it is fetched (`parseSet`) and each picture's hash before it is scored (`fetchPicture`). Nothing under `eval/` is requested until a run starts, which `tests/e2e/scorecard.spec.ts` asserts.
+- **Running.** The scorecard does not use the task runner. `score-worker.ts` opens a worker per row and sends the worker scripts' own `init` and `frame` messages, so a row is the file and delegate it names or a failure with its reason; nothing falls back, and Sharper has no CPU row. Every model is read down to a score of `FLOOR` (0.05), at most `MAX_BOXES` (100) a picture. `score-run.ts` pauses the stage, gives each row one pass that is not counted and then every picture once, closes the worker and puts the stage back.
+- **Scoring.** Five pure modules: `iou.ts` (overlap; a crowd region divides by the box's own area), `match.ts` (COCO's greedy matching per class at ten thresholds), `average-precision.ts` (101-point AP per class, pooled over pictures, with a weight per picture), `operating-point.ts` (hits, misses and false boxes at the Confidence value, Sharper never under 0.45) and `bootstrap.ts` (`RESAMPLES`, 2,000 seeded resamples of whole pictures, percentile interval, Wilson when every resample agrees, paired differences; a class with fewer than `MIN_OBJECTS`, 20, labelled objects gets no figure). `tests/score-pycocotools.test.ts` holds the scorer to pycocotools 2.0.11 on a stored case to 1e-6; `scripts/score-fixture.py` made that case.
+- **Report.** `score-prepare.ts` matches each run and resamples its AP once, and holds COCO's category ids for the export. `score-report.ts` works out the figures at the page's Confidence value again whenever the slider moves, with no model run, using one set of weights for every run so differences are paired. `score-types.ts` is the report's shape, `score-markdown.ts` the JSON and Markdown exports, and `score-wording.ts` every sentence, read by both the page and the Markdown. The page is `scorecard-panel.tsx` with `scorecard-picks.tsx` (which models, on what), `scorecard-tables.tsx` (results, comparisons, by class) and `scorecard-viewer.tsx` with `draw-score.ts` (one picture with its boxes drawn over it, never into it, and its credit).
+- **What it is not.** A spot check on 100 pictures chosen by a fixed rule, not a random sample and not a COCO result, with no person in it. The percentile ranges are not centred on their figures.
+
+**Phone-sized screens.** The layout is under "Shell"; these are the behaviours that go with it.
+
+- **Ask before a large first download** (`src/shell/download-consent.ts`, `use-download-consent.ts`, `src/components/DownloadConsent.tsx`). On a touch-first device a mode whose models still have more than `BIG_DOWNLOAD_BYTES` (30,000,000, a design choice: above every model a mode loads by itself except Depth's) to fetch does not open until the card's Download button is pressed. `App.tsx` hands `requestMode` out as the page's `setMode`, so the mode switch, the number keys, the palette and the Lab's benchmark all go through it; the benchmark's case was read from the code and not run. An on-demand task asks the same rule through `downloadGate(spec)`, which answers `clear`, `checking` or `ask`; Measure objects asks it last, once the Ruler is ready. A yes is kept per model file for the page load, so one yes covers Depth and Measure objects.
+- **Model default on touch** (`largerOnGpu` in `src/vision/model-choice.ts`). With nothing stored, the larger GPU model is off where `touchFirst()` is true. A stored choice wins.
+- **Smaller demo pictures** (`src/vision/demo-picture.ts`, `scripts/phone-demo-pictures.sh`). `demoStill(path, smallScreen())` gives the `-phone.webp` beside a listed still. A new demo still needs its WebP made and its path added to `PHONE_STILLS`; `tests/vision-demo-picture.test.ts` fails otherwise.
+- **`firstDownloadBytes`, `statedBytes`, `keepsDownloads`** in `src/vision/first-download.ts`: the bytes of model a set of tasks still has to fetch, the size a spec states, and whether this browser will keep a download.
+- **Checked in** `tests/e2e/phone-layout.spec.ts`, `phone-touch.spec.ts`, `phone-start.spec.ts` and `phone-measure.spec.ts` with `tests/helpers/phone-audit.ts`: desktop Chrome at 390 x 844, 360 x 740, 740 x 360 and 844 x 390 with touch events. No real phone or tablet, and no Safari.
+
 ## Telemetry bus
 
 `src/telemetry/bus.ts`. A typed emitter with no UI. Events carry measured values only.
@@ -664,6 +695,7 @@ telemetry.on("result", (e) => {}); // { result, generation }  one per merged vis
 `src/shell/`, `src/components/`. The shell decides what is on screen; it never touches inference.
 
 - **Layout.** `App.tsx` composes the header, the workspace (stage, rail, effects tray, result card) and the footer. In the one-column layout (760 px and narrower, `use-narrow.ts`) the rail is placed after the tray in the markup as well, so keyboard focus follows the visual order. The tips are a pill in the heading band beside the source actions; on a first visit the pill is highlighted and the card stays closed. Opened, the card takes its own row between the heading band and the workspace at every width, so it covers neither the stage nor the rail, and it is not shown while the stage reports an error. Closed, it takes no room, which keeps the metrics strip on a 1536 x 1024 screen.
+- **Phone-sized screens** (`device.ts`, `src/styles/phone.css`, `src/styles/touch.css`). Three checks stand for the device, none of them the user agent string. One column is `(max-width: 760px)` (`NARROW` in `device.ts`, read by `use-narrow.ts`). A short screen is `(max-height: 500px) and (orientation: landscape)`, in CSS only. Touch-first is `(pointer: coarse) and (hover: none)` (`touchFirst()`, asked once per page load, false where `matchMedia` is missing); `smallScreen()` is touch-first or one column right now. `phone.css` holds the one-column and short layouts and `touch.css` the 44 px targets, the latter under `(pointer: coarse)` alone; `index.css` imports both last and every rule is written under `:root .app` so it out-ranks the component stylesheets, which load later. In one column `App.tsx` places the camera chooser after the stage, the stage is `overflow: visible` so its tools can sit in a bar under it (`min-height: 0` keeps its aspect ratio in charge of its height), and `.playback` and `.stage-tools` are `display: contents`, so nothing can measure them as boxes there. Upright and at least 600 px tall, the stage is `position: sticky` at no more than 55% of the small viewport's height and goes back to its place while a text field in the inspector has focus. Text under 12 px is lifted to 12 px by a block at the end of each stylesheet that needs it, under `(max-width: 760px), (pointer: coarse)`: a new panel stylesheet with smaller text needs the same block, and `tests/e2e/phone-layout.spec.ts` audits text size, press targets and sideways scroll on every tab and in every mode but Depth. All of it was run in desktop Chrome at phone sizes with touch events, never on a phone.
 - **Effects tray** (`StudioDeck`, `EffectsPicker`, `EffectIntensity`): one chip per effect of the current mode.
 - **Shortcuts** (`shortcuts.ts`, `use-shortcuts.ts`): one `keydown` listener on `window`, ignored while typing, during IME composition, on key repeat and while the palette is open.
 - **Command palette** (`commands.ts`, `palette-commands.ts`, `CommandPalette`): built from the registries only while it is open.
@@ -690,6 +722,7 @@ The service worker is registered in production builds only, after `load`, as `<b
 | `models/*`, `runtime/*`                                    | Cache first, stored on first fetch                             | `spectra-assets-<runtime version>`, kept across deploys |
 | Other same-scope files (worker script, icons, demo stills) | Network first, cached fallback                                 | `spectra-shell-<v>`                                     |
 | Video, Range requests, non-GET, other origins              | Not handled                                                    | none                                                    |
+| `eval/*` (the scorecard's picture list and photographs)    | Not handled                                                    | none                                                    |
 
 - At install the worker stores the page and the hashed script and style its markup names, so it never takes over with a shell it cannot serve. Models and the runtime are never fetched ahead of use. On a first visit the page, its assets, the runtime and the first model are fetched before the worker controls the page, so the page tells the worker what it already fetched (an `adopt` message): its own resource entries, and on every model load the files the vision worker reports (its own script included) together with everything the page has loaded so far. A model is therefore kept after its first real use and never before, and a first-visit user can reload offline.
 - Cached files are matched by address, ignoring `Vary`. A host that lists a request header under `Vary` (the preview server sends `Vary: Origin`, GitHub Pages `Vary: Accept-Encoding`) otherwise made the page's own script and style requests miss the stored copies.
@@ -699,7 +732,7 @@ The service worker is registered in production builds only, after `load`, as `<b
 
 ## Styles
 
-`src/styles/index.css` imports `base.css`, `shell.css`, `stage.css`, `inspector.css` and `deck.css`. `panel-tabs.css`, `palette.css`, `coach.css`, `share.css`, `immersive.css` and `measure-settings.css` are imported by the component that uses them, and `src/panels/lab/lab.css` by the Lab and Presence. Plugins bring their own CSS file next to their module.
+`src/styles/index.css` imports `base.css`, `shell.css`, `stage.css`, `inspector.css` and `deck.css`, then `phone.css` and `touch.css` last. `panel-tabs.css`, `palette.css`, `coach.css`, `share.css`, `immersive.css` and `measure-settings.css` are imported by the component that uses them, and `src/panels/lab/lab.css` by the Lab and Presence. Plugins bring their own CSS file next to their module.
 
 ## File map
 
@@ -710,9 +743,13 @@ public/detector-worker.js   Objects' Sharper model (D-FINE-S) on ONNX Runtime We
 public/sw.js                offline cache rules
 src/registry.ts             collect(): shared discovery
 src/modes/                  types.ts, index.ts, objects.ts, body.ts, hands.ts, face.ts, segment.ts,
-                            gestures.ts, fusion.ts, depth.ts, lib/ (depth-* for Depth; for Objects
-                            object-boxes.ts, object-controls.tsx, object-model-setting.tsx,
-                            object-sharper-setting.tsx)
+                            gestures.ts, fusion.ts, depth.ts, lib/ (depth-* for Depth, depth-task.ts
+                            the one depth spec; for Objects object-boxes.ts,
+                            object-controls.tsx, object-model-setting.tsx,
+                            object-sharper-setting.tsx, and for Measure objects
+                            object-measure.ts, object-measured.ts, object-measure-frame.ts,
+                            object-measure-text.ts, object-measure-setting.tsx,
+                            object-measure.css)
 src/effects/                types.ts, index.ts, trails.ts, constellation.ts, plasma-hands.ts,
                             ember-trail.ts, neon-ribbons.ts, aura.ts, hologram.ts, starfield-pull.ts,
                             echo.ts, face-light.ts, lib/
@@ -720,6 +757,14 @@ src/panels/                 types.ts, index.ts, inspect.tsx, lab.tsx, lab/, libr
                             ruler.tsx, ruler/, presence.tsx, presence/; the last four .tsx files
                             hold no body, each body is <id>/panel.tsx, fetched on
                             demand through shared/lazy-panel.tsx
+src/panels/lab/             device-block.tsx (This device), and scorecard/: the set (score-set.ts),
+                            the run (score-worker.ts, score-run.ts), the scoring (iou.ts, match.ts,
+                            average-precision.ts, operating-point.ts, bootstrap.ts), the report
+                            (score-prepare.ts, score-report.ts, score-types.ts, score-markdown.ts,
+                            score-wording.ts) and the page (scorecard-panel.tsx,
+                            scorecard-picks.tsx, scorecard-tables.tsx, scorecard-viewer.tsx,
+                            draw-score.ts, scorecard.css)
+public/eval/set.json        the scorecard's 100 pictures: hashes, credits, COCO's labels
 src/panels/ruler/           at the root, what every part of the Ruler reads: its state (state.ts,
                             store.ts, units.ts, references.ts), the plane solve (homography.ts,
                             derive.ts, monte-carlo.ts, lens.ts), long-side.ts (which way round the
@@ -755,33 +800,41 @@ src/vision/                 types.ts, frame.ts, draw.ts, geometry.ts, tracker.ts
                             download-failure.ts, first-download.ts, camera-start.ts,
                             camera-choice.ts, camera-errors.ts, camera-devices.ts, camera-source.ts,
                             camera-recover.ts, camera-live.ts, tracker-options.ts, track-gate.ts,
-                            track-smooth.ts, model-choice.ts
+                            track-smooth.ts, model-choice.ts, on-demand.ts, demo-picture.ts
 src/vision/detector/        sharper.ts (the Sharper choice, its worker script and its fallback)
 src/vision/depth/           colormap.ts, affine-fit.ts, unproject.ts, orbit.ts (pure)
 src/measure/                one-euro.ts, series.ts, noise.ts, format.ts, angles.ts, camera.ts,
-                            camera-fit.ts, camera-project.ts, vec.ts (pure; vec.ts is the one home
+                            camera-fit.ts, camera-project.ts, box-size.ts, box-bars.ts, vec.ts (pure; vec.ts is the one home
                             of solveLinear and invert3, the Ruler's plane solves included, and of
                             the plane helpers cross and dist)
 src/telemetry/              bus.ts, stats.ts, task-status.ts
-scripts/                    models.json, setup-assets.mjs, and checks run by hand, not in CI:
-                            depth-check.mjs, gpu-loss-check.mjs, detector-check.mjs
-src/shell/                  shortcuts, palette, layout, recorder, service worker registration
+scripts/                    models.json, setup-assets.mjs, and scripts run by hand, not in CI:
+                            depth-check.mjs, gpu-loss-check.mjs, detector-check.mjs,
+                            build-score-set.mjs with score-set-flickr.mjs, score-fixture.py,
+                            phone-demo-pictures.sh
+src/shell/                  shortcuts, palette, layout, recorder, service worker registration,
+                            device.ts (narrow, touch-first), download-consent.ts,
+                            use-download-consent.ts
 src/components/             Header, ModeSwitch, CameraStage, StageTools, StageMessage, CameraPicker, Inspector,
                             StudioDeck, EffectsPicker, EffectIntensity, ShareCard, CoachMarks,
                             CommandPalette, ImmersiveDock, HelpPanel, Footer, MeasureSettings,
-                            ErrorBoundary
+                            ErrorBoundary, DownloadConsent
 src/styles/                 index.css, base.css, shell.css, stage.css, inspector.css, panel-tabs.css,
                             deck.css, palette.css, coach.css, share.css, immersive.css,
-                            measure-settings.css
+                            measure-settings.css, phone.css, touch.css
 tests/                      unit: tracker, registry (with fixtures), vision, telemetry, modes, effects, lab,
                             shell, measure-*, stage-hooks, vision-smoothing, vision-settings, ruler-*,
                             fit-*, walls-*, room-*, depth-*, library-*, presence-*, session-export,
                             licence-notices, inspect-controls, camera-*, tracker-*, vision-track-smooth,
                             vision-model-choice, vision-sharper, vision-first-download, detector-worker,
-                            modes-objects, modes-worker-band; helpers/ (seeded noise, the worker
-                            harness, room builders);
+                            modes-objects, modes-worker-band, measure-box-size, object-measured,
+                            object-refusals, vision-on-demand, score-*, shell-device,
+                            shell-download-consent, vision-demo-picture; helpers/ (seeded noise,
+                            the worker harness, room builders, phone-audit);
                             e2e: studio, modes, effects, lab, shell, mode-switch, no-webgl, measure,
                             ruler*, fit, walls, room, depth, demo-page, detection-models,
                             detection-stability, library, presence, error-boundary,
-                            still-picture, panel-layout, unreadable-file, camera, detector-sharper
+                            still-picture, panel-layout, unreadable-file, camera, detector-sharper,
+                            measured-objects, scorecard, phone-layout, phone-touch, phone-start,
+                            phone-measure
 ```

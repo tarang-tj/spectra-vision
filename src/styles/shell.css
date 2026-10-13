@@ -423,13 +423,13 @@ kbd {
     gap: 12px;
   }
   .top-right > a {
-    height: 40px;
+    height: 44px;
   }
   .privacy svg {
     height: 20px;
   }
   /* A grid of up to four columns (set from the mode count), so seven modes
-     make two balanced rows and every button stays 40 px tall. */
+     make two balanced rows and every button stays 44 px tall. */
   .modes,
   .topbar[data-many="true"] .modes {
     grid-column: 1 / -1;
@@ -441,7 +441,7 @@ kbd {
   .topbar[data-many="true"] .modes button {
     width: auto;
     min-width: 0;
-    min-height: 40px;
+    min-height: 44px;
     padding: 8px 4px;
   }
   .intro {
@@ -494,7 +494,7 @@ kbd {
     padding-left: 0;
   }
   .stat span {
-    font-size: 11px;
+    font-size: 12px;
   }
   .stat strong {
     font-size: 16px;
@@ -505,10 +505,10 @@ kbd {
     font-size: 12px;
   }
   .button.compact {
-    min-height: 40px;
+    min-height: 44px;
   }
   footer {
-    font-size: 10px;
+    font-size: 12px;
     padding: 8px 0;
     flex-wrap: wrap;
   }
@@ -527,10 +527,17 @@ kbd {
     gap: 6px;
   }
   footer .icon-button {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
   }
   .shortcut-list dt {
     flex-basis: 104px;
+  }
+}
+/* No text under 12 px on a one-column screen or where the main pointer is a
+   finger. Wide screens with a mouse keep their sizes. */
+@media (max-width: 760px), (pointer: coarse) {
+  .help h3 {
+    font-size: 12px;
   }
 }

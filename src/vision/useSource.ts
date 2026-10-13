@@ -1,9 +1,11 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { defaultMode, getMode } from "../modes";
+import { smallScreen } from "../shell/device";
 import { useCameraSource } from "./camera-source";
 import type { CameraHooks } from "./camera-source";
 import type { CameraFailure } from "./camera-errors";
+import { demoStill } from "./demo-picture";
 import type { Mode, Source } from "./types";
 
 /** What became of a file given to `upload`. `generation` is the one a picture
@@ -129,7 +131,8 @@ export function useSource(hooks: CameraHooks) {
           return;
         }
         const image = new Image();
-        image.src = `${import.meta.env.BASE_URL}${spec.still}`;
+        // A small screen is sent the smaller file (demo-picture.ts).
+        image.src = `${import.meta.env.BASE_URL}${demoStill(spec.still, smallScreen())}`;
         await image.decode();
         commit(image, "demo", spec.label, token);
       } catch {

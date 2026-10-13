@@ -10,6 +10,7 @@ vi.mock("../src/vision/webgl-probe", () => ({
 }));
 
 import { getMode, tasksOf } from "../src/modes";
+import { resetDevice } from "../src/shell/device";
 import { taskStatus } from "../src/telemetry/task-status";
 import { chooseDelegate } from "../src/vision/delegate";
 import {
@@ -129,6 +130,42 @@ describe("which model Objects runs", () => {
     setLargerOnGpu(false);
     expect(largerOnGpu()).toBe(false);
     expect(modelOf(spec, "fast", "GPU")).toBe(SMALL);
+  });
+  it("starts off where touch is the main way in, unless a choice is stored", () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => store.set(key, value),
+    });
+    const touch = (yes: boolean) => {
+      vi.stubGlobal("matchMedia", () => ({ matches: yes }));
+      resetDevice();
+      resetModelChoice();
+    };
+    try {
+      touch(true);
+      expect(largerOnGpu()).toBe(false);
+      expect(modelOf(spec, "fast", "GPU")).toBe(SMALL);
+      // A stored choice always wins, either way.
+      store.set("spectra.gpumodel.v1", "on");
+      touch(true);
+      expect(largerOnGpu()).toBe(true);
+      store.set("spectra.gpumodel.v1", "off");
+      touch(false);
+      expect(largerOnGpu()).toBe(false);
+      // A mouse or a trackpad with nothing stored: on, as before.
+      store.clear();
+      touch(false);
+      expect(largerOnGpu()).toBe(true);
+      // One switch away: switching it on is kept.
+      touch(true);
+      setLargerOnGpu(true);
+      expect(store.get("spectra.gpumodel.v1")).toBe("on");
+      expect(modelOf(spec, "fast", "GPU")).toBe(LARGE);
+    } finally {
+      vi.unstubAllGlobals();
+      resetDevice();
+    }
   });
   it("never changes a task that names no larger model", () => {
     const pose = { kind: "pose" as const, model: "lite.task" };

@@ -274,7 +274,7 @@
     right: 9px;
   }
   .hud-badge {
-    font-size: 8px;
+    font-size: 12px;
     padding: 5px 7px;
   }
   .stage-bottom {
@@ -283,7 +283,7 @@
   .playback {
     gap: 6px;
     max-width: 32%;
-    font-size: 10px;
+    font-size: 12px;
   }
   .playback .icon-button {
     width: 40px;
@@ -322,17 +322,30 @@
     font-size: 18px;
   }
   .stage-message p {
-    font-size: 11px;
+    font-size: 12px;
     margin: 8px 0 12px;
   }
   .stage-message .button {
     font-size: 12px;
     padding: 8px 12px;
-    min-height: 40px;
+    min-height: 44px;
   }
+  /* The line can be long ("Downloading this mode's model: 99 MB, ..."): it
+     wraps inside the stage instead of running off both sides of it. */
   .loading {
-    font-size: 11px;
+    font-size: 12px;
     padding: 12px;
-    white-space: nowrap;
+    width: max-content;
+    max-width: 92%;
+  }
+}
+/* No text under 12 px on a one-column screen or where the main pointer is a
+   finger. Wide screens with a mouse keep their sizes. */
+@media (max-width: 760px), (pointer: coarse) {
+  .hud-badge,
+  .playback small,
+  .tool,
+  .recording-badge {
+    font-size: 12px;
   }
 }

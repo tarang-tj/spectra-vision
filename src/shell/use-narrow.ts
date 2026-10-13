@@ -1,9 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useSyncExternalStore } from "react";
-
-// The width at and below which the page is one column (see the 760px rules
-// in src/styles).
-const NARROW = "(max-width: 760px)";
+import { NARROW } from "./device";
 
 const subscribe = (changed: () => void) => {
   const query = matchMedia(NARROW);

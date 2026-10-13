@@ -155,3 +155,11 @@
   max-width: 100%;
   align-self: flex-start;
 }
+/* No text under 12 px on a one-column screen or where the main pointer is a
+   finger. Wide screens with a mouse keep their sizes. */
+@media (max-width: 760px), (pointer: coarse) {
+  .room-thumb img,
+  .room-thumb-blank {
+    font-size: 12px;
+  }
+}

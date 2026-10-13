@@ -1,0 +1,54 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+.score-basis {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+.score-basis li {
+  margin-bottom: 0.3rem;
+}
+.score-viewer {
+  margin-top: 0.8rem;
+}
+.score-viewer .score-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.4rem 0;
+}
+.score-picture {
+  position: relative;
+  max-width: 100%;
+}
+.score-picture img,
+.score-picture canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.score-picture canvas {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+}
+.score-legend,
+.score-items {
+  margin: 0.4rem 0;
+  padding: 0;
+  list-style: none;
+}
+.score-legend li {
+  display: inline-block;
+  margin-right: 0.9rem;
+}
+.score-legend i {
+  display: inline-block;
+  width: 1rem;
+  height: 0.7rem;
+  margin-right: 0.3rem;
+  border: 2px solid;
+  vertical-align: middle;
+}
+.score-credit {
+  overflow-wrap: anywhere;
+}

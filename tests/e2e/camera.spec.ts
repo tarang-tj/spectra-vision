@@ -97,10 +97,18 @@ test.describe("on a phone", () => {
       expect(box.height).toBeGreaterThanOrEqual(44);
       expect(box.width).toBeGreaterThanOrEqual(44);
     }
-    // Every stage tool is still inside the stage with the flip added.
-    const tools = (await page.locator(".stage-tools").boundingBox())!;
-    expect(tools.x).toBeGreaterThanOrEqual(stage.x);
-    expect(tools.x + tools.width).toBeLessThanOrEqual(stage.x + stage.width);
+    // Every tool, with the flip added, is in the bar under the picture, on
+    // the screen and thumb sized.
+    const tools = await page.locator(".stage-bottom button").all();
+    expect(tools.length).toBeGreaterThanOrEqual(6);
+    for (const tool of tools) {
+      const box = (await tool.boundingBox())!;
+      expect(box.y).toBeGreaterThanOrEqual(stage.y + stage.height - 1);
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(390);
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
     // The phone turns: the badge and the stage follow the new shape.
     await bench(page, (b) => b.turn());
     await expect(badge(page)).toHaveText("CAMERA · REAR · 1280×720");

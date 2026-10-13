@@ -1,26 +1,39 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { X } from "lucide-react";
+import { touchFirst } from "../shell/device";
 import "../styles/coach.css";
+
+type CoachStep = {
+  target: string;
+  title: string;
+  text: string;
+  /** The same tip where touch is the main way in: no keyboard keys. */
+  touch?: string;
+};
 
 /** The three first-run tips. `target` names the control the tip is about:
  * the shell outlines the element carrying the matching data-coach value. */
-export const COACH_STEPS = [
+export const COACH_STEPS: readonly CoachStep[] = [
   {
     target: "modes",
     title: "Pick what to see",
     text: "Each mode runs a different vision model. Use the switch at the top, or press a number key.",
+    touch:
+      "Each mode runs a different vision model. Use the switch at the top.",
   },
   {
     target: "effects",
     title: "Layer effects",
     text: "The tray under the stage turns effects on and off. Press E to open or close it.",
+    touch:
+      "The tray under the picture turns effects on and off. Tap Effects to open or close it.",
   },
   {
     target: "source",
     title: "Use your own view",
     text: "Start your camera or upload a file. Frames are processed on this device and never uploaded.",
   },
-] as const;
+];
 
 /** The tips card, opened from the Tips pill in the heading band (which draws
  * attention to itself on a first visit) or from the palette. It sits in the
@@ -51,7 +64,7 @@ export default function CoachMarks({
         Tip {step + 1} of {COACH_STEPS.length}
       </p>
       <strong>{tip.title}</strong>
-      <p aria-live="polite">{tip.text}</p>
+      <p aria-live="polite">{(touchFirst() && tip.touch) || tip.text}</p>
       <div className="coach-actions">
         <button
           className="button primary compact"

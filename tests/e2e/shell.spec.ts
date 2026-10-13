@@ -457,6 +457,8 @@ test("at 390 px nothing scrolls sideways, no control is clipped and all are 40 p
   });
   expect(problems).toEqual([]);
   // The effects tray sits directly under the stage, above the inspector.
+  // Read with the page at its top: scrolled, the stage stays pinned there.
+  await page.evaluate(() => scrollTo(0, 0));
   const tray = await page.locator(".deck").boundingBox(),
     stage = await page.locator(".camera-stage").boundingBox(),
     rail = await page.locator(".inspector").boundingBox();

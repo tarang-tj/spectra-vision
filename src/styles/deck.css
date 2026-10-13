@@ -114,7 +114,7 @@ input[type="range"].effect-intensity {
     row-gap: 8px;
   }
   .deck-toggle {
-    min-height: 40px;
+    min-height: 44px;
   }
   .effects-tray {
     order: 3;
@@ -129,5 +129,12 @@ input[type="range"].effect-intensity {
   }
   .effect-switch {
     padding: 0 12px 0 10px;
+  }
+}
+/* No text under 12 px on a one-column screen or where the main pointer is a
+   finger. Wide screens with a mouse keep their sizes. */
+@media (max-width: 760px), (pointer: coarse) {
+  .deck-toggle small {
+    font-size: 12px;
   }
 }

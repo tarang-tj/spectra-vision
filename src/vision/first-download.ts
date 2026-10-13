@@ -17,33 +17,44 @@ export const downloadNote = (bytes: number, kept: boolean) =>
   `Downloading this mode's model: ${megabytes(bytes)}, one time` +
   (kept ? ". It is kept on this device afterwards" : "");
 
-/** The loading line for these tasks, or null when none of them states a size
- * or every stated model is already stored on this device. Never throws: a
- * browser without Cache Storage is treated as having nothing stored. */
-export async function firstDownloadNote(
-  specs: (Pick<TaskSpec, "model" | "options"> &
-    Partial<
-      Pick<
-        TaskSpec,
-        "kind" | "preciseModel" | "gpuModel" | "sharpModel" | "sizes"
-      >
-    >)[],
+/** As much of a task as its download size is read from. */
+export type Sized = Pick<TaskSpec, "model" | "options"> &
+  Partial<
+    Pick<
+      TaskSpec,
+      "kind" | "preciseModel" | "gpuModel" | "sharpModel" | "sizes"
+    >
+  >;
+type Env = {
+  caches?: Pick<CacheStorage, "match">;
+  registered?: () => Promise<boolean>;
+};
+const browser = (): Env => ({
+  caches: typeof caches === "undefined" ? undefined : caches,
+  registered: async () => !!(await navigator.serviceWorker?.getRegistration()),
+});
+
+/** What the file this task's runner is loading now weighs, or 0 when the
+ * task states no size. */
+export const statedBytes = (spec: Sized): number => {
+  const size = Number(spec.options.bytes ?? spec.sizes?.[modelOf(spec)]);
+  return size > 0 ? size : 0;
+};
+
+/** The bytes of model these tasks still have to fetch: 0 when none of them
+ * states a size or every stated model is already stored on this device.
+ * Never throws: a browser without Cache Storage is treated as having nothing
+ * stored. Model files only, not the runtime. */
+export async function firstDownloadBytes(
+  specs: Sized[],
   base: string,
-  env: {
-    caches?: Pick<CacheStorage, "match">;
-    registered?: () => Promise<boolean>;
-  } = {
-    caches: typeof caches === "undefined" ? undefined : caches,
-    registered: async () =>
-      !!(await navigator.serviceWorker?.getRegistration()),
-  },
-): Promise<string | null> {
+  env: Env = browser(),
+): Promise<number> {
   let bytes = 0;
   for (const spec of specs) {
-    // The file the task's runner is loading now, and what that file weighs.
     const model = modelOf(spec),
-      size = Number(spec.options.bytes ?? spec.sizes?.[model]);
-    if (!(size > 0)) continue;
+      size = statedBytes(spec);
+    if (!size) continue;
     let stored = false;
     try {
       // By address alone, as the service worker matches it (public/sw.js).
@@ -55,12 +66,27 @@ export async function firstDownloadNote(
     }
     if (!stored) bytes += size;
   }
-  if (!bytes) return null;
-  let kept = false;
+  return bytes;
+}
+
+/** Whether this browser will keep a fetched model (a service worker is
+ * registered). False when that cannot be known. */
+export async function keepsDownloads(env: Env = browser()): Promise<boolean> {
   try {
-    kept = !!(await env.registered?.());
+    return !!(await env.registered?.());
   } catch {
     /* No service worker here: nothing is promised. */
+    return false;
   }
-  return downloadNote(bytes, kept);
+}
+
+/** The loading line for these tasks, or null when there is nothing left to
+ * fetch (see `firstDownloadBytes`). */
+export async function firstDownloadNote(
+  specs: Sized[],
+  base: string,
+  env: Env = browser(),
+): Promise<string | null> {
+  const bytes = await firstDownloadBytes(specs, base, env);
+  return bytes ? downloadNote(bytes, await keepsDownloads(env)) : null;
 }

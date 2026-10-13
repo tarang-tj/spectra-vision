@@ -17,6 +17,9 @@
  *   other files       network first with a cached fallback (worker script,
  *                     icons, manifest, demo stills)
  *   video, Range      never cached
+ *   eval/             never cached: the Lab scorecard's photographs are
+ *                     other people's pictures, 16 MB of them, fetched only
+ *                     when a visitor runs the scorecard
  */
 
 // The page registers this file as sw.js?v=<hash of its entry script>, so each
@@ -93,6 +96,7 @@ function classify(url) {
   if (!url.href.startsWith(SCOPE)) return null;
   const path = url.href.slice(SCOPE.length).split(/[?#]/)[0];
   if (/\.(mp4|webm|mov|m4v)$/i.test(path)) return null;
+  if (path.startsWith("eval/")) return null;
   if (path.startsWith("models/") || path.startsWith("runtime/"))
     return "models";
   if (path.startsWith("assets/")) return "assets";

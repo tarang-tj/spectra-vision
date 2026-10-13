@@ -4,6 +4,7 @@
 // own `cameraTrials`) gives the marked floor other depths and so another fit.
 // A depth's bar is 2 standard deviations over those fits, combined with twice
 // the scatter the fit leaves on the marked floor.
+import type { Camera } from "../../measure/camera";
 import { combineErrors, measured, type Measured } from "../../measure/noise";
 import { sampleSd } from "../../measure/series";
 import { cameraTrials } from "../../panels/ruler/camera-of";
@@ -20,8 +21,15 @@ const MAX_RETAKE_CELLS = 500;
  * handle does not refit two hundred cameras on every move. */
 const SETTLE_ASKS = 8;
 
-/** One retake's fit, and the near and far depth it gave the marked floor. */
-type Retake = { a: number; b: number; near: number; far: number };
+/** One retake's fit, the near and far depth it gave the marked floor, and the
+ * camera it was fitted under (focal length and depth move together). */
+export type Retake = {
+  a: number;
+  b: number;
+  near: number;
+  far: number;
+  camera: Camera;
+};
 type Retakes = { asks: number; fits: Retake[] | null };
 const store = new WeakMap<MetricScale, Retakes>();
 
@@ -47,13 +55,21 @@ function refit(scale: MetricScale): Retake[] {
   for (const trial of cameraTrials(scale.s, scale.d).trials) {
     if (!trial.camera) continue;
     const fit = fitDepth(samplesFor(cells, trial.h, trial.camera));
-    if (fit.ok) fits.push(fit);
+    if (fit.ok)
+      fits.push({
+        a: fit.a,
+        b: fit.b,
+        near: fit.near,
+        far: fit.far,
+        camera: trial.camera,
+      });
   }
   return fits;
 }
 
-/** The retakes, or null until the scale has settled. */
-function retakesOf(scale: MetricScale): Retake[] | null {
+/** The retakes, or null until the scale has settled. Each call counts as one
+ * ask (see SETTLE_ASKS): call it once per drawn frame, not per reading. */
+export function retakesOf(scale: MetricScale): Retake[] | null {
   let entry = store.get(scale);
   if (!entry) store.set(scale, (entry = { asks: 0, fits: null }));
   if (!entry.fits) {
@@ -65,10 +81,15 @@ function retakesOf(scale: MetricScale): Retake[] | null {
   return entry.fits;
 }
 
+/** The retakes if they are already worked out, without counting as an ask:
+ * for a reader other than the stage's once-a-frame one. */
+export const settledRetakes = (scale: MetricScale): Retake[] | null =>
+  store.get(scale)?.fits ?? null;
+
 /** A depth whose bar is wider than this share of it is not shown. */
 export const MAX_RELATIVE_BAR = 0.5;
 /** Fewest retakes that must have given a fit for a bar to be stated. */
-const MIN_RETAKES = 20;
+export const MIN_RETAKES = 20;
 
 /** How far the near and the far end of the marked floor are from the camera
  * (the 5th and 95th percentile of its cells), in metres. This is the Ruler's

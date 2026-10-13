@@ -82,3 +82,64 @@ describe("third party notices", () => {
     expect(JSON.stringify(models)).not.toMatch(/obj2coco-ONNX|obj365-ONNX/);
   });
 });
+
+// The scorecard's pictures are other people's photographs. They cannot be
+// served without the notices saying whose they are and under what licence.
+describe("scorecard set", () => {
+  const lines = notices.split("\n"),
+    section = notices.slice(
+      notices.indexOf("## Scorecard pictures and labels"),
+    ),
+    license = readFileSync(resolve("LICENSE"), "utf8"),
+    set: {
+      labels: string;
+      labelsUrl: string;
+      annotationsSha256: string;
+      pictures: number;
+      items: { license: string; checked: string }[];
+    } = JSON.parse(readFileSync(resolve("public/eval/set.json"), "utf8"));
+  it("has a section of its own", () => {
+    expect(notices).toContain("\n## Scorecard pictures and labels\n");
+  });
+  it("names the picture list beside CC BY 2.0 and says where each credit is", () => {
+    const line = lines.find(
+      (l) => l.includes("`public/eval/set.json`") && /CC BY 2\.0/.test(l),
+    );
+    expect(line, "set.json is not named beside CC BY 2.0").toBeDefined();
+    expect(line).toContain("https://creativecommons.org/licenses/by/2.0/");
+    expect(line).toMatch(/author, title and link/);
+    expect(line).toMatch(/served unchanged/);
+  });
+  it("credits the labels to the COCO Consortium under CC BY 4.0", () => {
+    const line = lines.find(
+      (l) => /COCO Consortium/.test(l) && /CC BY 4\.0/.test(l),
+    );
+    expect(line, "the labels are not credited").toBeDefined();
+    expect(line).toContain("https://creativecommons.org/licenses/by/4.0/");
+    expect(line).toContain(set.labelsUrl);
+    expect(line).toContain(`\`${set.annotationsSha256}\``);
+    expect(set.labels).toBe("COCO Consortium, CC BY 4.0");
+  });
+  it("says what the set file says: how many, under which licence, read when", () => {
+    expect(set.items).toHaveLength(set.pictures);
+    expect(new Set(set.items.map((item) => item.license))).toEqual(
+      new Set(["CC BY 2.0"]),
+    );
+    expect(section).toContain(`${set.pictures} photographs`);
+    for (const date of new Set(set.items.map((item) => item.checked)))
+      expect(section, date).toContain(date);
+    expect(section).toMatch(/No picture .*person/);
+    expect(section).toMatch(/refuses a (file|picture) whose SHA-256 differs/);
+    expect(section).toMatch(/not (kept|included) in this repository/);
+  });
+  it("no longer says that no COCO photograph is included", () => {
+    expect(notices).not.toMatch(/original photographs are not included/);
+    expect(notices).toMatch(/COCO training (dataset|set) is not included/);
+  });
+  it("leaves photographs and their labels out of the reservation of rights", () => {
+    const third = license.slice(license.indexOf("THIRD-PARTY MATERIAL"));
+    expect(third.replace(/\s+/g, " ")).toMatch(
+      /photographs and their labels are excluded from the reservation of rights/,
+    );
+  });
+});
