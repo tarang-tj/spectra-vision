@@ -1,5 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import BenchmarkPanel from "./benchmark-panel";
+import DeviceBlock from "./device-block";
 import LiveCharts from "./live-charts";
 import { LoadTimes, ModelCards } from "./model-cards";
 import Scorecard from "./scorecard/scorecard-panel";
@@ -16,6 +17,7 @@ export default function Lab() {
       <p className="lab-note">
         Measured in this browser, on this device. Nothing is sent anywhere.
       </p>
+      <DeviceBlock />
       <LiveCharts />
       <Stability />
       <LoadTimes />
