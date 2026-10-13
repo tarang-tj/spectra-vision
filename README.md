@@ -2,7 +2,7 @@
 
 **Reality, augmented.** A camera-first computer vision studio by **Tarang Jammalamadaka**.
 
-[Open the live studio](https://tarang-tj.github.io/spectra-vision/) · [Watch the video demo](https://tarang-tj.github.io/spectra-vision/demo/) · [v2.5.0](https://github.com/tarang-tj/spectra-vision/releases/tag/v2.5.0) · [Ownership and license](LICENSE)
+[Open the live studio](https://tarang-tj.github.io/spectra-vision/) · [Watch the video demo](https://tarang-tj.github.io/spectra-vision/demo/) · [v2.5.1](https://github.com/tarang-tj/spectra-vision/releases/tag/v2.5.1) · [Ownership and license](LICENSE)
 
 Eight modes run seven real vision models on your camera: tracked object boxes, a body skeleton, hand-controlled light painting, a 478-point face mesh, a person cutout, gesture recognition, body, hands and face together, and a depth map from one camera. Ten effects draw on what the models find, a Ruler tab measures on a frozen picture with a stated error on every number and can lay several pictures of one room on one plan, and a Lab tab measures how fast the models run on your device. Objects has a further model, D-FINE-S, that runs only where you choose it and the browser has WebGPU. Everything runs in your browser.
 
@@ -194,13 +194,13 @@ The **Library** tab lists every class the loaded models can name: the object det
 
 ### Camera
 
-On a phone, choose **Front** or **Rear** beside the stage before **Start camera**, or press **Flip** on the stage while the camera is live. A rear camera is never shown mirrored. The camera you used last is remembered on this device. While the Ruler tab is open, Start camera asks for the rear camera unless you chose a side yourself, because what is measured is in front of you; this holds for its Room tool too. With one webcam on a desk there is no Front, Rear or Flip.
+On a phone, choose **Front** or **Rear** beside the stage before **Start camera**, or press **Flip** on the stage while the camera is live. A rear camera is never shown mirrored. A camera on such a device that does not say which way it faces is shown mirrored, with a note saying so and pointing to **Mirror**. The camera you used last is remembered on this device. While the Ruler tab is open, Start camera asks for the rear camera unless you chose a side yourself, because what is measured is in front of you; this holds for its Room tool too. With one webcam on a desk there is no Front, Rear or Flip.
 
 The stage badge shows the side and size the browser granted, for example `CAMERA · REAR · 720×1280`. On a narrow screen a portrait camera picture sets the stage's shape: in the browser test a 720x1280 picture is drawn at least 250x440 CSS px on a 390 px wide screen (it was 150x267 before), and the Flip tool and the chooser's controls are at least 44x44 px.
 
 If the camera does not start, the stage says why (blocked for this site, prompt closed, blocked by the device, no camera, in use, went away, needs HTTPS) and what to do. When you allow the camera in the browser's settings or plug one in, it starts without another press. If the browser's permission prompt goes unanswered for 2 seconds, the stage says where to look and offers **Cancel**. A camera picked from the list that has gone comes back to the one that was live, and says so.
 
-The camera start (front or rear, flip, recovery from a camera that has gone, the portrait stage, the permission wording) has been checked only in headless desktop Chrome with canvas stand-ins for cameras. It has not been tried on a real phone, a real camera, Safari or Firefox. The stand-ins show what the app does with a front and a rear camera; they prove nothing about what a phone's browser hands the app. That the Ruler and Room ask for the rear camera is covered by a unit test only.
+The camera start (front or rear, flip, recovery from a camera that has gone, the portrait stage, the permission wording) has been checked only in headless desktop Chrome with canvas stand-ins for cameras. It has not been tried on a real phone, a real camera, Safari or Firefox. The stand-ins show what the app does with a front and a rear camera; they prove nothing about what a phone's browser hands the app. That the Ruler asks for the rear camera is covered by a unit test and a browser test with stand-in cameras.
 
 ### Detection settings
 
@@ -231,7 +231,7 @@ The **Lab** tab in the right rail measures the app on your device. Nothing it sh
 - A stability meter: how much the landmarks or boxes of the running mode move, in source pixels over 3 seconds, raw beside smoothed, and identity switches over the last minute. On a moving input the figure includes the real motion.
 - A CPU or GPU switch per model. The line under it says what is really running. A GPU request falls back to CPU, with the reason shown, when the browser draws WebGL in software, has no WebGL2, or does not start the GPU path in bounded time.
 - How long each model took to load, and a card for each model in use with its file, size, SHA-256 and license.
-- A benchmark you run yourself: choose modes and delegates, then **Run benchmark**. Each run measures 20 seconds after a 2-second warm-up on whatever source is on the stage (a demo source follows the mode being measured) and can be saved as `spectra-benchmark.json` or `spectra-benchmark.md`, with the device, browser, GPU name and protocol recorded in the file.
+- A benchmark you run yourself: choose modes and delegates, then **Run benchmark**. Each run measures 20 seconds after a 2-second warm-up on whatever source is on the stage (a demo source follows the mode being measured) and can be saved as `spectra-benchmark.json` or `spectra-benchmark.md`, with the device, browser, GPU name and protocol recorded in the file. Every task runs one model file on each delegate, so a CPU row and a GPU row of one mode time the same file, which the saved Markdown names in its Model column: the larger model Objects uses on a GPU and Sharper are set aside while a benchmark runs. The GPU row is therefore not a timing of what Objects runs by default on a GPU.
 
 No benchmark figures are published here: they depend on the device, its load and its power state. Run the benchmark on the machine you care about, idle and on mains power.
 

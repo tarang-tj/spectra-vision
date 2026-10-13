@@ -69,6 +69,8 @@ test("a damaged image and a text file given to Upload leave the picture and its 
   });
   await showsPicture(page, "ruler-room.png");
   await page.getByRole("button", { name: "Ruler", exact: true }).click();
+  // The Ruler's body is fetched on demand: it takes taps once it is showing.
+  await expect(step).toContainText("Tap corner 1 of 4");
   const box = (await page.locator(".camera-stage canvas").boundingBox())!,
     scale = Math.min(box.width / IMAGE.w, box.height / IMAGE.h),
     corner = sheetCorners()[0];

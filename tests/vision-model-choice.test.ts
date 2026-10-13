@@ -16,11 +16,13 @@ import {
   GUARD_RESULTS,
   SLOW_MS,
   gpuModelRefusal,
+  holdStandardModel,
   largerOnGpu,
   medianOf,
   modelChoiceWatchers,
   resetModelChoice,
   setLargerOnGpu,
+  standardModelHeld,
 } from "../src/vision/model-choice";
 import { modelOf, setPrecision } from "../src/vision/settings";
 import { createTaskRunner } from "../src/vision/task-runner";
@@ -296,5 +298,47 @@ describe("the task runner and the larger model", () => {
     expect(modelChoiceWatchers()).toBe(before);
     setLargerOnGpu(false);
     expect(workers).toHaveLength(1);
+  });
+});
+
+describe("the standard model held for a Lab benchmark", () => {
+  it("sets the larger GPU model aside while held, and never touches Precise", () => {
+    expect(standardModelHeld()).toBe(false);
+    holdStandardModel(true);
+    expect(standardModelHeld()).toBe(true);
+    expect(modelOf(spec, "fast", "GPU")).toBe(SMALL);
+    expect(modelOf(spec, "fast", "CPU")).toBe(SMALL);
+    expect(modelOf(spec, "precise", "GPU")).toBe(LARGE);
+    // The person's own switch is left as it was.
+    expect(largerOnGpu()).toBe(true);
+    holdStandardModel(false);
+    expect(standardModelHeld()).toBe(false);
+    expect(modelOf(spec, "fast", "GPU")).toBe(LARGE);
+  });
+  it("reloads a running task on the standard model, and back when released", () => {
+    const { workers, runner, events } = harness();
+    work(workers[0], 2, 60);
+    expect(runner.model()).toBe(LARGE);
+    holdStandardModel(true);
+    expect(workers).toHaveLength(2);
+    expect(workers[0].terminated).toBe(true);
+    expect(init(workers[1])).toMatchObject({ model: SMALL, delegate: "GPU" });
+    expect(modelOf(spec)).toBe(SMALL);
+    expect(events.onRestart).toHaveBeenCalledTimes(1);
+    // Held already: nothing is loaded again.
+    holdStandardModel(true);
+    expect(workers).toHaveLength(2);
+    holdStandardModel(false);
+    expect(init(workers[2])).toMatchObject({ model: LARGE, delegate: "GPU" });
+    runner.dispose();
+  });
+  it("is kept in memory only, and the test reset clears it", () => {
+    const setItem = vi.fn();
+    vi.stubGlobal("localStorage", { getItem: () => null, setItem });
+    holdStandardModel(true);
+    expect(setItem).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+    resetModelChoice();
+    expect(standardModelHeld()).toBe(false);
   });
 });

@@ -15,6 +15,9 @@ export type CameraWant = {
   facing?: Facing;
   /** True when `deviceId` is the camera used last time, not one just picked. */
   remembered?: boolean;
+  /** Set when the remembered camera never said which way it faces: `facing`
+   * is then only what to ask for next, not a side to show as chosen. */
+  sideUnknown?: true;
 };
 
 /** What the browser granted, read from the live track. */
@@ -62,14 +65,18 @@ export function cameraRequests(want: CameraWant): CameraRequest[] {
 export const triesNextRung = (errorName: string): boolean =>
   errorName === "OverconstrainedError" || errorName === "NotFoundError";
 
-/** Which way a camera faces: what the browser says, else what its name says,
- * else unknown (a laptop webcam says neither). */
+/** Which way a camera faces: what the live track says, else the one side its
+ * capabilities list (a camera may list both, which says nothing), else what
+ * its name says, else unknown (a laptop webcam says none of these). */
 export function facingOf(
   settings: { facingMode?: string },
   label: string,
+  capable?: readonly string[],
 ): Granted["facing"] {
   if (settings.facingMode === "user" || settings.facingMode === "environment")
     return settings.facingMode;
+  const only = capable?.length === 1 ? capable[0] : "";
+  if (only === "user" || only === "environment") return only;
   if (/\b(back|rear|environment)\b/i.test(label)) return "environment";
   if (/\b(front|selfie)\b/i.test(label)) return "user";
   return "unknown";
@@ -78,11 +85,12 @@ export function facingOf(
 export function grantedOf(
   settings: MediaTrackSettings,
   label: string,
+  capable?: readonly string[],
 ): Granted {
   return {
     deviceId: settings.deviceId ?? "",
     label: label || "Camera",
-    facing: facingOf(settings, label),
+    facing: facingOf(settings, label, capable),
     width: settings.width ?? 0,
     height: settings.height ?? 0,
     frameRate: Math.round(settings.frameRate ?? 0),
@@ -93,6 +101,16 @@ export function grantedOf(
  * looks at the room never is, or writing in the room would read backwards. */
 export const mirrorFor = (facing: Granted["facing"]): boolean =>
   facing !== "environment";
+
+/** What to tell the person about a camera that is mirrored on a guess: only
+ * where the device has sides, so a desk webcam gets no note. */
+export const unknownSideNote = (
+  facing: Granted["facing"],
+  sidesMatter: boolean,
+): string | null =>
+  facing === "unknown" && sidesMatter
+    ? "This camera does not say which way it faces, so it is shown mirrored. Press Mirror if it points away from you."
+    : null;
 
 /** What the stage badge says about a live camera: the side when it is known,
  * and the size the picture really has. */
@@ -151,7 +169,12 @@ export async function openCamera(
       return {
         stream,
         rung: request.rung,
-        granted: grantedOf(track?.getSettings() ?? {}, track?.label ?? ""),
+        granted: grantedOf(
+          track?.getSettings() ?? {},
+          track?.label ?? "",
+          // Not every browser has getCapabilities; a missing side is allowed.
+          track?.getCapabilities?.().facingMode,
+        ),
       };
     } catch (e) {
       const name = (e as { name?: string } | null)?.name ?? "";

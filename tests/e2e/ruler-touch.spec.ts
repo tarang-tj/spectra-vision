@@ -195,6 +195,8 @@ test("with a live camera the canvas lets a swipe scroll the page", async ({
   await page.getByRole("button", { name: "Start camera" }).click();
   await expect(page.getByRole("button", { name: "Stop camera" })).toBeVisible();
   await page.getByRole("button", { name: "Ruler", exact: true }).click();
+  // The Ruler's body is fetched on demand; read the canvas once it is showing.
+  await expect(page.getByTestId("ruler-step")).toBeVisible();
   const canvas = page.locator(".camera-stage canvas");
   // Live picture: nothing is listening for taps, so touch-action is not none.
   await expect(canvas).not.toHaveAttribute("data-pointer", "on");

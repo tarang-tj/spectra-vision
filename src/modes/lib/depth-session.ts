@@ -93,7 +93,8 @@ function ensure(): CloudRenderer | null {
 
 /** Draw the 3D view over the picture's rectangle. Returns the number of
  * points drawn (0 when there is no view to draw). The points are built once
- * per result, so `picture` is read only when a new map arrives. */
+ * per result and scale, so `picture` is read only when a new map or a new
+ * scale arrives. */
 export function drawCloud(
   ctx: CanvasRenderingContext2D,
   frame: Frame,

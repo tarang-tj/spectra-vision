@@ -1,13 +1,17 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { defaultMode } from "../modes";
 import { hasSides } from "../vision/camera-choice";
-import { facingOf, mirrorFor } from "../vision/camera-start";
+import { facingOf, mirrorFor, unknownSideNote } from "../vision/camera-start";
 import { useSource } from "../vision/useSource";
 
 /** Shown as the stage's notice when a chosen file is not a picture. */
 export const UNREADABLE_NOTICE =
   "That file could not be read as a picture. The stage is unchanged.";
+
+/** Shown when a camera prompt nobody answered is given up on. */
+export const CANCELLED_NOTICE =
+  "Stopped waiting for the camera. Showing the demo.";
 
 /** The mode, the source and the three switches that belong to them (paused,
  * mirror, motion demo), with the rules that tie them together: a new source
@@ -18,6 +22,8 @@ export function useSourceControls(notice: (text: string) => void) {
     [paused, setPaused] = useState(false),
     [mirror, setMirror] = useState(false),
     [motionDemo, setMotionDemo] = useState(false),
+    // Whether Front and Rear mean anything here, as of the last render.
+    sides = useRef(false),
     input = useSource({
       notice,
       // Every camera that goes live sets the mirror from the way it faces,
@@ -25,6 +31,9 @@ export function useSourceControls(notice: (text: string) => void) {
       onCamera: (granted) => {
         setMirror(!!granted && mirrorFor(granted.facing));
         if (granted) setPaused(false);
+        // A mirror set on a guess is said, where the guess can be wrong.
+        const note = granted && unknownSideNote(granted.facing, sides.current);
+        if (note) notice(note);
       },
     }),
     { camera } = input;
@@ -68,6 +77,13 @@ export function useSourceControls(notice: (text: string) => void) {
       camera.start();
     }
   };
+  /** Give up on a camera prompt nobody answered. What was showing is gone by
+   * then (starting a camera lets it go), so the demo comes back, with a word. */
+  const cancelCamera = () => {
+    camera.cancel();
+    onDemo();
+    notice(CANCELLED_NOTICE);
+  };
   /** Retry the camera request that failed, exactly as it was asked. Only a
    * camera failure has a retry: a demo that did not load offers the demo. */
   const retrySource = () => {
@@ -83,6 +99,7 @@ export function useSourceControls(notice: (text: string) => void) {
       ]),
     [camera.count, camera.named, camera.live],
   );
+  sides.current = cameraSides;
   /** Open a file, and say so when it could not be read: the stage keeps
    * what it was showing, so without a word the press would look ignored.
    * The switches are reset only when the file does take the stage. */
@@ -125,6 +142,7 @@ export function useSourceControls(notice: (text: string) => void) {
     onMotionDemo,
     onCamera,
     retrySource,
+    cancelCamera,
     /** Go to the other camera, where there is one to go to. */
     flipCamera:
       camera.flip && (navigator.maxTouchPoints > 0 || camera.count > 1)

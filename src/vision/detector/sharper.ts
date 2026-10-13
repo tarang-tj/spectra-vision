@@ -5,9 +5,10 @@
 // WebGPU; a frame took about 1.1 s on CPU, so there it is not offered at all.
 // When it cannot start or its GPU device is lost, the task runner goes back
 // to the MediaPipe detector and the reason is kept here for the page to say.
+// It also stands aside while a Lab benchmark holds the standard model.
 import { readFlag, writeFlag } from "../../shell/storage";
 import { autoDelegate } from "../delegate";
-import { delegateInUse } from "../model-choice";
+import { delegateInUse, standardModelHeld } from "../model-choice";
 import type { Delegate, TaskKind, TaskSpec } from "../types";
 
 export const SHARPER_MODEL = "dfine_s_coco.onnx";
@@ -73,6 +74,7 @@ export function sharperBlocked(
 ): string | null {
   if (!hasWebGpu()) return "this browser has no WebGPU";
   if (delegate !== "GPU") return "Objects is on CPU here";
+  if (standardModelHeld()) return "a Lab benchmark is running";
   return refusal;
 }
 

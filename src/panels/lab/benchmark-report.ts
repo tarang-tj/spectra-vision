@@ -134,7 +134,7 @@ export function toMarkdown(report: BenchReport): string {
   }
   lines.push(
     "",
-    "Every figure was measured by a clock in this browser. Latency is the model call inside the worker. Percentiles use linear interpolation over all samples of the measuring period; nothing is smoothed.",
+    "Every figure was measured by a clock in this browser. Latency is the model call inside the worker. Percentiles use linear interpolation over all samples of the measuring period; nothing is smoothed. Rows of one mode ran the same model file on each delegate; the Model column names it.",
     "",
   );
   return lines.join("\n");

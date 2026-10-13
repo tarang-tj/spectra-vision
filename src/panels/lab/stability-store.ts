@@ -2,7 +2,7 @@
 import { SampleWindow } from "../../telemetry/stats";
 import { onVisionResult } from "../../vision/result-feed";
 import { ResultSmoother } from "../../vision/smooth-result";
-import { faintOf } from "../../vision/track-gate";
+import { trackResult } from "../../vision/track-gate";
 import { STEADY_TRACKER, Tracker } from "../../vision/tracker";
 import type { TaskKind, VisionResult } from "../../vision/types";
 import {
@@ -126,11 +126,7 @@ export function openStabilityStore(
     if (options.tracked && result.time > lastTime) {
       lastTime = result.time;
       // The same two-level gate as the stage (vision/track-gate.ts).
-      const tracks = tracker.update(
-        result.detections,
-        result.time,
-        faintOf(result.tasks.object),
-      );
+      const tracks = trackResult(tracker, result);
       identity.update(tracks, result.time);
       for (const t of tracks)
         // A held box is a prediction, not a reading: it has no spread.

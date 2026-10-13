@@ -36,3 +36,10 @@
     min-height: 40px;
   }
 }
+/* A panel whose body is still on its way (panels/shared/lazy-panel.tsx). */
+.panel-loading {
+  margin: 0;
+  padding: 12px 4px;
+  color: var(--muted);
+  font-size: 13px;
+}

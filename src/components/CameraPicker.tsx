@@ -28,10 +28,13 @@ export default function CameraPicker({
 }) {
   const list = named.length > 1;
   if (!sides && !(list && live)) return null;
-  // With nothing chosen or remembered, Start camera asks for the front.
+  // With nothing chosen or remembered, Start camera asks for the front. A
+  // remembered camera that never said its side shows neither as chosen.
   const facing = live
       ? live.facing
-      : (asking.facing ?? (asking.deviceId ? undefined : "user")),
+      : asking.sideUnknown
+        ? undefined
+        : (asking.facing ?? (asking.deviceId ? undefined : "user")),
     id = (live ? live.deviceId : asking.deviceId) ?? "",
     listed = named.some((c) => c.deviceId === id);
   return (

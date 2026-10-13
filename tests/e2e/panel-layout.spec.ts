@@ -115,6 +115,7 @@ test("the phone Library takes the full width and its checkboxes are finger sized
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page);
   await tab(page, "Library").click();
+  await expect(page.locator(".library-panel")).toBeVisible();
   const panel = (await page.locator(".library-panel").boundingBox())!,
     body = (await page.locator(".panel-body").boundingBox())!;
   // It was one 153 px column of a two-column grid.

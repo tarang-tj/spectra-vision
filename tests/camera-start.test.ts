@@ -9,6 +9,7 @@ import {
   openCamera,
   recoveryNote,
   triesNextRung,
+  unknownSideNote,
 } from "../src/vision/camera-start";
 
 const named = (name: string, message = "") =>
@@ -157,6 +158,49 @@ describe("reading what was granted", () => {
     // "Background" is not "back".
     expect(facingOf({}, "Background Blur Cam")).toBe("unknown");
     expect(facingOf({ facingMode: "left" }, "")).toBe("unknown");
+  });
+  it("believes a side given only by the camera's capabilities, when there is one", () => {
+    expect(facingOf({}, "Camera 2", ["environment"])).toBe("environment");
+    expect(facingOf({}, "Camera 2", ["user"])).toBe("user");
+    // A camera that lists both sides, or a side that is neither, has not said.
+    expect(facingOf({}, "Camera 2", ["user", "environment"])).toBe("unknown");
+    expect(facingOf({}, "Camera 2", ["left"])).toBe("unknown");
+    expect(facingOf({}, "Camera 2", [])).toBe("unknown");
+    // What the live track says comes first, and the name still counts after.
+    expect(facingOf({ facingMode: "user" }, "", ["environment"])).toBe("user");
+    expect(facingOf({}, "Back Camera", ["user", "environment"])).toBe(
+      "environment",
+    );
+    expect(grantedOf({}, "Camera 2", ["environment"]).facing).toBe(
+      "environment",
+    );
+  });
+  it("reads the capabilities of the track it opened, where the browser has them", async () => {
+    const track = (capabilities?: () => object) => ({
+        label: "Camera 2",
+        getSettings: () => ({ deviceId: "c2", width: 720, height: 1280 }),
+        ...(capabilities ? { getCapabilities: capabilities } : {}),
+      }),
+      open = async (t: object) =>
+        (
+          await openCamera({}, async () => {
+            return { getVideoTracks: () => [t] } as unknown as MediaStream;
+          })
+        ).granted.facing;
+    expect(await open(track(() => ({ facingMode: ["environment"] })))).toBe(
+      "environment",
+    );
+    expect(await open(track(() => ({})))).toBe("unknown");
+    // A browser with no getCapabilities at all.
+    expect(await open(track())).toBe("unknown");
+  });
+  it("says that the side is unknown only where sides matter", () => {
+    expect(unknownSideNote("unknown", true)).toBe(
+      "This camera does not say which way it faces, so it is shown mirrored. Press Mirror if it points away from you.",
+    );
+    expect(unknownSideNote("unknown", false)).toBeNull();
+    expect(unknownSideNote("user", true)).toBeNull();
+    expect(unknownSideNote("environment", true)).toBeNull();
   });
   it("fills in what a track leaves out", () => {
     expect(grantedOf({}, "")).toEqual({

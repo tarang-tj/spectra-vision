@@ -3,7 +3,8 @@
 // (`TaskSpec.gpuModel`). It runs while the task is on GPU, unless the person
 // switched it off or it proved slow on this device. On CPU, and after a GPU
 // to CPU fallback, the task's standard model runs. The Precision setting
-// wins over all of this (settings.ts, `modelOf`).
+// wins over all of this (settings.ts, `modelOf`). A Lab benchmark holds the
+// standard model on every delegate while it runs, so its rows time one file.
 import { readFlag, writeFlag } from "../shell/storage";
 import type { Delegate, TaskKind, TaskSpec } from "./types";
 
@@ -15,7 +16,10 @@ export const SLOW_MS = 120;
 export const GUARD_RESULTS = 30;
 
 const KEY = "spectra.gpumodel.v1";
-let on: boolean | undefined;
+let on: boolean | undefined,
+  // True while a Lab benchmark runs. Never stored, so a closed tab cannot
+  // leave it on.
+  standardOnly = false;
 const listeners = new Set<() => void>(),
   // The delegate each kind's runner is on now, written by the runner.
   inUse = new Map<TaskKind, Delegate>(),
@@ -38,6 +42,15 @@ export function setLargerOnGpu(next: boolean) {
   writeFlag(KEY, next ? "on" : "off");
   announce();
 }
+/** Hold every task on its standard model, whatever it is on (a Lab
+ * benchmark), or let go. Running tasks load the other file when it changes. */
+export function holdStandardModel(hold: boolean) {
+  if (hold === standardOnly) return;
+  standardOnly = hold;
+  announce();
+}
+/** Whether a Lab benchmark is holding the standard model now. */
+export const standardModelHeld = (): boolean => standardOnly;
 /** Called when the choice changes. Returns the unsubscribe function. */
 export function onModelChoice(listener: () => void) {
   listeners.add(listener);
@@ -73,6 +86,7 @@ export function gpuModelFor(
   if (!spec.gpuModel || !spec.kind) return null;
   return (delegate ?? inUse.get(spec.kind)) === "GPU" &&
     largerOnGpu() &&
+    !standardOnly &&
     !refused.has(spec.kind)
     ? spec.gpuModel
     : null;
@@ -87,9 +101,11 @@ export function medianOf(values: readonly number[]): number {
     : (sorted[half - 1] + sorted[half]) / 2;
 }
 
-/** Test hook: forget the stored value, the delegates and the refusals. */
+/** Test hook: forget the stored value, the hold, the delegates and the
+ * refusals. */
 export const resetModelChoice = () => {
   on = undefined;
+  standardOnly = false;
   inUse.clear();
   refused.clear();
 };

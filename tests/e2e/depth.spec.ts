@@ -345,6 +345,8 @@ test("leaving Depth gives the 3D view back at once, and with the Ruler open a pr
   // With the Ruler tab open, leave and come back: the view is made again, so
   // its handler is registered after the Ruler's. The taps still place corners.
   await panel(page, "Ruler").click();
+  // The Ruler's body is fetched on demand: its handler exists once it shows.
+  await expect(page.getByTestId("ruler-step")).toBeVisible();
   await mode(page, "Objects").click();
   await expect.poll(() => cloudHeld(page), { timeout: 5_000 }).toBe(false);
   await expect(page.getByTestId("latency")).toHaveText(/^\d+ ms$/);

@@ -10,6 +10,7 @@ import { telemetry } from "../../telemetry/bus";
 import { droppedFrames, rate, summarize } from "../../telemetry/stats";
 import { loadCount, taskStatus } from "../../telemetry/task-status";
 import { chooseDelegate, chosenDelegate } from "../../vision/delegate";
+import { holdStandardModel } from "../../vision/model-choice";
 import { modelOf } from "../../vision/settings";
 import type { Delegate, Source, TaskKind } from "../../vision/types";
 import { measured } from "./benchmark-report";
@@ -110,7 +111,7 @@ async function runOne(
     if (recording && now <= end) frames.push(now);
   });
   document.addEventListener("visibilitychange", onHide);
-  const status = () => specs.map((s) => taskStatus(s.kind, s.model));
+  const status = () => specs.map((s) => taskStatus(s.kind, modelOf(s)));
   try {
     say(`${name}: loading`);
     const before = loadCount(),
@@ -217,6 +218,7 @@ export async function runBenchmark(
     startMode = host.mode().id,
     kinds = new Set(plan.modes.flatMap((m) => tasksOf(m).map((s) => s.kind))),
     choices = [...kinds].map((kind) => [kind, chosenDelegate(kind)] as const);
+  holdStandardModel(true);
   try {
     for (const mode of plan.modes)
       for (const delegate of plan.delegates)
@@ -224,6 +226,7 @@ export async function runBenchmark(
   } catch (error) {
     if (!(error instanceof Stop)) throw error;
   } finally {
+    holdStandardModel(false);
     choices.forEach(([kind, choice]) => chooseDelegate(kind, choice));
     if (host.mode().id !== startMode) host.setMode(startMode);
   }

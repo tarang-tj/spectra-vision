@@ -1,9 +1,10 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved.
  *
  * SPECTRA service worker: lets the studio open offline. It caches only what
- * the page has actually fetched from this site. Nothing is uploaded and
- * nothing is fetched ahead of use: a model enters the cache the first time a
- * mode asks for it, never before.
+ * the page has actually fetched from this site. Nothing is uploaded. The page
+ * prefetches the scripts and styles of its on-demand panels; no model is
+ * fetched ahead of use: one enters the cache the first time a mode asks for
+ * it, never before.
  *
  * Cache rules
  *   navigation        network first, cached copy when the network fails or

@@ -7,7 +7,8 @@
 // returns that lower band apart, as `extra.faint`: `detections` holds only
 // what reached the slider's value, which is what the Library counts and the
 // session export read. Only the tracker reads the band.
-import type { Detection, TaskResult } from "./types";
+import type { Tracker } from "./tracker";
+import type { Detection, TaskResult, Track, VisionResult } from "./types";
 
 /** How far under the Confidence value a track still takes a detection. The
  * worker keeps the same figure as KEEP_BELOW; tests/modes-worker.test.ts
@@ -22,3 +23,11 @@ export function faintOf(task: Pick<TaskResult, "extra"> | undefined) {
   const faint = task?.extra?.faint;
   return Array.isArray(faint) ? (faint as Detection[]) : NONE;
 }
+
+/** One result into the tracker: what reached the Confidence value as
+ * detections, the band under it beside them. The stage and the Lab meter both go through here. */
+export const trackResult = (
+  tracker: Pick<Tracker, "update">,
+  result: Pick<VisionResult, "detections" | "time" | "tasks">,
+): Track[] =>
+  tracker.update(result.detections, result.time, faintOf(result.tasks.object));

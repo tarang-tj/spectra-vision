@@ -1,6 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { describe, it, expect } from "vitest";
-import { STAY_BELOW, faintOf } from "../src/vision/track-gate";
+import { STAY_BELOW, faintOf, trackResult } from "../src/vision/track-gate";
 import { STEADY_TRACKER, Tracker } from "../src/vision/tracker";
 import type { Detection } from "../src/vision/types";
 
@@ -30,9 +30,10 @@ describe("the two-level gate", () => {
       shown.push(
         feed(t, [det(i % 2 ? 0.4 : 0.5)], i * 66).map((track) => track.id),
       );
-    // Hidden on its first sighting (two are needed), then on every result.
-    expect(shown[0]).toEqual([]);
-    expect(shown.slice(1)).toEqual(Array(59).fill([1]));
+    // Hidden on its first sighting (two are needed) and on the faint second
+    // one (it cannot confirm), then shown on every result.
+    expect(shown.slice(0, 2)).toEqual([[], []]);
+    expect(shown.slice(2)).toEqual(Array(58).fill([1]));
   });
   it("with one gate the same object blinks on every other result", () => {
     // The comparison the fix is measured against: no band, as in 2.4.
@@ -78,6 +79,46 @@ describe("the two-level gate", () => {
       [1, 0.35],
       [2, 0.6],
     ]);
+  });
+  it("never gives an id on a faint sighting: the box waits for one that reaches the gate", () => {
+    const t = new Tracker(options);
+    expect(feed(t, [det(0.5)], 0)).toEqual([]);
+    // The second sighting is under the gate: two sightings, still no box.
+    expect(feed(t, [det(0.4)], 66)).toEqual([]);
+    const shown = feed(t, [det(0.5)], 132);
+    expect(shown).toMatchObject([{ id: 1 }]);
+    expect(shown[0].score).toBeGreaterThanOrEqual(GATE);
+  });
+  it("nor when results are slow, where one sighting is otherwise enough", () => {
+    const t = new Tracker(options);
+    expect(feed(t, [det(0.5)], 0)).toEqual([]);
+    expect(feed(t, [det(0.4)], 500)).toEqual([]);
+    // A sighting at the gate on a slow result still confirms at once.
+    expect(feed(t, [det(0.5)], 1000)).toMatchObject([{ id: 1, score: 0.5 }]);
+  });
+});
+
+describe("trackResult", () => {
+  const result = (
+    time: number,
+    detections: Detection[],
+    faint?: Detection[],
+  ) => ({
+    time,
+    detections,
+    tasks: faint ? { object: { extra: { faint } } } : {},
+  });
+  it("hands the band under the gate to the tracker with the result", () => {
+    // The app's own tracker settings, holding included: with the band
+    // unplugged the third result would come back held, with the old score.
+    const t = new Tracker(STEADY_TRACKER);
+    trackResult(t, result(0, [det(0.5)]) as never);
+    expect(trackResult(t, result(66, [det(0.5)]) as never)).toMatchObject([
+      { id: 1, score: 0.5 },
+    ]);
+    const next = trackResult(t, result(132, [], [det(0.4)]) as never);
+    expect(next).toMatchObject([{ id: 1, score: 0.4 }]);
+    expect(next[0].held).toBeUndefined();
   });
 });
 
