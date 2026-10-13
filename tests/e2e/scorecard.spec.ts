@@ -64,6 +64,8 @@ test("the scorecard asks for no picture before Run, then scores a shortened run 
   const before = await alive(page);
 
   await card.getByLabel(/EfficientDet-Lite2/).uncheck();
+  // Still nothing asked for, right up to the press.
+  expect(asked).toEqual([]);
   await card.getByRole("button", { name: "Run scorecard" }).click();
   await expect(card.getByTestId("score-progress")).toHaveText(
     "Finished 2 runs.",
