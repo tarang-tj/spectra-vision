@@ -57,9 +57,10 @@ test("the scorecard asks for no picture before Run, then scores a shortened run 
   await page.getByRole("button", { name: "Lab", exact: true }).click();
   const card = page.getByTestId("scorecard");
   await expect(card.getByRole("heading", { name: "Scorecard" })).toBeVisible();
-  // Before the list is read the page states neither count nor size.
+  // Before the list is read the page states no count, and says the size of
+  // the download the button starts without having asked for anything.
   await expect(card).toContainText("against a set of labelled photographs");
-  await expect(card).not.toContainText("16.4 MB");
+  await expect(card).toContainText("The photographs (16.4 MB) are downloaded");
   expect(asked).toEqual([]);
   const before = await alive(page);
 
