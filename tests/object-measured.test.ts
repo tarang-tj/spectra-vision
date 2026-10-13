@@ -28,7 +28,15 @@ import {
   setRef,
   setTool,
 } from "../src/panels/ruler/store";
-import type { Box, Source, Track } from "../src/vision/types";
+import objects from "../src/modes/objects";
+import { createFrame, updateFrame } from "../src/vision/frame";
+import type {
+  Box,
+  Source,
+  TaskResult,
+  Track,
+  VisionResult,
+} from "../src/vision/types";
 import { boardCorners, IMAGE, patchCorners } from "./fixtures/depth-scene";
 import {
   outputFor,
@@ -380,5 +388,160 @@ describe("when the depth model is wanted for measuring", () => {
   it("runs the very task Depth runs", async () => {
     const depth = (await import("../src/modes/depth")).default;
     expect(measureTask.spec).toBe(depth.task);
+  });
+});
+
+describe("what Objects shows of a measured box", () => {
+  /** A canvas that only keeps the text drawn on it. */
+  function canvas() {
+    const texts: string[] = [],
+      ctx = new Proxy(
+        {},
+        {
+          get: (_, name) =>
+            name === "fillText"
+              ? (text: string) => void texts.push(text)
+              : name === "measureText"
+                ? (text: string) => ({ width: text.length * 6 })
+                : () => {},
+          set: () => true,
+        },
+      ) as unknown as CanvasRenderingContext2D;
+    return { texts, ctx };
+  }
+  const map = sceneMap(320, 240),
+    task = (kind: "object" | "depth", extra?: object) =>
+      ({
+        kind,
+        generation: GENERATION,
+        time: 40,
+        latency: kind === "depth" ? 900 : 80,
+        delegate: "CPU",
+        model: kind === "object" ? "efficientdet_lite0.tflite" : "d.onnx",
+        detections: [],
+        landmarks: [],
+        handedness: [],
+        extra,
+      }) as unknown as TaskResult,
+    result = (withMap: boolean): VisionResult => ({
+      mode: "objects",
+      generation: GENERATION,
+      time: 40,
+      latency: 80,
+      detections: [],
+      landmarks: [],
+      handedness: [],
+      tasks: {
+        object: task("object"),
+        ...(withMap ? { depth: task("depth", map) } : {}),
+      },
+    }),
+    data = (withMap: boolean) => ({
+      result: result(withMap),
+      tracks: [track(scene.box)],
+      mirror: false,
+      settings: { confidence: 0.5, selected: null, effects: {} },
+      source,
+      aspect: IMAGE.w / IMAGE.h,
+    });
+  /** Draw `count` frames of the same result and return the last one's labels. */
+  function draw(shown: ReturnType<typeof data>, count: number) {
+    const frame = createFrame();
+    let last: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const { texts, ctx } = canvas();
+      updateFrame(
+        frame,
+        shown,
+        IMAGE.w,
+        IMAGE.h,
+        800,
+        600,
+        1,
+        i * 16,
+        16,
+        false,
+        true,
+      );
+      objects.drawBase(ctx, frame);
+      last = texts;
+    }
+    return last;
+  }
+  const PLAIN = "board  76% · 03";
+  beforeEach(() => {
+    resetRuler();
+    resetMeasure();
+    objects.leave?.();
+  });
+  afterEach(() => {
+    setMeasure(false);
+    resetMeasure();
+    objects.leave?.();
+  });
+
+  it("is an on-demand task of Objects, not one of its own tasks", () => {
+    expect(objects.onDemand).toEqual([measureTask]);
+    expect(objects.task).toMatchObject({ kind: "object" });
+  });
+
+  it("adds the distance to the label, the sizes to the row and a key to the export", () => {
+    setMeasure(true);
+    tapRuler();
+    const shown = data(true);
+    // The first drawn frames have no bars yet, and say so.
+    expect(draw(shown, 1)).toEqual(["board  76% · measuring… · 03"]);
+    expect(objects.inspector(shown)[0].detail).toBe(
+      "76% · working out the error",
+    );
+    const [label] = draw(shown, 10);
+    expect(label).toMatch(/^board {2}76% · [\d.]+ ± [\d.]+ m away · 03$/);
+    expect(objects.inspector(shown)[0].detail).toMatch(
+      /^76% · [\d.]+ ± [\d.]+ m away · box [\d.]+ ± [\d.]+ m wide, [\d.]+ ± [\d.]+ m tall$/,
+    );
+    const exported = objects.exportFrame!(shown.result) as {
+      measured: { metric: boolean; map: object; objects: { id: number }[] };
+    };
+    expect(Object.keys(exported)).toEqual(["measured"]);
+    expect(exported.measured.metric).toBe(true);
+    expect(exported.measured.map).toEqual({
+      width: 320,
+      height: 240,
+      delegate: "CPU",
+    });
+    expect(exported.measured.objects[0].id).toBe(3);
+    // A result of another photo gets nothing from this one's readings.
+    expect(
+      objects.exportFrame!({ ...shown.result, generation: GENERATION + 1 }),
+    ).toEqual({});
+  });
+
+  it("shows exactly what it showed before while the switch is off, map or no map", () => {
+    tapRuler();
+    for (const withMap of [false, true]) {
+      const shown = data(withMap);
+      expect(draw(shown, 10)).toEqual([PLAIN]);
+      expect(objects.inspector(shown)[0].detail).toBe("76%");
+      expect(objects.exportFrame!(shown.result)).toEqual({});
+    }
+    // On, but no map of this photo yet: still nothing added.
+    setMeasure(true);
+    const waiting = data(false);
+    expect(draw(waiting, 10)).toEqual([PLAIN]);
+    expect(objects.inspector(waiting)[0].detail).toBe("76%");
+    expect(objects.exportFrame!(waiting.result)).toEqual({});
+  });
+
+  it("adds nothing to a label or a row when the map cannot be put in metres", () => {
+    setMeasure(true);
+    const shown = data(true);
+    expect(draw(shown, 10)).toEqual([PLAIN]);
+    expect(objects.inspector(shown)[0].detail).toBe("76%");
+    expect(objects.exportFrame!(shown.result)).toMatchObject({
+      measured: {
+        metric: false,
+        reason: expect.stringMatching(/^No metres: /),
+      },
+    });
   });
 });

@@ -4,10 +4,15 @@
 // rows, the settings' status line, the Library and the session export.
 import { detectorSide } from "../../measure/box-size";
 import type { Source, Track, VisionResult } from "../../vision/types";
-import { settledRetakes } from "./depth-measured";
+import { retakesOf, settledRetakes } from "./depth-measured";
 import { depthScale } from "./depth-metric";
 import { depthExtra } from "./depth-readout";
-import { measureTracks, type Measurement } from "./object-measured";
+import { measureOn } from "./object-measure";
+import {
+  measureTracks,
+  type BoxReading,
+  type Measurement,
+} from "./object-measured";
 
 /** What was last measured, for the settings, the Library and the export. */
 export type Latest = {
@@ -39,11 +44,14 @@ export function forgetMeasured() {
 
 /** The readings for a result that carries a depth map, or null without one.
  * Worked out once per tracks list, map, scale and set of retakes, so it is
- * cheap to ask for on every drawn frame. */
+ * cheap to ask for on every drawn frame. `ask` is for the stage alone, once
+ * a drawn frame: it counts toward working the retakes out, so the bars
+ * arrive shortly after the Ruler's points stop changing (depth-measured.ts). */
 export function measureFrame(
   result: VisionResult | null,
   tracks: readonly Track[],
   source: Source | null,
+  ask = false,
 ): Measurement | null {
   const task = result?.tasks.depth,
     extra = depthExtra(task);
@@ -52,7 +60,11 @@ export function measureFrame(
     return null;
   }
   const scale = depthScale(extra, task.generation, source),
-    retakes = scale.metric ? settledRetakes(scale) : null,
+    retakes = !scale.metric
+      ? null
+      : ask
+        ? retakesOf(scale)
+        : settledRetakes(scale),
     side = detectorSide(result.tasks.object?.model),
     key = [tracks, extra.values, scale, retakes, side];
   if (memo && memo.key.every((part, i) => part === key[i])) return memo.value;
@@ -69,4 +81,29 @@ export function measureFrame(
     },
   });
   return value;
+}
+
+const byId = new WeakMap<Measurement, Map<number, BoxReading>>();
+/** Each track's reading by id, for the box labels and the Inspect rows.
+ * Finds nothing while Measure objects is off or there are no metres. */
+export function readingsOf(
+  frame: {
+    result: VisionResult | null;
+    tracks: Track[];
+    source: Source | null;
+  },
+  ask = false,
+): (id: number) => BoxReading | undefined {
+  const measurement = measureOn()
+    ? measureFrame(frame.result, frame.tracks, frame.source, ask)
+    : null;
+  if (!measureOn()) forgetMeasured();
+  if (!measurement?.metric) return () => undefined;
+  let map = byId.get(measurement);
+  if (!map)
+    byId.set(
+      measurement,
+      (map = new Map(measurement.boxes.map((box) => [box.id, box]))),
+    );
+  return (id) => map.get(id);
 }
