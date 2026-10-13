@@ -6,6 +6,7 @@ import type { ModeDef } from "../modes";
 import { firstDownloadNote } from "./first-download";
 import { createFrameHolder } from "./held-frame";
 import { mergeResults } from "./merge";
+import { createOnDemand, feedFrame } from "./on-demand";
 import { createStillGate, setStillState } from "./still";
 import "./still-holds";
 import { createTaskRunner } from "./task-runner";
@@ -79,13 +80,24 @@ export function useVision(
     // change the answer wakes it: here a restart or a live option, in the
     // tick a new picture, a new confidence or a resume.
     const gate = createStillGate(specs.map((spec) => spec.still === "once")),
+      // Hand the page its latest result again without running a model.
+      rehand = () => {
+        if (!stopped)
+          setResult((shown) => (shown ? demand.attach({ ...shown }) : shown));
+      },
       offs = specs.flatMap((spec) => [
         spec.live?.subscribe(gate.wake),
         // The mode's readout changed without a new result: show it again.
-        spec.restate?.(() => {
-          if (!stopped) setResult((shown) => (shown ? { ...shown } : shown));
-        }),
+        spec.restate?.(rehand),
       ]);
+    const live = () => (stopped ? null : settings.current);
+    // Tasks the mode runs only when they are wanted (on-demand.ts). They
+    // never touch the status, the error or the latency of the mode's own.
+    const demand = createOnDemand(mode.onDemand ?? [], base, {
+      changed: rehand,
+      feed: (runner, generation) =>
+        void feedFrame(runner, null, generation, live, () => {}),
+    });
     // For a task that asks, the frame each result was computed from.
     const holders = specs.map((spec) =>
       spec.holdFrame ? createFrameHolder() : null,
@@ -120,37 +132,18 @@ export function useVision(
               result: merged,
               generation: merged.generation,
             });
-          setResult(merged);
+          setResult(demand.attach(merged));
         },
         onError: unavailable,
       }),
     );
-    // Hand one frame to a runner that asked for it. Each worker gets its own
-    // bitmap because a bitmap is transferred, not shared.
-    const feed = async (index: number, generation: number) => {
-      const state = settings.current,
-        runner = runners[index];
-      try {
-        const element = state.source!.element,
-          bitmap = await createImageBitmap(element);
-        if (stopped || generation !== settings.current.source?.generation) {
-          bitmap.close();
-          runner.release();
-          return;
-        }
-        const now = performance.now();
-        // A still picture never moves on, so there is nothing to hold.
-        if (element instanceof HTMLVideoElement)
-          holders[index]?.capture(bitmap, now);
-        runner.send(bitmap, now, generation, state.confidence);
-      } catch {
-        runner.release();
-        if (!stopped)
-          setError(
-            "Could not read this frame. Try another image, video or camera.",
-          );
-      }
-    };
+    // Hand one frame to a runner that asked for it.
+    const feed = (index: number, generation: number) =>
+      feedFrame(runners[index], holders[index], generation, live, () =>
+        setError(
+          "Could not read this frame. Try another image, video or camera.",
+        ),
+      );
     const tick = (time: number) => {
       if (stopped) return;
       raf = requestAnimationFrame(tick);
@@ -163,6 +156,7 @@ export function useVision(
           state.confidence,
           resting,
         );
+      demand.tick(time, state.source, state.paused);
       if (resting) return;
       if (element instanceof HTMLVideoElement && element.readyState < 2) return;
       for (let i = 0; i < runners.length; i++) {
@@ -189,6 +183,7 @@ export function useVision(
       offs.forEach((off) => off?.());
       setStillState({ state: "live" });
       runners.forEach((runner) => runner.dispose());
+      demand.dispose();
     };
   }, [mode, restart]);
   return {

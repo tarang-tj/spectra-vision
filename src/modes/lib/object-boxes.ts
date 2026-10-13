@@ -44,12 +44,14 @@ const HELD_ALPHA = 0.45;
 
 /** One tracked box: a thin outline, corner brackets and a label chip. A held
  * track (the latest result missed it) is drawn dimmed and dashed, and its
- * label says so in place of a score it does not have. */
+ * label says so in place of a score it does not have. `note` is one more
+ * piece for the label, before the id (Measure objects' distance). */
 export function drawBox(
   ctx: CanvasRenderingContext2D,
   frame: Frame,
   t: Track,
   opacity: number,
+  note = "",
 ) {
   const { rect, mirror } = frame,
     color = COLORS[(t.id - 1) % COLORS.length],
@@ -81,7 +83,7 @@ export function drawBox(
   });
   ctx.stroke();
   const finer = finerFor(t),
-    label = `${t.label}  ${t.held ? HELD : `${(t.score * 100).toFixed(0)}%`} · ${finer ? `${finerText(finer)} · ` : ""}${String(t.id).padStart(2, "0")}`;
+    label = `${t.label}  ${t.held ? HELD : `${(t.score * 100).toFixed(0)}%`} · ${finer ? `${finerText(finer)} · ` : ""}${note ? `${note} · ` : ""}${String(t.id).padStart(2, "0")}`;
   ctx.font = "600 12px Inter Variable, sans-serif";
   const tw = ctx.measureText(label).width + 14,
     lx = Math.min(Math.max(q.x, rect.x), rect.x + rect.w - tw),

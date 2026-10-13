@@ -1,0 +1,12 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+.object-measure [data-testid="measure-status"] {
+  overflow-wrap: anywhere;
+}
+.object-measure .measure-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-left: 2px solid var(--border);
+  padding-left: 10px;
+  overflow-wrap: anywhere;
+}

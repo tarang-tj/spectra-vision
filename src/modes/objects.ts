@@ -9,6 +9,17 @@ import { drawChip } from "./lib/hud";
 import { HELD, drawBox, drawnTracks, forgetDrawn } from "./lib/object-boxes";
 import { objectControls } from "./lib/object-controls";
 import { filterSummary, getFilter, shows } from "./lib/object-filter";
+import { measureOn, measureTask } from "./lib/object-measure";
+import {
+  forgetMeasured,
+  latestMeasured,
+  readingsOf,
+} from "./lib/object-measure-frame";
+import {
+  exportMeasured,
+  labelPiece,
+  rowPiece,
+} from "./lib/object-measure-text";
 import type { ModeDef } from "./types";
 
 const task: TaskSpec = {
@@ -51,6 +62,9 @@ const objects: ModeDef = {
   short: "Objects",
   order: 10,
   task,
+  // Measure objects (modes/lib/object-measure.ts): Depth's model, run once
+  // per photo and only while the switch is on and the Ruler is ready.
+  onDemand: [measureTask],
   controls: objectControls(task),
   hint: "Switch to Hands. Pinch to paint.",
   demo: {
@@ -59,7 +73,10 @@ const objects: ModeDef = {
     label: "Demo studio",
   },
   tracked: true,
-  leave: forgetDrawn,
+  leave() {
+    forgetDrawn();
+    forgetMeasured();
+  },
   // Tracked boxes with corner brackets and a label. A selected track dims the rest.
   drawBase(ctx, frame) {
     const { rect } = frame,
@@ -70,7 +87,10 @@ const objects: ModeDef = {
         (t) => t.id === frame.settings.selected && !shows(t.label, filter),
       )
         ? null
-        : frame.settings.selected;
+        : frame.settings.selected,
+      // Each box's distance, where Measure objects has one. Asked once a
+      // drawn frame, which is also what gets the error bars worked out.
+      reading = readingsOf(frame, true);
     drawnTracks(frame).forEach((t, index) => {
       // A class the filter hides is not drawn. `index` stays the track's own,
       // which is what the effects look up.
@@ -80,7 +100,7 @@ const objects: ModeDef = {
       ctx.globalAlpha = opacity;
       // Effects that belong under this track's box (its trail) draw here.
       frame.emit("before", "object", index);
-      drawBox(ctx, frame, t, opacity);
+      drawBox(ctx, frame, t, opacity, labelPiece(reading(t.id)));
       frame.emit("after", "object", index);
       ctx.restore();
     });
@@ -100,19 +120,37 @@ const objects: ModeDef = {
         wait ? COLORS[0] : "#ffd18d",
       );
   },
-  inspector: (frame) =>
-    frame.tracks
+  inspector(frame) {
+    const reading = readingsOf(frame);
+    return frame.tracks
       .filter((t) => shows(t.label))
       .map((t) => {
-        const finer = finerFor(t);
+        const finer = finerFor(t),
+          size = rowPiece(reading(t.id));
         return {
           key: t.id,
           label: t.label,
           // A held track was missed by the latest result: it has no score.
-          detail: `${t.held ? HELD : `${Math.round(t.score * 100)}%`}${finer ? ` · ${finerText(finer)}` : ""}`,
+          detail: `${t.held ? HELD : `${Math.round(t.score * 100)}%`}${finer ? ` · ${finerText(finer)}` : ""}${size ? ` · ${size}` : ""}`,
           point: { x: t.box.x + t.box.w / 2, y: t.box.y + t.box.h / 2 },
           color: COLORS[(t.id - 1) % COLORS.length],
         };
-      }),
+      });
+  },
+  // The readings last worked out for this photo, never the depth map. Only
+  // while Measure objects is on and a map of this photo exists.
+  exportFrame(result) {
+    const latest = latestMeasured();
+    if (
+      !measureOn() ||
+      !result.tasks.depth ||
+      latest?.generation !== result.generation
+    )
+      return {};
+    const { width, height, delegate } = latest.map;
+    return {
+      measured: exportMeasured(latest.measurement, { width, height, delegate }),
+    };
+  },
 };
 export default objects;
