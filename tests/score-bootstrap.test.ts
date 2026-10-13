@@ -98,11 +98,14 @@ describe("figureOf", () => {
     expect([bare.basis, bare.lo, bare.hi]).toEqual(["none", null, null]);
   });
   it("leaves out the resamples with no value, counts them, and states no interval past 5%", () => {
-    // Only the first picture has any object, so a draw without it has no
-    // recall. With 2 pictures that is a quarter of the draws.
-    const few = figureOf(recall([1, 0], [1, 0]), drawWeights(2));
+    // Two of four pictures have no object, so a draw of those two alone has
+    // no recall: one draw in sixteen. The others do not all agree, so only
+    // the 5% rule stands between this figure and an interval.
+    const few = figureOf(recall([2, 1, 0, 0], [2, 2, 0, 0]), drawWeights(4));
     expect(few.skipped).toBeGreaterThan(RESAMPLES * 0.05);
+    expect(few.skipped).toBeLessThan(RESAMPLES * 0.08);
     expect([few.basis, few.lo, few.hi]).toEqual(["none", null, null]);
+    expect(few.value).toBe(0.75);
     // With 100 pictures and one empty, no draw lacks a value.
     const empty = [...set.labels];
     empty[0] = 0;
