@@ -102,6 +102,15 @@ test("a session measures on the Fusion demo, keeps going on another tab and expo
     .poll(async () => seconds(await timeRow()), { timeout: 30_000 })
     .toBeGreaterThan(before + 2.5);
 
+  // Head direction and expression change are asserted on below. Expression
+  // needs a full window of results, which a slow machine has not always
+  // gathered by now (6.3 s once left it unmeasured), so wait for both rows to
+  // show a value before stopping. Without the blendshapes the wait runs out.
+  for (const id of ["head", "expression"])
+    await expect
+      .poll(() => cellText(page, id), { timeout: 90_000 })
+      .toMatch(/^-?\d[\d.]* ± \d/);
+
   await page.getByRole("button", { name: "Stop", exact: true }).click();
   await expect(status(page)).toContainText("Stopped");
   await expect(page.getByRole("heading", { name: "Summary" })).toBeVisible();
