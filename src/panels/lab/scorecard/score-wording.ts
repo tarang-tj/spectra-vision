@@ -7,6 +7,7 @@
 import type { Difference, Figure } from "./bootstrap";
 import { MIN_OBJECTS, RESAMPLES } from "./bootstrap";
 import type { PointItem } from "./operating-point";
+import type { Progress } from "./score-run";
 import { FLOOR, MAX_BOXES } from "./score-worker";
 
 /** What the page knows about the set once its list has been read. */
@@ -47,6 +48,18 @@ export const progressText = {
   stopped: "Stopped. A run that did not finish is not shown.",
   failed: (reason: string) => `The scorecard could not run: ${reason}`,
 };
+/** The progress line for one step of the run loop. */
+export const progressOf = (state: Progress, short: Shortened) =>
+  state.step === "list"
+    ? progressText.list
+    : state.step === "loading"
+      ? progressText.loading(state.target.label, state.target.delegate)
+      : progressText.picture(
+          state.target.label,
+          state.target.delegate,
+          state.index,
+          state.of,
+        ) + shortenedNote(short);
 
 const range = (
   figure: Figure,

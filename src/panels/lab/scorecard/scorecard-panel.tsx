@@ -4,26 +4,19 @@ import { downloadText } from "../../../download";
 import { useStudio } from "../../../studio-context";
 import { testHooksEnabled } from "../../../test-hooks";
 import { gpuUnavailable } from "../../../vision/delegate";
-import {
-  SHARPER_MODEL,
-  sharperOffered,
-} from "../../../vision/detector/sharper";
+import { sharperOffered } from "../../../vision/detector/sharper";
 import type { Delegate } from "../../../vision/types";
 import { describeDevice, hashModel, modelCard } from "../environment";
 import { drawWeights } from "./bootstrap";
-import {
-  basisOf,
-  captionOf,
-  cellsOf,
-  comparisonsOf,
-  toJson,
-  toMarkdown,
-} from "./score-markdown";
-import { buildReport, prepare, type Prepared } from "./score-report";
+import { toJson, toMarkdown } from "./score-markdown";
+import { prepare, type Prepared } from "./score-prepare";
+import { buildReport } from "./score-report";
 import { runScorecard, type Progress, type RunResult } from "./score-run";
 import { fetchPicture, fetchSet } from "./score-set";
 import * as words from "./score-wording";
 import { MODELS, openScoreWorker, targetsFor } from "./score-worker";
+import ScorecardPicks from "./scorecard-picks";
+import ScorecardTables from "./scorecard-tables";
 import ScorecardViewer from "./scorecard-viewer";
 import "./scorecard.css";
 
@@ -49,8 +42,6 @@ type Scored = {
 let lastScored: Scored | null = null,
   lastFacts: words.SetFacts | null = null;
 const bytesOf = (file: string) => modelCard(file)?.bytes ?? null;
-const toggle = <T,>(list: T[], item: T) =>
-  list.includes(item) ? list.filter((i) => i !== item) : [...list, item];
 
 /** The scorecard: its controls, the results table with its caption and basis
  * lines, the paired comparisons, the by-class rows, the viewer and exports. */
@@ -93,21 +84,7 @@ export default function Scorecard() {
     stopper.current = control;
     setRunning(true);
     const say = (state: Progress) =>
-      setProgress(
-        state.step === "list"
-          ? words.progressText.list
-          : state.step === "loading"
-            ? words.progressText.loading(
-                state.target.label,
-                state.target.delegate,
-              )
-            : words.progressText.picture(
-                state.target.label,
-                state.target.delegate,
-                state.index,
-                state.of,
-              ) + words.shortenedNote(short),
-      );
+      setProgress(words.progressOf(state, short));
     try {
       const result = await runScorecard(
         targetsFor(models, delegates, bytesOf),
@@ -186,48 +163,16 @@ export default function Scorecard() {
         <h3>Scorecard</h3>
       </header>
       <p className="lab-note">{words.intro(facts)}</p>
-      <fieldset className="lab-picks" disabled={running}>
-        <legend>Models</legend>
-        {MODELS.map(({ file, label }) => {
-          const sharper = file === SHARPER_MODEL,
-            size = bytesOf(file);
-          return (
-            <label key={file}>
-              <input
-                type="checkbox"
-                disabled={sharper && !sharp}
-                checked={models.includes(file)}
-                onChange={() => setModels(toggle(models, file))}
-              />
-              {label}
-              {size ? ` (${words.megabytes(size)} MB` : " ("}
-              {sharper
-                ? `${size ? ", " : ""}GPU only)`
-                : size
-                  ? ")"
-                  : "size not listed)"}
-              {sharper && !sharp
-                ? " Sharper is not offered on this device."
-                : ""}
-            </label>
-          );
-        })}
-      </fieldset>
-      <fieldset className="lab-picks" disabled={running}>
-        <legend>Run on</legend>
-        {(["CPU", "GPU"] as Delegate[]).map((delegate) => (
-          <label key={delegate}>
-            <input
-              type="checkbox"
-              disabled={delegate === "GPU" && !!noGpu}
-              checked={delegates.includes(delegate)}
-              onChange={() => setDelegates(toggle(delegates, delegate))}
-            />
-            {delegate}
-            {delegate === "GPU" && noGpu ? ` GPU not available: ${noGpu}` : ""}
-          </label>
-        ))}
-      </fieldset>
+      <ScorecardPicks
+        models={models}
+        setModels={setModels}
+        delegates={delegates}
+        setDelegates={setDelegates}
+        sharp={sharp}
+        noGpu={noGpu}
+        running={running}
+        bytesOf={bytesOf}
+      />
       <button
         className="button compact lab-run"
         disabled={!running && !targetsFor(models, delegates).length}
@@ -241,99 +186,7 @@ export default function Scorecard() {
       <p className="lab-note">{words.UNDER_BUTTON}</p>
       {report && scored && (
         <>
-          <table className="lab-table" data-testid="score-results">
-            <thead>
-              <tr>
-                {[
-                  "Run",
-                  "Found",
-                  "Right",
-                  "AP50",
-                  "AP50:95",
-                  "ms a picture",
-                ].map((name) => (
-                  <th scope="col" key={name}>
-                    {name}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {report.runs.map((row) => (
-                <tr key={row.id}>
-                  <th scope="row">
-                    {row.label}
-                    <small>
-                      {row.status === "ok"
-                        ? `on ${row.delegate}`
-                        : `on ${row.delegate}, ${words.didNotRun(row.note)}`}
-                    </small>
-                  </th>
-                  {cellsOf(row, report).map((cell, i) => (
-                    <td key={i}>{cell}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="lab-note" data-testid="score-caption">
-            {captionOf(report)}
-          </p>
-          <ul className="lab-note score-basis">
-            {basisOf(report).map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-          {report.comparisons.length > 0 && (
-            <>
-              <h4>Compared on the same pictures</h4>
-              {comparisonsOf(report).map((line) => (
-                <p className="lab-note" key={line}>
-                  {line}
-                </p>
-              ))}
-            </>
-          )}
-          <details>
-            <summary>By class</summary>
-            {report.byClass.length > 0 && (
-              <table className="lab-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Class</th>
-                    <th scope="col">Labelled</th>
-                    {report.runs.map((row) => (
-                      <th scope="col" key={row.id}>
-                        Found, {row.label} on {row.delegate}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.byClass.map((row) => (
-                    <tr key={row.label}>
-                      <th scope="row">{row.label}</th>
-                      <td>{row.labelled}</td>
-                      {row.found.map((figure, i) => (
-                        <td key={i}>
-                          {figure
-                            ? words.shareCell(
-                                figure,
-                                "objects",
-                                words.NOT_MEASURED,
-                              )
-                            : words.NOT_MEASURED}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            <p className="lab-note">
-              {words.otherClasses(report.otherClasses)}
-            </p>
-          </details>
+          <ScorecardTables report={report} />
           <ScorecardViewer
             result={scored.result}
             confidence={confidence}
