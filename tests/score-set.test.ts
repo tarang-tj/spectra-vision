@@ -149,7 +149,7 @@ describe("parseSet", () => {
 describe("fetching", () => {
   afterEach(() => vi.unstubAllGlobals());
   const answer = (body: BodyInit, status = 200) =>
-    vi.fn(async () => new Response(body, { status }));
+    vi.fn(async (_address: string) => new Response(body, { status }));
   it("asks for the list under eval/ only when called, and checks it", async () => {
     const fetched = answer(JSON.stringify(set));
     vi.stubGlobal("fetch", fetched);
