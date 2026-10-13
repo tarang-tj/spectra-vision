@@ -7,11 +7,8 @@ import {
   toJson,
   toMarkdown,
 } from "../src/panels/lab/scorecard/score-markdown";
-import {
-  buildReport,
-  cocoId,
-  prepare,
-} from "../src/panels/lab/scorecard/score-report";
+import { cocoId, prepare } from "../src/panels/lab/scorecard/score-prepare";
+import { buildReport } from "../src/panels/lab/scorecard/score-report";
 import type { RunRaw, RunResult } from "../src/panels/lab/scorecard/score-run";
 import type { ScoreSet, SetItem } from "../src/panels/lab/scorecard/score-set";
 import {

@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { STYLE, drawScore } from "./draw-score";
-import { pointsOf } from "./score-report";
+import { pointsOf } from "./score-prepare";
 import type { RunResult } from "./score-run";
 import { labelsOf } from "./score-set";
 import {

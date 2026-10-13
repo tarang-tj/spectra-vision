@@ -1,11 +1,10 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-// From raw boxes to the scorecard's report. Matching and the AP resamples
-// depend only on the boxes, so they are done once per run (`prepare`); the
-// figures at the page's Confidence value are worked out again whenever the
-// slider moves (`buildReport`), with no model run. Every run is resampled
-// with the same weights, so the differences between runs are paired.
+// From prepared runs to the scorecard's report. Matching and the AP resamples
+// are done once per run (`prepare` in score-prepare.ts); the figures at the
+// page's Confidence value are worked out again whenever the slider moves
+// (`buildReport`), with no model run. Every run is resampled with the same
+// weights, so the differences between runs are paired.
 import { summarize } from "../../../telemetry/stats";
-import { meanAp, poolClasses, type ClassPool } from "./average-precision";
 import {
   MIN_OBJECTS,
   RESAMPLES,
@@ -13,167 +12,19 @@ import {
   differenceFrom,
   figureFrom,
   resample,
-  type Difference,
-  type Figure,
   type Statistic,
 } from "./bootstrap";
-import { matchPicture } from "./match";
-import { found, gateFor, pointOf, right } from "./operating-point";
-import type { PicturePoint } from "./operating-point";
-import type { RunRaw, RunResult } from "./score-run";
-import { labelsOf, type ScoreSet } from "./score-set";
+import { found, right } from "./operating-point";
+import { cocoId, pointsOf, type Prepared, type Samples } from "./score-prepare";
+import type { RunResult } from "./score-run";
+import type {
+  ClassRow,
+  Comparison,
+  ReportMeta,
+  ReportRun,
+  ScoreReport,
+} from "./score-types";
 import { FLOOR, MAX_BOXES } from "./score-worker";
-
-// COCO's 80 category names in its own order, and the id each has in
-// instances_val2017.json (the ids skip some numbers). The names are the
-// models' names; tests/score-report.test.ts holds the list to
-// src/panels/library/label-maps.json.
-const COCO_NAMES =
-  "person|bicycle|car|motorcycle|airplane|bus|train|truck|boat|traffic light|fire hydrant|stop sign|parking meter|bench|bird|cat|dog|horse|sheep|cow|elephant|bear|zebra|giraffe|backpack|umbrella|handbag|tie|suitcase|frisbee|skis|snowboard|sports ball|kite|baseball bat|baseball glove|skateboard|surfboard|tennis racket|bottle|wine glass|cup|fork|knife|spoon|bowl|banana|apple|sandwich|orange|broccoli|carrot|hot dog|pizza|donut|cake|chair|couch|potted plant|bed|dining table|toilet|tv|laptop|mouse|remote|keyboard|cell phone|microwave|oven|toaster|sink|refrigerator|book|clock|vase|scissors|teddy bear|hair drier|toothbrush";
-const COCO_IDS = [
-  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-  24, 25, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 46,
-  47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65,
-  67, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89,
-  90,
-];
-const NAMES = COCO_NAMES.split("|");
-/** COCO's category id for a class name, or null for a name it does not have. */
-export const cocoId = (label: string): number | null =>
-  COCO_IDS[NAMES.indexOf(label)] ?? null;
-
-type Samples = (number | null)[];
-/** What one run needs worked out once, whatever the Confidence value. */
-export type Prepared = {
-  raw: RunRaw;
-  pools: ClassPool[];
-  ap50: Figure | null;
-  ap: Figure | null;
-  ap50Samples: Samples;
-};
-
-/** Match every run's boxes and resample its AP. The resamples are done in
- * slices with a pause between them, so the page stays responsive. */
-export async function prepare(
-  result: RunResult,
-  weights: readonly ArrayLike<number>[],
-  pause: () => Promise<void> = () => new Promise((done) => setTimeout(done)),
-): Promise<Prepared[]> {
-  const labels = result.items.map(labelsOf),
-    prepared: Prepared[] = [];
-  for (const raw of result.runs) {
-    if (raw.status !== "ok") {
-      prepared.push({ raw, pools: [], ap50: null, ap: null, ap50Samples: [] });
-      continue;
-    }
-    // Pictures go in the set's order: equal scores are broken by it.
-    const pools = poolClasses(
-        raw.pictures.map((picture, i) =>
-          matchPicture(picture.boxes, labels[i]),
-        ),
-      ),
-      ap50: Statistic = (w) => meanAp(pools, [0], w),
-      ap: Statistic = (w) => meanAp(pools, undefined, w),
-      ap50Samples: Samples = [],
-      apSamples: Samples = [];
-    for (let from = 0; from < weights.length; from += 100) {
-      ap50Samples.push(...resample(ap50, weights, from, from + 100));
-      apSamples.push(...resample(ap, weights, from, from + 100));
-      await pause();
-    }
-    prepared.push({
-      raw,
-      pools,
-      ap50: figureFrom(ap50(), ap50Samples),
-      ap: figureFrom(ap(), apSamples),
-      ap50Samples,
-    });
-  }
-  return prepared;
-}
-
-/** One run's pictures at the page's Confidence value. */
-export const pointsOf = (
-  raw: RunRaw,
-  result: RunResult,
-  confidence: number,
-): PicturePoint[] =>
-  raw.pictures.map((picture, i) =>
-    pointOf(
-      picture.boxes,
-      labelsOf(result.items[i]),
-      gateFor(confidence, raw.target.sharper),
-    ),
-  );
-
-export type ReportRun = {
-  id: string;
-  label: string;
-  model: string;
-  modelSha256: string | null;
-  /** Whether that hash is the catalogue's; null when either is unknown. */
-  matchesCatalogue: boolean | null;
-  delegate: string;
-  status: "ok" | "failed";
-  note: string;
-  hits: number | null;
-  misses: number | null;
-  falses: number | null;
-  /** Null for a run that failed or a set with too few labelled objects. */
-  found: Figure | null;
-  right: Figure | null;
-  ap50: Figure | null;
-  ap: Figure | null;
-  latency: { pictures: number; p50: number; p95: number } | null;
-  cocoResults: {
-    image_id: number;
-    category_id: number;
-    bbox: number[];
-    score: number;
-  }[];
-};
-export type Comparison = {
-  run: string;
-  against: string;
-  found: Difference;
-  ap50: Difference;
-};
-export type ClassRow = {
-  label: string;
-  labelled: number;
-  /** Found per run, in the order of `runs`; null for a failed run. */
-  found: (Figure | null)[];
-};
-export type ScoreReport = {
-  app: "SPECTRA";
-  kind: "scorecard";
-  schema: 1;
-  startedAt: string;
-  set: Omit<ScoreSet, "items"> & { checked: string };
-  device: unknown;
-  protocol: {
-    floor: number;
-    maxBoxes: number;
-    resamples: number;
-    seed: number;
-    confidence: number;
-    shortened: boolean;
-    picturesScored: number;
-    labelledObjects: number;
-    classes: number;
-    minObjects: number;
-  };
-  runs: ReportRun[];
-  comparisons: Comparison[];
-  byClass: ClassRow[];
-  otherClasses: number;
-};
-export type ReportMeta = {
-  startedAt: string;
-  device: unknown;
-  /** The catalogue's SHA-256 for a model file, or null. */
-  pinned(file: string): string | null;
-};
 
 export function buildReport(
   result: RunResult,

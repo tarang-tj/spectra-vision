@@ -3,7 +3,7 @@
 // and every basis line word for word as the page shows them; the JSON holds
 // null for a figure that is not stated.
 import type { Figure } from "./bootstrap";
-import type { ReportRun, ScoreReport } from "./score-report";
+import type { ReportRun, ScoreReport } from "./score-types";
 import {
   NOT_MEASURED,
   apCell,
