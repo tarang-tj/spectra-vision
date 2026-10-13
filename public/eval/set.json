@@ -1,0 +1,5259 @@
+{
+  "id": "spectra-score-v1",
+  "source": "COCO val2017",
+  "labels": "COCO Consortium, CC BY 4.0",
+  "labelsUrl": "https://cocodataset.org/#termsofuse",
+  "annotationsSha256": "e8c7f7908f1d7278341fae127d0da654f102f11bd7b21d8aeefa635b8c810b6f",
+  "rule": "The first 100 COCO val2017 pictures by image id that COCO records as licence 4 (CC BY 2.0), that have no person annotation and at least one box that is not a crowd region, whose Flickr page still stated CC BY 2.0 on the date checked, and in which no recognisable face is visible.",
+  "builtOn": "2026-10-12",
+  "pictures": 100,
+  "boxes": 438,
+  "crowds": 5,
+  "bytes": 16429956,
+  "items": [
+    {
+      "id": 1993,
+      "file": "000000001993.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000001993.jpg",
+      "sha256": "039f3bfb862023bde7f835a36c32d8f59a3e66488863c2a47b7b746e78c44186",
+      "bytes": 110450,
+      "width": 640,
+      "height": 419,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/joeshlabotnik/3223600591/",
+      "author": "Joe Shlabotnik",
+      "title": "Hôtel Le Priori",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bed",
+          "x": 258.93,
+          "y": 194.91,
+          "w": 355.92,
+          "h": 219.38,
+          "crowd": false
+        },
+        {
+          "label": "chair",
+          "x": 109.22,
+          "y": 250.46,
+          "w": 118.64,
+          "h": 158.18,
+          "crowd": false
+        },
+        {
+          "label": "chair",
+          "x": 0,
+          "y": 298.68,
+          "w": 35.15,
+          "h": 109.32,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 0.04,
+          "y": 251.11,
+          "w": 154.39,
+          "h": 167.89,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 6012,
+      "file": "000000006012.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000006012.jpg",
+      "sha256": "7cd0d627b15c09f373aa613d013fb2d8ae6bd20bcce0d98aa31b963e6bcca495",
+      "bytes": 166135,
+      "width": 640,
+      "height": 531,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/erix/4281955635/",
+      "author": "Erich Ferdinand",
+      "title": "Fruit Logo",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "banana",
+          "x": 328.15,
+          "y": 25.06,
+          "w": 220.75,
+          "h": 477.3,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 98.7,
+          "y": 23.53,
+          "w": 207.41,
+          "h": 481.02,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 6818,
+      "file": "000000006818.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000006818.jpg",
+      "sha256": "99479f61ef2931ea70e161db0859e8706c6e48f13e8cb0798959f52433b01b98",
+      "bytes": 77539,
+      "width": 427,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/11388848@N07/2068039201/",
+      "author": "momovieman",
+      "title": "squat toilet/2nd bathroom",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "toilet",
+          "x": 186.97,
+          "y": 471.83,
+          "w": 100.67,
+          "h": 56.09,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 7991,
+      "file": "000000007991.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000007991.jpg",
+      "sha256": "63c6fae2e3defd4bc1c6f346806aef03eb11ccbd7c6bda3e479d1fbafd486db1",
+      "bytes": 194363,
+      "width": 640,
+      "height": 359,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/sarahmstewart/5355551637/",
+      "author": "Sarah Stewart",
+      "title": "Dwarf carrots",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "knife",
+          "x": 0.81,
+          "y": 157.31,
+          "w": 146.82,
+          "h": 100.04,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 170.63,
+          "y": 70.11,
+          "w": 310.01,
+          "h": 269.46,
+          "crowd": false
+        },
+        {
+          "label": "knife",
+          "x": 6.53,
+          "y": 115.63,
+          "w": 144.53,
+          "h": 43.82,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 8762,
+      "file": "000000008762.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000008762.jpg",
+      "sha256": "8b8aa2412ac3502dbb4b8a7d7987359d4049cf70e7177748e907e3ddfa3211ce",
+      "bytes": 48914,
+      "width": 640,
+      "height": 427,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/vax-o-matic/4466652187/",
+      "author": "Patrick Finnegan",
+      "title": "Stoplight on AZ-90, Sierra Vista on the horizon",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "traffic light",
+          "x": 58.07,
+          "y": 85.64,
+          "w": 21.24,
+          "h": 61.35,
+          "crowd": false
+        },
+        {
+          "label": "traffic light",
+          "x": 163.15,
+          "y": 106.16,
+          "w": 23.1,
+          "h": 38.71,
+          "crowd": false
+        },
+        {
+          "label": "traffic light",
+          "x": 504.08,
+          "y": 230.61,
+          "w": 13.85,
+          "h": 11.37,
+          "crowd": false
+        },
+        {
+          "label": "traffic light",
+          "x": 495.15,
+          "y": 178.41,
+          "w": 20.11,
+          "h": 41.93,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 109.05,
+          "y": 285.07,
+          "w": 13.29,
+          "h": 7.22,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 0,
+          "y": 279.61,
+          "w": 27.83,
+          "h": 23.29,
+          "crowd": false
+        },
+        {
+          "label": "traffic light",
+          "x": 484.99,
+          "y": 229.2,
+          "w": 9.29,
+          "h": 16.64,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 12062,
+      "file": "000000012062.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000012062.jpg",
+      "sha256": "319d58f0fa008d076b766671a5b607f94614f6005f773adced54a57567aa28fb",
+      "bytes": 227134,
+      "width": 640,
+      "height": 427,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/-jvl-/9086068242/",
+      "author": "-JvL-",
+      "title": "Mommy?",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "sheep",
+          "x": 130.68,
+          "y": 70.4,
+          "w": 435.28,
+          "h": 208.9,
+          "crowd": false
+        },
+        {
+          "label": "sheep",
+          "x": 0,
+          "y": 174.53,
+          "w": 270.89,
+          "h": 247.94,
+          "crowd": false
+        },
+        {
+          "label": "sheep",
+          "x": 344.48,
+          "y": 292.66,
+          "w": 295.52,
+          "h": 125.7,
+          "crowd": false
+        },
+        {
+          "label": "sports ball",
+          "x": 601.58,
+          "y": 58.61,
+          "w": 38.42,
+          "h": 73.25,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 12667,
+      "file": "000000012667.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000012667.jpg",
+      "sha256": "0bf182b59b89f534d6f89a2b57c976c47b7f9a95e5e47a7f236b285b9211af14",
+      "bytes": 81731,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/erix/499050773/",
+      "author": "Erich Ferdinand",
+      "title": "Monkeyphone At The Office",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "banana",
+          "x": 283.84,
+          "y": 48.74,
+          "w": 163.77,
+          "h": 241.29,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 13004,
+      "file": "000000013004.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000013004.jpg",
+      "sha256": "09d489992329d2a17186a82781c7d23d8c687ee580567babc7494f9bc8b1220a",
+      "bytes": 129165,
+      "width": 375,
+      "height": 500,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/jessicamullen/4208826429/",
+      "author": "jessica mullen",
+      "title": "Huge brunch! Texas caviar & peanut butter banana",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "banana",
+          "x": 44.71,
+          "y": 72.94,
+          "w": 298.82,
+          "h": 217.65,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 1.13,
+          "y": 6.76,
+          "w": 373.87,
+          "h": 477.47,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 15272,
+      "file": "000000015272.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000015272.jpg",
+      "sha256": "d4a09d9517fea54811b7fabb1274117a107c4cb8fdccfbcae4ced6dd82034ce5",
+      "bytes": 344568,
+      "width": 424,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/yoshikazut/8584364941/",
+      "author": "Yoshikazu TAKADA",
+      "title": "Sakura and Traffic Light",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "traffic light",
+          "x": 41.95,
+          "y": 38.91,
+          "w": 234.47,
+          "h": 97.87,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 15517,
+      "file": "000000015517.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000015517.jpg",
+      "sha256": "db13a24631806ad53b865d8edb4926d455cf54ae60e72b45778e5e58fb164369",
+      "bytes": 194615,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/kzaral/8407007011/",
+      "author": "Kzaral",
+      "title": "Naha Bus Terminal",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bus",
+          "x": 162.58,
+          "y": 322.33,
+          "w": 185.64,
+          "h": 84.49,
+          "crowd": false
+        },
+        {
+          "label": "bus",
+          "x": 0,
+          "y": 306.32,
+          "w": 127.87,
+          "h": 56.63,
+          "crowd": false
+        },
+        {
+          "label": "bus",
+          "x": 230.56,
+          "y": 275.71,
+          "w": 88.67,
+          "h": 26.84,
+          "crowd": false
+        },
+        {
+          "label": "bus",
+          "x": 374.72,
+          "y": 292.37,
+          "w": 114.61,
+          "h": 21.68,
+          "crowd": false
+        },
+        {
+          "label": "bus",
+          "x": 361.24,
+          "y": 275.55,
+          "w": 86.68,
+          "h": 12.75,
+          "crowd": false
+        },
+        {
+          "label": "bus",
+          "x": 433.22,
+          "y": 283.28,
+          "w": 82.66,
+          "h": 29.36,
+          "crowd": false
+        },
+        {
+          "label": "bus",
+          "x": 322.2,
+          "y": 285.15,
+          "w": 96.77,
+          "h": 21.17,
+          "crowd": false
+        },
+        {
+          "label": "bus",
+          "x": 116.14,
+          "y": 263.04,
+          "w": 55.99,
+          "h": 19.6,
+          "crowd": false
+        },
+        {
+          "label": "bus",
+          "x": 338.57,
+          "y": 263.45,
+          "w": 64.49,
+          "h": 19.08,
+          "crowd": false
+        },
+        {
+          "label": "bus",
+          "x": 273.56,
+          "y": 262.83,
+          "w": 64,
+          "h": 13.33,
+          "crowd": false
+        },
+        {
+          "label": "bus",
+          "x": 489.56,
+          "y": 272.94,
+          "w": 48.74,
+          "h": 32.29,
+          "crowd": false
+        },
+        {
+          "label": "bus",
+          "x": 145.82,
+          "y": 274.98,
+          "w": 90.98,
+          "h": 22.56,
+          "crowd": false
+        },
+        {
+          "label": "bus",
+          "x": 182.43,
+          "y": 270.25,
+          "w": 71.6,
+          "h": 7.88,
+          "crowd": false
+        },
+        {
+          "label": "bus",
+          "x": 197,
+          "y": 248,
+          "w": 264,
+          "h": 45,
+          "crowd": true
+        }
+      ]
+    },
+    {
+      "id": 15746,
+      "file": "000000015746.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000015746.jpg",
+      "sha256": "ba79e69d4272bc31ea4fb9f3731e020a9c8acf1fbf3b6ffb78528d70e2e183f7",
+      "bytes": 196039,
+      "width": 427,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/7577384@N04/3517907686/",
+      "author": "piddix",
+      "title": "Robot Fire Hydrant",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "fire hydrant",
+          "x": 71.5,
+          "y": 197.7,
+          "w": 278.58,
+          "h": 377.67,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 17182,
+      "file": "000000017182.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000017182.jpg",
+      "sha256": "0ec7cbf35b5ff0352f9da0653eda2aaf5b578e7f2b5c8480c5b6c19fd2435141",
+      "bytes": 105405,
+      "width": 640,
+      "height": 428,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/cleopold73/2906486794/",
+      "author": "Corey Leopold",
+      "title": "Frontier Classroom",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "chair",
+          "x": 184.71,
+          "y": 233.84,
+          "w": 65.38,
+          "h": 61.11,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 240.5,
+          "y": 230.8,
+          "w": 58.69,
+          "h": 75.27,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 275.92,
+          "y": 229.48,
+          "w": 35.1,
+          "h": 72.19,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 292.8,
+          "y": 226.84,
+          "w": 29.24,
+          "h": 71.21,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 305.45,
+          "y": 226.76,
+          "w": 29.01,
+          "h": 70.46,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 314.81,
+          "y": 228.57,
+          "w": 31.19,
+          "h": 66.29,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 318.46,
+          "y": 228.11,
+          "w": 37.84,
+          "h": 65.18,
+          "crowd": false
+        },
+        {
+          "label": "apple",
+          "x": 428.1,
+          "y": 261.44,
+          "w": 27.62,
+          "h": 19.06,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 20247,
+      "file": "000000020247.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000020247.jpg",
+      "sha256": "92a0ab00f3a0b9f6de5162449a8b79167363897fb489c172eebc244bccef23cb",
+      "bytes": 158661,
+      "width": 640,
+      "height": 457,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/denalinps/6473127891/",
+      "author": "Denali National Park and Preserve",
+      "title": "Grizzly Bear Cubs",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bear",
+          "x": 333.21,
+          "y": 176.15,
+          "w": 177.43,
+          "h": 263.05,
+          "crowd": false
+        },
+        {
+          "label": "bear",
+          "x": 1.03,
+          "y": 15.09,
+          "w": 85.24,
+          "h": 249.55,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 20553,
+      "file": "000000020553.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000020553.jpg",
+      "sha256": "739fee1c09f6d7c1670d2f558f70d2aea2ea6863a964c5a9582ca3bb70a55cb5",
+      "bytes": 140118,
+      "width": 500,
+      "height": 375,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/mikecogh/2926009969/",
+      "author": "Michael Coghlan",
+      "title": "T for Ted",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bottle",
+          "x": 364.89,
+          "y": 132.03,
+          "w": 17.59,
+          "h": 35.9,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 391.28,
+          "y": 133.41,
+          "w": 16.68,
+          "h": 58.13,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 406.57,
+          "y": 132.32,
+          "w": 11.76,
+          "h": 53.88,
+          "crowd": false
+        },
+        {
+          "label": "teddy bear",
+          "x": 170.96,
+          "y": 79.86,
+          "w": 114.3,
+          "h": 88.52,
+          "crowd": false
+        },
+        {
+          "label": "teddy bear",
+          "x": 240.04,
+          "y": 179.39,
+          "w": 31.23,
+          "h": 53.79,
+          "crowd": false
+        },
+        {
+          "label": "umbrella",
+          "x": 85.64,
+          "y": 142.45,
+          "w": 92.59,
+          "h": 112.59,
+          "crowd": false
+        },
+        {
+          "label": "chair",
+          "x": 123.44,
+          "y": 192.65,
+          "w": 117.9,
+          "h": 103.38,
+          "crowd": false
+        },
+        {
+          "label": "vase",
+          "x": 405.06,
+          "y": 132.9,
+          "w": 12.31,
+          "h": 53.29,
+          "crowd": false
+        },
+        {
+          "label": "teddy bear",
+          "x": 273.15,
+          "y": 115.78,
+          "w": 29.65,
+          "h": 45.87,
+          "crowd": false
+        },
+        {
+          "label": "cup",
+          "x": 362.21,
+          "y": 166.89,
+          "w": 21.19,
+          "h": 25.29,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 321.36,
+          "y": 163.05,
+          "w": 106.37,
+          "h": 40.73,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 23666,
+      "file": "000000023666.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000023666.jpg",
+      "sha256": "c6e0dcc40c55570c04bb709097e3d0c6c6ada2ef55ca2a2601c67545581897d4",
+      "bytes": 129858,
+      "width": 480,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/ell-r-brown/6050612972/",
+      "author": "Elliott Brown",
+      "title": "Black Country Living Museum - Cast Iron Houses - bathroom",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "toilet",
+          "x": 159.78,
+          "y": 470.12,
+          "w": 116.49,
+          "h": 148.14,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 23781,
+      "file": "000000023781.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000023781.jpg",
+      "sha256": "085b1c7f25bf1d149b6dff82dfdb0a83fbf6e875c01d5d374070eb582aada80e",
+      "bytes": 153693,
+      "width": 640,
+      "height": 427,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/whitneyinchicago/3669674438/",
+      "author": "Whitney",
+      "title": "6.24.09 Market",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "broccoli",
+          "x": 76.18,
+          "y": 120.38,
+          "w": 244.57,
+          "h": 138.33,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 377.52,
+          "y": 313,
+          "w": 115.28,
+          "h": 60.5,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 481.25,
+          "y": 339.59,
+          "w": 100.47,
+          "h": 82.39,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 337.83,
+          "y": 285.42,
+          "w": 122.57,
+          "h": 51.84,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 379.78,
+          "y": 362.7,
+          "w": 102.48,
+          "h": 59.28,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 425.57,
+          "y": 269.46,
+          "w": 49.5,
+          "h": 35.66,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 483.69,
+          "y": 381.8,
+          "w": 35.47,
+          "h": 45.09,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 27932,
+      "file": "000000027932.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000027932.jpg",
+      "sha256": "9ab6d8c5a124427d77add9827dc6ad58ce94efb003c34e5e20699acd82f43731",
+      "bytes": 75978,
+      "width": 288,
+      "height": 307,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/roncantrell/837387952/",
+      "author": "Ron Cantrell",
+      "title": "Beit Shemesh Hat and Mitt",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "baseball glove",
+          "x": 33.11,
+          "y": 130.39,
+          "w": 159.37,
+          "h": 123.49,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 29393,
+      "file": "000000029393.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000029393.jpg",
+      "sha256": "378763dec71a25c7cb44ff9e345c84ca0fe2d8bf993b88775c360549edf3b733",
+      "bytes": 167853,
+      "width": 500,
+      "height": 375,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/dharrels/4228514131/",
+      "author": "Dan Harrelson",
+      "title": "Rusty on the bench",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "dog",
+          "x": 170.04,
+          "y": 157.52,
+          "w": 195.09,
+          "h": 183.7,
+          "crowd": false
+        },
+        {
+          "label": "orange",
+          "x": 344.26,
+          "y": 244.93,
+          "w": 7.99,
+          "h": 9.1,
+          "crowd": false
+        },
+        {
+          "label": "orange",
+          "x": 322.52,
+          "y": 230.95,
+          "w": 9.07,
+          "h": 12.26,
+          "crowd": false
+        },
+        {
+          "label": "orange",
+          "x": 356.67,
+          "y": 165.78,
+          "w": 13.28,
+          "h": 15.32,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 30213,
+      "file": "000000030213.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000030213.jpg",
+      "sha256": "27fdc374629bb5fc3c059eb7f5516b940596f0b50087adf364b6b09922089eaf",
+      "bytes": 264615,
+      "width": 640,
+      "height": 449,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/calliope/8561578295/",
+      "author": "liz west",
+      "title": "older kitchen",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "refrigerator",
+          "x": 490.18,
+          "y": 111.59,
+          "w": 145.65,
+          "h": 241.08,
+          "crowd": false
+        },
+        {
+          "label": "chair",
+          "x": 305.4,
+          "y": 333.21,
+          "w": 264.95,
+          "h": 111.24,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 294.74,
+          "y": 220.92,
+          "w": 49.04,
+          "h": 26.25,
+          "crowd": false
+        },
+        {
+          "label": "sink",
+          "x": 374.42,
+          "y": 165.32,
+          "w": 97.49,
+          "h": 67.21,
+          "crowd": false
+        },
+        {
+          "label": "apple",
+          "x": 605.15,
+          "y": 84.42,
+          "w": 17.41,
+          "h": 12.07,
+          "crowd": false
+        },
+        {
+          "label": "apple",
+          "x": 601.82,
+          "y": 80.22,
+          "w": 13.78,
+          "h": 10.79,
+          "crowd": false
+        },
+        {
+          "label": "oven",
+          "x": 21.24,
+          "y": 193.15,
+          "w": 154.72,
+          "h": 113.26,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 244.75,
+          "y": 163.14,
+          "w": 11.81,
+          "h": 16.47,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 280.75,
+          "y": 181.48,
+          "w": 30.57,
+          "h": 55.68,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 267.62,
+          "y": 144.19,
+          "w": 4.02,
+          "h": 7.04,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 160.52,
+          "y": 218.1,
+          "w": 250.56,
+          "h": 230.9,
+          "crowd": false
+        },
+        {
+          "label": "apple",
+          "x": 596.93,
+          "y": 86.33,
+          "w": 8.54,
+          "h": 8.01,
+          "crowd": false
+        },
+        {
+          "label": "apple",
+          "x": 579.01,
+          "y": 87.14,
+          "w": 16.31,
+          "h": 8.87,
+          "crowd": false
+        },
+        {
+          "label": "apple",
+          "x": 570.44,
+          "y": 80.37,
+          "w": 23.42,
+          "h": 15.24,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 34873,
+      "file": "000000034873.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000034873.jpg",
+      "sha256": "376dbffac6db0b092cc07b43dfc34886725682d8e641caeff54710ac8f61ffb6",
+      "bytes": 94292,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/12394349@N06/3822818427/",
+      "author": "Bryn Pinzgauer",
+      "title": "Kitchen units",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "chair",
+          "x": 545.43,
+          "y": 176.42,
+          "w": 59.33,
+          "h": 95.92,
+          "crowd": false
+        },
+        {
+          "label": "chair",
+          "x": 482.45,
+          "y": 169.57,
+          "w": 46.05,
+          "h": 49.45,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 346.85,
+          "y": 200.91,
+          "w": 171.81,
+          "h": 27.92,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 409.48,
+          "y": 194.92,
+          "w": 40.26,
+          "h": 21.08,
+          "crowd": false
+        },
+        {
+          "label": "apple",
+          "x": 307.07,
+          "y": 188.26,
+          "w": 15.04,
+          "h": 9.36,
+          "crowd": false
+        },
+        {
+          "label": "sink",
+          "x": 143.26,
+          "y": 257.94,
+          "w": 149.3,
+          "h": 27.7,
+          "crowd": false
+        },
+        {
+          "label": "cup",
+          "x": 125.08,
+          "y": 201.18,
+          "w": 23.28,
+          "h": 24.35,
+          "crowd": false
+        },
+        {
+          "label": "chair",
+          "x": 493.97,
+          "y": 209.88,
+          "w": 65.71,
+          "h": 53.2,
+          "crowd": false
+        },
+        {
+          "label": "tv",
+          "x": 394.48,
+          "y": 151.79,
+          "w": 44.4,
+          "h": 49.04,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 39956,
+      "file": "000000039956.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000039956.jpg",
+      "sha256": "76e73337d2385cf701750bc38a42f0205153af090244e66fb7a261052cb05217",
+      "bytes": 107543,
+      "width": 640,
+      "height": 427,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/idovermani/4164666887/",
+      "author": "Dov Harrington",
+      "title": "11-30-09",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bed",
+          "x": 0.96,
+          "y": 211.77,
+          "w": 360.79,
+          "h": 193.83,
+          "crowd": false
+        },
+        {
+          "label": "chair",
+          "x": 518.51,
+          "y": 184.87,
+          "w": 121.16,
+          "h": 134.57,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 42889,
+      "file": "000000042889.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000042889.jpg",
+      "sha256": "8a5181cdf9425417913d378a6f64833e606586202e9297ad308c4c95fc38e025",
+      "bytes": 106440,
+      "width": 375,
+      "height": 500,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/grahamstanley/67531548/",
+      "author": "BLOG EFL",
+      "title": "Podcast Bear",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "keyboard",
+          "x": 63.9,
+          "y": 376.79,
+          "w": 285.88,
+          "h": 123.21,
+          "crowd": false
+        },
+        {
+          "label": "teddy bear",
+          "x": 58.43,
+          "y": 49.44,
+          "w": 285.39,
+          "h": 301.12,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 43737,
+      "file": "000000043737.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000043737.jpg",
+      "sha256": "87e63848d72793260c580c8653f3ad0529682e49782dceb54385c0aa5417a10d",
+      "bytes": 116443,
+      "width": 480,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/charkes/3595526099/",
+      "author": "Charles Willgren",
+      "title": "Old Town Clock",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "clock",
+          "x": 23.01,
+          "y": 120.81,
+          "w": 126.56,
+          "h": 122.25,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 99.34,
+          "y": 426.56,
+          "w": 69.25,
+          "h": 35.04,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 111.23,
+          "y": 416.09,
+          "w": 81.12,
+          "h": 38,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 14.8,
+          "y": 422.32,
+          "w": 16.41,
+          "h": 13.95,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 161.43,
+          "y": 422.42,
+          "w": 36.94,
+          "h": 20.09,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 0.36,
+          "y": 415.36,
+          "w": 17.26,
+          "h": 25.71,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 50844,
+      "file": "000000050844.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000050844.jpg",
+      "sha256": "82e1bd15d418dffb439de80cf445b733a186286253732895c93d79464bcb6165",
+      "bytes": 191366,
+      "width": 334,
+      "height": 500,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/rdvortex/3904379072/",
+      "author": "Timo Kuusela",
+      "title": "The Happy Trio",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "teddy bear",
+          "x": 13.48,
+          "y": 49.25,
+          "w": 198.88,
+          "h": 334.83,
+          "crowd": false
+        },
+        {
+          "label": "teddy bear",
+          "x": 94.38,
+          "y": 144.61,
+          "w": 234.83,
+          "h": 337.08,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 53994,
+      "file": "000000053994.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000053994.jpg",
+      "sha256": "0f1eb7ded7f9443a89430ccdf4375f58ec10185f76afef4f4ff23f15c856780e",
+      "bytes": 191513,
+      "width": 481,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/vxla/2851509696/",
+      "author": "vxla",
+      "title": "HPIM6932",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "parking meter",
+          "x": 159.64,
+          "y": 58.21,
+          "w": 218.61,
+          "h": 444.4,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 17.75,
+          "y": 19.41,
+          "w": 45.94,
+          "h": 19.59,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 5.21,
+          "y": 19.84,
+          "w": 32.16,
+          "h": 14.91,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 44.56,
+          "y": 22.24,
+          "w": 110.23,
+          "h": 27.09,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 56288,
+      "file": "000000056288.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000056288.jpg",
+      "sha256": "6f98dd8e6b6c0d301919aa847ddfc0b9356914219349ea67942b1afbebbd68f9",
+      "bytes": 132152,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/goincase/376779110/",
+      "author": "Incase",
+      "title": "Massive Sammich",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "sandwich",
+          "x": 82.98,
+          "y": 76.61,
+          "w": 339.93,
+          "h": 254.94,
+          "crowd": false
+        },
+        {
+          "label": "keyboard",
+          "x": 409.87,
+          "y": 198.98,
+          "w": 230.13,
+          "h": 76.28,
+          "crowd": false
+        },
+        {
+          "label": "tv",
+          "x": 231.91,
+          "y": 0,
+          "w": 399.1,
+          "h": 166.11,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 56545,
+      "file": "000000056545.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000056545.jpg",
+      "sha256": "852f95c0f7d5d72ec994fcead05a2a5501e7459966a360d92c26a5827584c744",
+      "bytes": 164141,
+      "width": 505,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/36302473@N03/9470927378/",
+      "author": "Princess Ruto",
+      "title": "Rainforest bird",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bird",
+          "x": 131.56,
+          "y": 31.65,
+          "w": 235.72,
+          "h": 597.52,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 57232,
+      "file": "000000057232.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000057232.jpg",
+      "sha256": "d2608c361bce2a50706e7b840819dbc3c01147bacfe35752c4ff59ebb467ce93",
+      "bytes": 229950,
+      "width": 612,
+      "height": 612,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/donhall16/8693708685/",
+      "author": "donhall16",
+      "title": "A chair made from baseball bats #bizarrestuff",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "baseball bat",
+          "x": 370.57,
+          "y": 245.97,
+          "w": 215.34,
+          "h": 98.19,
+          "crowd": false
+        },
+        {
+          "label": "baseball bat",
+          "x": 366.49,
+          "y": 290.52,
+          "w": 206.37,
+          "h": 94.29,
+          "crowd": false
+        },
+        {
+          "label": "baseball bat",
+          "x": 389.96,
+          "y": 232.09,
+          "w": 215.59,
+          "h": 87.68,
+          "crowd": false
+        },
+        {
+          "label": "baseball bat",
+          "x": 66.93,
+          "y": 212.5,
+          "w": 354.06,
+          "h": 121.52,
+          "crowd": false
+        },
+        {
+          "label": "baseball bat",
+          "x": 319.68,
+          "y": 421.92,
+          "w": 200.16,
+          "h": 138.24,
+          "crowd": false
+        },
+        {
+          "label": "baseball bat",
+          "x": 327.65,
+          "y": 436.63,
+          "w": 213.62,
+          "h": 157.33,
+          "crowd": false
+        },
+        {
+          "label": "baseball bat",
+          "x": 37.44,
+          "y": 260.64,
+          "w": 239.04,
+          "h": 246.24,
+          "crowd": false
+        },
+        {
+          "label": "baseball bat",
+          "x": 46.19,
+          "y": 6.5,
+          "w": 316.1,
+          "h": 69.28,
+          "crowd": false
+        },
+        {
+          "label": "baseball bat",
+          "x": 73.27,
+          "y": 102.64,
+          "w": 320.11,
+          "h": 76.13,
+          "crowd": false
+        },
+        {
+          "label": "baseball bat",
+          "x": 56.16,
+          "y": 128.79,
+          "w": 353.07,
+          "h": 86.13,
+          "crowd": false
+        },
+        {
+          "label": "vase",
+          "x": 511.83,
+          "y": 57.56,
+          "w": 69.98,
+          "h": 94.69,
+          "crowd": false
+        },
+        {
+          "label": "baseball bat",
+          "x": 56.57,
+          "y": 37.32,
+          "w": 329.14,
+          "h": 65.16,
+          "crowd": false
+        },
+        {
+          "label": "chair",
+          "x": 6.36,
+          "y": 14.31,
+          "w": 605.64,
+          "h": 596.1,
+          "crowd": false
+        },
+        {
+          "label": "baseball bat",
+          "x": 373.88,
+          "y": 322.28,
+          "w": 187.03,
+          "h": 93.17,
+          "crowd": false
+        },
+        {
+          "label": "baseball bat",
+          "x": 58.66,
+          "y": 61.83,
+          "w": 340.88,
+          "h": 76.11,
+          "crowd": false
+        },
+        {
+          "label": "baseball bat",
+          "x": 6,
+          "y": 62,
+          "w": 593,
+          "h": 539,
+          "crowd": true
+        }
+      ]
+    },
+    {
+      "id": 57725,
+      "file": "000000057725.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000057725.jpg",
+      "sha256": "d660e0aa68834a35a45348a1ef40e0d5c5321aea7ac74b36a53fbe7abc63ed60",
+      "bytes": 233505,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/chicagoarchitecturetoday/8401424062/",
+      "author": "Chicago Architecture Today",
+      "title": "Reid Murdoch Center - Exterior 4",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "clock",
+          "x": 368.42,
+          "y": 76.19,
+          "w": 19.96,
+          "h": 27.93,
+          "crowd": false
+        },
+        {
+          "label": "clock",
+          "x": 414.35,
+          "y": 75.31,
+          "w": 19.49,
+          "h": 27.98,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 58029,
+      "file": "000000058029.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000058029.jpg",
+      "sha256": "bdaff927606e8238cc1fc099830c233851e8af4567238d9b5ba5cb5886e5b0f8",
+      "bytes": 125451,
+      "width": 640,
+      "height": 478,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/spyffe/5589997131/",
+      "author": "spyffe",
+      "title": "Master bedroom bathroom",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "toilet",
+          "x": 112.17,
+          "y": 353.58,
+          "w": 166.99,
+          "h": 124.42,
+          "crowd": false
+        },
+        {
+          "label": "sink",
+          "x": 306.73,
+          "y": 414.71,
+          "w": 164.8,
+          "h": 63.29,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 58111,
+      "file": "000000058111.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000058111.jpg",
+      "sha256": "2c476318934bf7b8e6ddbb0bcb119b8ce5ed9409e3444a6b8f8b4622e59fa1fe",
+      "bytes": 126017,
+      "width": 500,
+      "height": 490,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/81564552@N00/1432440864/",
+      "author": "AKX_",
+      "title": "On ur desk 2",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "cat",
+          "x": 32.74,
+          "y": 22.7,
+          "w": 461.48,
+          "h": 461.49,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 152.02,
+          "y": 16.2,
+          "w": 65.39,
+          "h": 35.6,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 166.98,
+          "y": 10.1,
+          "w": 90.28,
+          "h": 34.49,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 0,
+          "y": 66.56,
+          "w": 125.63,
+          "h": 26.34,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 1.1,
+          "y": 24.22,
+          "w": 142.05,
+          "h": 33.04,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 0,
+          "y": 54.66,
+          "w": 110.88,
+          "h": 12.18,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 58655,
+      "file": "000000058655.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000058655.jpg",
+      "sha256": "9784ea090eeba09ca328705b68552f091e4f2dc950119d0bdb1fdbe0d5032e31",
+      "bytes": 190190,
+      "width": 425,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/mblouir/6952501027/",
+      "author": "Matthew Blouir",
+      "title": "Clock",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "clock",
+          "x": 225.13,
+          "y": 133.38,
+          "w": 124.73,
+          "h": 67.32,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 59920,
+      "file": "000000059920.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000059920.jpg",
+      "sha256": "07df02359db6657d4ecab4ab888e70a19042dff8897fa7faa9dfc9899565e501",
+      "bytes": 82962,
+      "width": 427,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/markjhandel/1439875933/",
+      "author": "markjhandel",
+      "title": "Hotel Bathroom",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "toilet",
+          "x": 232.99,
+          "y": 316.4,
+          "w": 194.01,
+          "h": 316.41,
+          "crowd": false
+        },
+        {
+          "label": "toilet",
+          "x": 0.73,
+          "y": 416.97,
+          "w": 134.7,
+          "h": 148.57,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 62554,
+      "file": "000000062554.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000062554.jpg",
+      "sha256": "2b9444ef969f3b95e53ba3e78ddd329c41c03fbc3c8e7e07034cdd6cb8bc9f41",
+      "bytes": 140456,
+      "width": 640,
+      "height": 428,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/31403417@N00/5560942229/",
+      "author": "kizzzbeth",
+      "title": "Untitled",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "dining table",
+          "x": 1.93,
+          "y": 18.8,
+          "w": 638.07,
+          "h": 403.9,
+          "crowd": false
+        },
+        {
+          "label": "fork",
+          "x": 574.63,
+          "y": 74.64,
+          "w": 65.37,
+          "h": 100.67,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 0,
+          "y": 159.54,
+          "w": 462.7,
+          "h": 264.12,
+          "crowd": false
+        },
+        {
+          "label": "broccoli",
+          "x": 1.01,
+          "y": 102.72,
+          "w": 397.79,
+          "h": 273.92,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 527.07,
+          "y": 231.79,
+          "w": 112.93,
+          "h": 158.7,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 32.98,
+          "y": 354.4,
+          "w": 607.02,
+          "h": 73.6,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 64495,
+      "file": "000000064495.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000064495.jpg",
+      "sha256": "57c99cd4703a6c54282dde37cb83c05e08619776beb766c3b06f9acdff0357b8",
+      "bytes": 251532,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/40002045@N08/5438937895/",
+      "author": "Willeke_igkt",
+      "title": "Quebec city parking meter empty",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "parking meter",
+          "x": 230.83,
+          "y": 40.81,
+          "w": 181.21,
+          "h": 187.68,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 64499,
+      "file": "000000064499.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000064499.jpg",
+      "sha256": "59e1d75bb19d61b4e6935e1701ca3a4e3abfa4cca546f81a2ca965992f4c9535",
+      "bytes": 202887,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/yortw/5083031191/",
+      "author": "Yortw",
+      "title": "BZ - Zebras",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "zebra",
+          "x": 1.08,
+          "y": 151.76,
+          "w": 379.68,
+          "h": 318.2,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 98.16,
+          "y": 187.69,
+          "w": 244.85,
+          "h": 240.53,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 66635,
+      "file": "000000066635.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000066635.jpg",
+      "sha256": "0969fb5fb163065ac5f0a8ee922db3339a3e099086a40f6d4da4b3254fc1a422",
+      "bytes": 68818,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/ian_d/256415658/",
+      "author": "Ian Dick",
+      "title": "Wireless keyboard and mouse",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "tv",
+          "x": 105.71,
+          "y": 40.99,
+          "w": 290.16,
+          "h": 272.9,
+          "crowd": false
+        },
+        {
+          "label": "mouse",
+          "x": 508.18,
+          "y": 337.49,
+          "w": 51.68,
+          "h": 36.09,
+          "crowd": false
+        },
+        {
+          "label": "remote",
+          "x": 407.87,
+          "y": 292.16,
+          "w": 44.87,
+          "h": 19.63,
+          "crowd": false
+        },
+        {
+          "label": "keyboard",
+          "x": 232.43,
+          "y": 342.16,
+          "w": 267.03,
+          "h": 118.92,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 68765,
+      "file": "000000068765.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000068765.jpg",
+      "sha256": "0c7e7e080936a8120fccf67e21f6142ed8a452e1e9411454b0900923dac247f0",
+      "bytes": 119138,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/declanjewell/1501351467/",
+      "author": "DeclanTM",
+      "title": "Keyboard & Mouse",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "keyboard",
+          "x": 1.08,
+          "y": 27.04,
+          "w": 573.84,
+          "h": 443.32,
+          "crowd": false
+        },
+        {
+          "label": "mouse",
+          "x": 1.24,
+          "y": 57.35,
+          "w": 155.44,
+          "h": 141.76,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 73118,
+      "file": "000000073118.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000073118.jpg",
+      "sha256": "b99729b8c45705912e2dbf30cdbc201dd599ff75d00b7ef54078b546195dff31",
+      "bytes": 186613,
+      "width": 612,
+      "height": 612,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/vuarnet/8017027419/",
+      "author": "Raul Ramirez",
+      "title": "Teddy bears...",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "teddy bear",
+          "x": 107.27,
+          "y": 44.01,
+          "w": 504.73,
+          "h": 565.24,
+          "crowd": false
+        },
+        {
+          "label": "teddy bear",
+          "x": 0,
+          "y": 175.1,
+          "w": 273.53,
+          "h": 429.65,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 78266,
+      "file": "000000078266.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000078266.jpg",
+      "sha256": "01297ee066ac26e787c2f112d73e24085b9b9b94100e4bb6b13b5758c77ab2e5",
+      "bytes": 213178,
+      "width": 640,
+      "height": 428,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/danramarch/6180130159/",
+      "author": "Daniel Ramirez",
+      "title": "USS Missouri - Kitchen",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "refrigerator",
+          "x": 55.78,
+          "y": 96.24,
+          "w": 93.3,
+          "h": 108.69,
+          "crowd": false
+        },
+        {
+          "label": "apple",
+          "x": 268.99,
+          "y": 192.47,
+          "w": 12.63,
+          "h": 13.58,
+          "crowd": false
+        },
+        {
+          "label": "orange",
+          "x": 268.24,
+          "y": 194.52,
+          "w": 11.35,
+          "h": 10.19,
+          "crowd": false
+        },
+        {
+          "label": "sink",
+          "x": 15.4,
+          "y": 194.19,
+          "w": 156.13,
+          "h": 34.49,
+          "crowd": false
+        },
+        {
+          "label": "knife",
+          "x": 255.71,
+          "y": 146.68,
+          "w": 3.36,
+          "h": 20.2,
+          "crowd": false
+        },
+        {
+          "label": "knife",
+          "x": 251.15,
+          "y": 144.46,
+          "w": 4.57,
+          "h": 22.24,
+          "crowd": false
+        },
+        {
+          "label": "knife",
+          "x": 271.51,
+          "y": 144.99,
+          "w": 5.77,
+          "h": 22.24,
+          "crowd": false
+        },
+        {
+          "label": "knife",
+          "x": 267.06,
+          "y": 143.63,
+          "w": 5.05,
+          "h": 24.03,
+          "crowd": false
+        },
+        {
+          "label": "knife",
+          "x": 263.12,
+          "y": 144.8,
+          "w": 3.84,
+          "h": 21.88,
+          "crowd": false
+        },
+        {
+          "label": "knife",
+          "x": 259.07,
+          "y": 145.13,
+          "w": 4.09,
+          "h": 22,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 374.58,
+          "y": 211.16,
+          "w": 46.05,
+          "h": 15.15,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 259.72,
+          "y": 205.33,
+          "w": 15.15,
+          "h": 8.74,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 284.1,
+          "y": 200.63,
+          "w": 6.79,
+          "h": 8.49,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 281.73,
+          "y": 201.35,
+          "w": 5.67,
+          "h": 10.79,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 272.48,
+          "y": 187.62,
+          "w": 11.36,
+          "h": 12.74,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 78823,
+      "file": "000000078823.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000078823.jpg",
+      "sha256": "d9fe245622dc52d9c977eb501aa70d23a9e0fb61e2873879db6c0a89b1bc6b88",
+      "bytes": 157930,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/dphiffer/13918737/",
+      "author": "Dan Phiffer",
+      "title": "Patient dog",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "dog",
+          "x": 197.97,
+          "y": 117.22,
+          "w": 170.45,
+          "h": 222.07,
+          "crowd": false
+        },
+        {
+          "label": "potted plant",
+          "x": 58.45,
+          "y": 81.69,
+          "w": 131.53,
+          "h": 125.9,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 9.29,
+          "y": 160,
+          "w": 466.58,
+          "h": 314.84,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 1.29,
+          "y": 150.59,
+          "w": 186.23,
+          "h": 261.24,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 594.08,
+          "y": 175,
+          "w": 45.2,
+          "h": 128.07,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 78959,
+      "file": "000000078959.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000078959.jpg",
+      "sha256": "e42bf26adeaac411f4714a1caa9a1c6488c2016cc6c4333f4ae1a5ab43f0b2cb",
+      "bytes": 149479,
+      "width": 384,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/rusty_clark/7623696666/",
+      "author": "Rusty Clark ~ 100K Photos",
+      "title": "bananas!",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "banana",
+          "x": 244.77,
+          "y": 62.73,
+          "w": 62.8,
+          "h": 70.2,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 239.89,
+          "y": 132.04,
+          "w": 97.58,
+          "h": 36.8,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 198.7,
+          "y": 23.08,
+          "w": 31.97,
+          "h": 90.75,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 222.6,
+          "y": 175.6,
+          "w": 68,
+          "h": 26.64,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 196.94,
+          "y": 179.62,
+          "w": 115.65,
+          "h": 61.23,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 225.56,
+          "y": 40.65,
+          "w": 37.83,
+          "h": 76.27,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 254.67,
+          "y": 0.53,
+          "w": 52.52,
+          "h": 90.04,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 165.99,
+          "y": 120.99,
+          "w": 28.8,
+          "h": 41.32,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 153.31,
+          "y": 0,
+          "w": 79.33,
+          "h": 79.21,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 80.02,
+          "y": 118.8,
+          "w": 88.09,
+          "h": 81.23,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 159.8,
+          "y": 67.11,
+          "w": 53.55,
+          "h": 69.46,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 136.95,
+          "y": 38.28,
+          "w": 66.49,
+          "h": 62.21,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 263.84,
+          "y": 45.63,
+          "w": 31.41,
+          "h": 44.42,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 79408,
+      "file": "000000079408.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000079408.jpg",
+      "sha256": "a14024d3cd0bc265333e329fd2e71adc3177e727c34293293aebf560135e67ce",
+      "bytes": 155070,
+      "width": 640,
+      "height": 427,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/taymtaym/9734800916/",
+      "author": "Claudio Marinangeli",
+      "title": "OKIMG_5873",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "stop sign",
+          "x": 39.43,
+          "y": 7.21,
+          "w": 375.07,
+          "h": 399.11,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 79651,
+      "file": "000000079651.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000079651.jpg",
+      "sha256": "05107da6f72e8e495bbfaa0e8d638433cb5fd9c35d43bf193ff2b12db0c684bb",
+      "bytes": 222884,
+      "width": 640,
+      "height": 478,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/morebyless/9659844494/",
+      "author": "morebyless",
+      "title": "Dragon Stout & Guinness",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bottle",
+          "x": 396.73,
+          "y": 9.62,
+          "w": 114.42,
+          "h": 367.86,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 150.99,
+          "y": 0,
+          "w": 110.42,
+          "h": 390.27,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 280.21,
+          "y": 0,
+          "w": 105.07,
+          "h": 379.1,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 294.32,
+          "y": 345.7,
+          "w": 338.36,
+          "h": 113.86,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 179.38,
+          "y": 365.48,
+          "w": 312.58,
+          "h": 108.49,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 87875,
+      "file": "000000087875.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000087875.jpg",
+      "sha256": "d90d4573a2b3d32f7ce3d704cb81b816f42a6326c59e935c6fa471dccc636718",
+      "bytes": 246526,
+      "width": 640,
+      "height": 487,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/krossbow/4628170230/",
+      "author": "F Delventhal",
+      "title": "Fire Hydrant for Daily Shoot ds187",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "fire hydrant",
+          "x": 144.86,
+          "y": 167.8,
+          "w": 154.06,
+          "h": 317.34,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 88265,
+      "file": "000000088265.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000088265.jpg",
+      "sha256": "91f854ea66dbbc6fc3dd1cfe4410157be13194bc8e083dc79032aef5af2c81cc",
+      "bytes": 289877,
+      "width": 427,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/sudharsannarayanan/9095670368/",
+      "author": "Sudharsan.Narayanan",
+      "title": "A horse cart awaits us at the end of the trek",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "horse",
+          "x": 167.02,
+          "y": 260.29,
+          "w": 102.86,
+          "h": 206.38,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 89880,
+      "file": "000000089880.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000089880.jpg",
+      "sha256": "4cc6935c4f45d41f57a53c5fb2ac917a81b3ff40e6dde5d6265357c32e93f7b5",
+      "bytes": 65619,
+      "width": 500,
+      "height": 281,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/ndecam/3424594672/",
+      "author": "Nicolas de Camaret",
+      "title": "Frenchie at the park with Friends",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "dog",
+          "x": 145.5,
+          "y": 13.18,
+          "w": 150.11,
+          "h": 172.06,
+          "crowd": false
+        },
+        {
+          "label": "dog",
+          "x": 256.47,
+          "y": 42.96,
+          "w": 163.02,
+          "h": 150.54,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 90108,
+      "file": "000000090108.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000090108.jpg",
+      "sha256": "3a9a862c237d03ab32d8b455de68ffcd4fd094f2ddd4355b95048243f59a781a",
+      "bytes": 148683,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/wwarby/5818186852/",
+      "author": "William Warby",
+      "title": "11 Linnett Close",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bottle",
+          "x": 214.42,
+          "y": 224.25,
+          "w": 15.94,
+          "h": 32.34,
+          "crowd": false
+        },
+        {
+          "label": "toilet",
+          "x": 526.38,
+          "y": 254.56,
+          "w": 111.1,
+          "h": 166.11,
+          "crowd": false
+        },
+        {
+          "label": "sink",
+          "x": 107.08,
+          "y": 253.46,
+          "w": 144.61,
+          "h": 47.29,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 91654,
+      "file": "000000091654.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000091654.jpg",
+      "sha256": "da28681c7ffbb7b414f60c4f9116a2aa70c6ae23d1b66e9b96319c7b7cbd8d21",
+      "bytes": 184578,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/goosmurf/8594175012/",
+      "author": "Yun Huang Yong",
+      "title": "Lum Cheong Mai Fun",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "spoon",
+          "x": 1.08,
+          "y": 0,
+          "w": 211.41,
+          "h": 235.15,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 1.08,
+          "y": 1.08,
+          "w": 638.56,
+          "h": 478.92,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 34.73,
+          "y": 0,
+          "w": 602.79,
+          "h": 460.27,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 94336,
+      "file": "000000094336.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000094336.jpg",
+      "sha256": "147bfe5b064eea4fb43be7189fe9c3f9b4ef770ca20f698668f66834eed454db",
+      "bytes": 94251,
+      "width": 500,
+      "height": 336,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/nothingbeatsaduck/2412271569/",
+      "author": "Jason Rojas",
+      "title": "Sink Cat",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "cat",
+          "x": 141.63,
+          "y": 15.17,
+          "w": 247.12,
+          "h": 273.86,
+          "crowd": false
+        },
+        {
+          "label": "sink",
+          "x": 15.83,
+          "y": 62.76,
+          "w": 472.41,
+          "h": 261.02,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 95899,
+      "file": "000000095899.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000095899.jpg",
+      "sha256": "b4e8f6fc5440abc790184973e0ec44428be8a682be6be0894311477727a19251",
+      "bytes": 207425,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/jasonparis/5530636215/",
+      "author": "JasonParis",
+      "title": "Toronto (CityPlace)",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "stop sign",
+          "x": 18.3,
+          "y": 78.51,
+          "w": 265.83,
+          "h": 233.54,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 98261,
+      "file": "000000098261.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000098261.jpg",
+      "sha256": "6d73f5967db3ef19680f17791dd7252e1acf189ddb0cf6590ed211f8da123475",
+      "bytes": 13947,
+      "width": 320,
+      "height": 216,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/pics4dawn/9354894019/",
+      "author": "Dawn Beattie",
+      "title": "7-23-13 Yard Feeding",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bird",
+          "x": 20.5,
+          "y": 28.63,
+          "w": 195.5,
+          "h": 117,
+          "crowd": false
+        },
+        {
+          "label": "bird",
+          "x": 193,
+          "y": 64.8,
+          "w": 126.5,
+          "h": 109,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 99053,
+      "file": "000000099053.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000099053.jpg",
+      "sha256": "a4e8405077a8f93115116f548e7d59b29a092a6ac2f749732a525e7b82c2f35a",
+      "bytes": 237853,
+      "width": 640,
+      "height": 559,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/djackmanson/5884430904/",
+      "author": "Caspia Jackmanson",
+      "title": "Pix: Beef strips, broccoli, mushrooms, carrots and udon noodles in Mongolian stir-fry sauce",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "fork",
+          "x": 403.93,
+          "y": 0,
+          "w": 236.07,
+          "h": 304.01,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 37.69,
+          "y": 81.27,
+          "w": 585.38,
+          "h": 463.53,
+          "crowd": false
+        },
+        {
+          "label": "broccoli",
+          "x": 94.34,
+          "y": 311.66,
+          "w": 89.13,
+          "h": 61.06,
+          "crowd": false
+        },
+        {
+          "label": "broccoli",
+          "x": 226.71,
+          "y": 398.16,
+          "w": 46.9,
+          "h": 55.55,
+          "crowd": false
+        },
+        {
+          "label": "broccoli",
+          "x": 448,
+          "y": 296.52,
+          "w": 57.83,
+          "h": 43.63,
+          "crowd": false
+        },
+        {
+          "label": "broccoli",
+          "x": 359.55,
+          "y": 412.12,
+          "w": 41.38,
+          "h": 54.35,
+          "crowd": false
+        },
+        {
+          "label": "broccoli",
+          "x": 392.36,
+          "y": 392.41,
+          "w": 44.2,
+          "h": 62.13,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 559,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 105014,
+      "file": "000000105014.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000105014.jpg",
+      "sha256": "f35e364bb8237ad5609f4e3a11220996b8417bd5241216aae82510f8ea368c14",
+      "bytes": 304002,
+      "width": 427,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/gamene/6933079123/",
+      "author": "gamene",
+      "title": "lentil rice bento",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "fork",
+          "x": 215.9,
+          "y": 429.2,
+          "w": 143.16,
+          "h": 210.8,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 28.76,
+          "y": 61.84,
+          "w": 310.66,
+          "h": 407.01,
+          "crowd": false
+        },
+        {
+          "label": "broccoli",
+          "x": 263.75,
+          "y": 196.31,
+          "w": 74.9,
+          "h": 92.23,
+          "crowd": false
+        },
+        {
+          "label": "broccoli",
+          "x": 261.56,
+          "y": 128.58,
+          "w": 59.06,
+          "h": 51.63,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 235.01,
+          "y": 140.36,
+          "w": 75.33,
+          "h": 65.97,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 0,
+          "y": 0,
+          "w": 427,
+          "h": 640,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 110211,
+      "file": "000000110211.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000110211.jpg",
+      "sha256": "f4eb2c0b04838083a34991f54480b50b9eea95b5a111c7cdfccb2c6a1874ea8d",
+      "bytes": 201996,
+      "width": 640,
+      "height": 344,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/18472724@N00/7884061016/",
+      "author": "MollySVH",
+      "title": "Zebras and warthogs at Karkloof game reserve",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "zebra",
+          "x": 1.55,
+          "y": 132.1,
+          "w": 175.87,
+          "h": 194.47,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 160.44,
+          "y": 132.61,
+          "w": 157.1,
+          "h": 134.18,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 61.39,
+          "y": 149.39,
+          "w": 54.16,
+          "h": 34.41,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 532.25,
+          "y": 179.66,
+          "w": 51.32,
+          "h": 68.75,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 543.33,
+          "y": 160.11,
+          "w": 81.1,
+          "h": 93.89,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 110972,
+      "file": "000000110972.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000110972.jpg",
+      "sha256": "ec73a8372fe4579490693690ff4b56510af5ce4ce830642eb05c01f2baa58f91",
+      "bytes": 206137,
+      "width": 640,
+      "height": 487,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/gwp57/8046866985/",
+      "author": "George Pankewytch",
+      "title": "IMG_4576_1f",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bear",
+          "x": 85.36,
+          "y": 8.83,
+          "w": 424.62,
+          "h": 425.71,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 113051,
+      "file": "000000113051.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000113051.jpg",
+      "sha256": "08e92ec10d2b3b5e1308e6853d50846fb11f718b57d1c4e32e302f8be7aac6a6",
+      "bytes": 148414,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/celesteh/5946397184/",
+      "author": "Charles Hutchins",
+      "title": "Parked Boat",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "boat",
+          "x": 34.59,
+          "y": 198.38,
+          "w": 411.9,
+          "h": 183.78,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 113403,
+      "file": "000000113403.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000113403.jpg",
+      "sha256": "ff974f9495b64648225c9c6fc2d13e642fec69033aa46a524596cb77c5a02224",
+      "bytes": 130520,
+      "width": 640,
+      "height": 451,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/dbgg1979/3713015524/",
+      "author": "dbgg1979",
+      "title": "who said 3's a crowd?",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "teddy bear",
+          "x": 248.3,
+          "y": 96.99,
+          "w": 205.74,
+          "h": 236.14,
+          "crowd": false
+        },
+        {
+          "label": "teddy bear",
+          "x": 47.63,
+          "y": 98.31,
+          "w": 243.24,
+          "h": 215.87,
+          "crowd": false
+        },
+        {
+          "label": "teddy bear",
+          "x": 423.13,
+          "y": 155.58,
+          "w": 141.91,
+          "h": 185.53,
+          "crowd": false
+        },
+        {
+          "label": "bed",
+          "x": 0,
+          "y": 0,
+          "w": 638.43,
+          "h": 441.63,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 116479,
+      "file": "000000116479.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000116479.jpg",
+      "sha256": "420baef9b67e572036be48387c31d7223e618a74b79de5ecc2ac154ad1aa3b0a",
+      "bytes": 234986,
+      "width": 411,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/ecoislandlife/8142492504/",
+      "author": "Jeanne Michelle Smith",
+      "title": "Master Bedroom Entrance",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "chair",
+          "x": 42.7,
+          "y": 341.42,
+          "w": 84.81,
+          "h": 117.17,
+          "crowd": false
+        },
+        {
+          "label": "couch",
+          "x": 41.89,
+          "y": 341.18,
+          "w": 78.83,
+          "h": 113.61,
+          "crowd": false
+        },
+        {
+          "label": "bed",
+          "x": 58.02,
+          "y": 80.25,
+          "w": 270.04,
+          "h": 552.03,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 121506,
+      "file": "000000121506.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000121506.jpg",
+      "sha256": "c343589eeba3701c2e6bc2b7f7f6c65eaaf9b2d998fd0402b90d82bdc69a0325",
+      "bytes": 144700,
+      "width": 612,
+      "height": 612,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/bpende/7721233008/",
+      "author": "Brad P.",
+      "title": "When @ikealiving says, \"Don't leave the umbrella open in the wind\", they mean it :) #followingdirections #fail",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "umbrella",
+          "x": 93.52,
+          "y": 60.09,
+          "w": 485.47,
+          "h": 196.67,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 26.43,
+          "y": 357.51,
+          "w": 109.26,
+          "h": 37.63,
+          "crowd": false
+        },
+        {
+          "label": "bench",
+          "x": 19.17,
+          "y": 424.56,
+          "w": 399.78,
+          "h": 176.62,
+          "crowd": false
+        },
+        {
+          "label": "bench",
+          "x": 67.97,
+          "y": 384.09,
+          "w": 108.93,
+          "h": 69.86,
+          "crowd": false
+        },
+        {
+          "label": "bench",
+          "x": 19.25,
+          "y": 448.34,
+          "w": 119.65,
+          "h": 121.03,
+          "crowd": false
+        },
+        {
+          "label": "chair",
+          "x": 397.16,
+          "y": 475.96,
+          "w": 149.05,
+          "h": 113.74,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 407.68,
+          "y": 259.56,
+          "w": 120.34,
+          "h": 42.62,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 24.68,
+          "y": 429.23,
+          "w": 387.54,
+          "h": 162.75,
+          "crowd": false
+        },
+        {
+          "label": "chair",
+          "x": 19.03,
+          "y": 452.05,
+          "w": 182.33,
+          "h": 125.25,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 124277,
+      "file": "000000124277.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000124277.jpg",
+      "sha256": "38b0db0e5567a75db609ceda8b76dd0ff1de74ca35f0f93ef26bce525de9c315",
+      "bytes": 327740,
+      "width": 640,
+      "height": 481,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/rym/9431897786/",
+      "author": "Schezar",
+      "title": "Subway Trains from the Roof",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "car",
+          "x": 431.74,
+          "y": 182.86,
+          "w": 16.62,
+          "h": 13.52,
+          "crowd": false
+        },
+        {
+          "label": "train",
+          "x": 299.41,
+          "y": 134.1,
+          "w": 311.3,
+          "h": 258.34,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 506.38,
+          "y": 300.61,
+          "w": 22.81,
+          "h": 12.51,
+          "crowd": false
+        },
+        {
+          "label": "train",
+          "x": 266.06,
+          "y": 14.89,
+          "w": 34.66,
+          "h": 49.4,
+          "crowd": false
+        },
+        {
+          "label": "truck",
+          "x": 431.56,
+          "y": 182.52,
+          "w": 16.93,
+          "h": 15.79,
+          "crowd": false
+        },
+        {
+          "label": "truck",
+          "x": 591.95,
+          "y": 299.88,
+          "w": 17.42,
+          "h": 19.19,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 592.19,
+          "y": 300.9,
+          "w": 17.04,
+          "h": 18.88,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 127494,
+      "file": "000000127494.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000127494.jpg",
+      "sha256": "65d47087b3c665d64aad0120658b00ac08dc9875597a5f8d801da4f70933f7fd",
+      "bytes": 112309,
+      "width": 500,
+      "height": 333,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/scaredykat/4066113855/",
+      "author": "Krista",
+      "title": "sriphraphai chinese broccoli with crispy pork",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "spoon",
+          "x": 9.87,
+          "y": 38.32,
+          "w": 222.52,
+          "h": 159.63,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 129054,
+      "file": "000000129054.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000129054.jpg",
+      "sha256": "b499404f1b12c09135740acf268306f73ecc23c4f0259c5b03ae5c06e45a2d3d",
+      "bytes": 127769,
+      "width": 500,
+      "height": 375,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/kmacelwee/411065926/",
+      "author": "Kent MacElwee",
+      "title": "zebra",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "zebra",
+          "x": 422.28,
+          "y": 199.97,
+          "w": 26.64,
+          "h": 53.23,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 361.14,
+          "y": 196.78,
+          "w": 50.34,
+          "h": 35.71,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 308.6,
+          "y": 191.18,
+          "w": 35.49,
+          "h": 46.14,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 384.13,
+          "y": 199.38,
+          "w": 44.75,
+          "h": 54.29,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 254,
+          "y": 193.72,
+          "w": 42.91,
+          "h": 45.48,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 196.98,
+          "y": 193.3,
+          "w": 29.37,
+          "h": 49.97,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 176.02,
+          "y": 197.7,
+          "w": 20.67,
+          "h": 27.67,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 141.97,
+          "y": 191.77,
+          "w": 20.19,
+          "h": 52.14,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 335.8,
+          "y": 199.77,
+          "w": 51.68,
+          "h": 33.41,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 294.29,
+          "y": 197.5,
+          "w": 26.44,
+          "h": 37.7,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 74.67,
+          "y": 201.48,
+          "w": 49.55,
+          "h": 34.96,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 191.25,
+          "y": 206.98,
+          "w": 10.14,
+          "h": 34.54,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 130.5,
+          "y": 203.06,
+          "w": 14.54,
+          "h": 24.62,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 63,
+          "y": 205,
+          "w": 12,
+          "h": 23,
+          "crowd": true
+        }
+      ]
+    },
+    {
+      "id": 129113,
+      "file": "000000129113.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000129113.jpg",
+      "sha256": "7afcf3b9fe07b838a808faf6cf1ba83e1527ad4e63fa79173f8a339bc3114d0d",
+      "bytes": 294374,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/grannieskitchen/4892593807/",
+      "author": "Grannies Kitchen",
+      "title": "Nickel Silver Flat Bowl Spoon by WM Rogers",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "dining table",
+          "x": 0,
+          "y": 2.7,
+          "w": 640,
+          "h": 472.44,
+          "crowd": false
+        },
+        {
+          "label": "spoon",
+          "x": 22.65,
+          "y": 151.01,
+          "w": 588.95,
+          "h": 158.56,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 132116,
+      "file": "000000132116.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000132116.jpg",
+      "sha256": "5f68d0c7c06169c086a71966090c325af62cd9f13b8e60967b5559f0fc24268c",
+      "bytes": 164122,
+      "width": 612,
+      "height": 612,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/stone-soup/8742005207/",
+      "author": "jules",
+      "title": "Beef & broccoli stir fry. One of my all time favourite quick dinners on Sarah Wilson's blog this week! http://www.sarahwilson.com.au/2013/05/mince-meat-and-broccoli-stir-fry-and-4-other-clever-mincey-tricks/",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bowl",
+          "x": 333.57,
+          "y": 1.38,
+          "w": 275.67,
+          "h": 339.08,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 1,
+          "y": 268.18,
+          "w": 432.21,
+          "h": 343.82,
+          "crowd": false
+        },
+        {
+          "label": "broccoli",
+          "x": 213.09,
+          "y": 361.44,
+          "w": 193.68,
+          "h": 215.61,
+          "crowd": false
+        },
+        {
+          "label": "broccoli",
+          "x": 470.41,
+          "y": 181.45,
+          "w": 141.59,
+          "h": 131.22,
+          "crowd": false
+        },
+        {
+          "label": "broccoli",
+          "x": 195.84,
+          "y": 270.72,
+          "w": 167.04,
+          "h": 145.44,
+          "crowd": false
+        },
+        {
+          "label": "broccoli",
+          "x": 335.52,
+          "y": 66.24,
+          "w": 155.52,
+          "h": 149.76,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 1.38,
+          "y": 1.38,
+          "w": 610.62,
+          "h": 610.62,
+          "crowd": false
+        },
+        {
+          "label": "broccoli",
+          "x": 410.07,
+          "y": 207.68,
+          "w": 77.62,
+          "h": 68.88,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 132329,
+      "file": "000000132329.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000132329.jpg",
+      "sha256": "78a2bdb448e5729fe89f9a4c768bdf6164ccb992e52aa7469d3c4c82a8707e49",
+      "bytes": 70867,
+      "width": 426,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/maveric2003/4142321546/",
+      "author": "Eric Chan",
+      "title": "stocking up on water for my next hike",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bottle",
+          "x": 163.59,
+          "y": 31,
+          "w": 51.66,
+          "h": 182.24,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 217.19,
+          "y": 32.52,
+          "w": 50.75,
+          "h": 181.46,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 265.64,
+          "y": 32.3,
+          "w": 56,
+          "h": 182.29,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 107.35,
+          "y": 85.43,
+          "w": 53.68,
+          "h": 129.37,
+          "crowd": false
+        },
+        {
+          "label": "refrigerator",
+          "x": 2.88,
+          "y": 3.24,
+          "w": 423.12,
+          "h": 631.37,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 134882,
+      "file": "000000134882.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000134882.jpg",
+      "sha256": "d2a42fe606563d125e105246e6cd473f098338364b51f085da8a97d5943876c5",
+      "bytes": 261857,
+      "width": 640,
+      "height": 639,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/goblinbox/8643440732/",
+      "author": "goblinbox_(queen_of_ad_hoc_bento)",
+      "title": "Harley",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "cat",
+          "x": 272.61,
+          "y": 328.52,
+          "w": 151.71,
+          "h": 64.61,
+          "crowd": false
+        },
+        {
+          "label": "bed",
+          "x": 27.28,
+          "y": 347.86,
+          "w": 590.18,
+          "h": 272.83,
+          "crowd": false
+        },
+        {
+          "label": "laptop",
+          "x": 467.35,
+          "y": 382.97,
+          "w": 151.46,
+          "h": 43.27,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 167.07,
+          "y": 121.5,
+          "w": 27.58,
+          "h": 79.57,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 78.68,
+          "y": 148.89,
+          "w": 85.86,
+          "h": 22.59,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 58.08,
+          "y": 101.45,
+          "w": 34,
+          "h": 86.3,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 43.77,
+          "y": 274.11,
+          "w": 13.65,
+          "h": 72.21,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 163.87,
+          "y": 251.53,
+          "w": 31.2,
+          "h": 53.89,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 39.57,
+          "y": 260.51,
+          "w": 28.74,
+          "h": 87.17,
+          "crowd": false
+        },
+        {
+          "label": "teddy bear",
+          "x": 230.78,
+          "y": 260.06,
+          "w": 53.98,
+          "h": 50.12,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 222.12,
+          "y": 125.76,
+          "w": 16.73,
+          "h": 80.24,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 208.63,
+          "y": 130.4,
+          "w": 16.59,
+          "h": 74.82,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 179.03,
+          "y": 117.68,
+          "w": 36.29,
+          "h": 86.8,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 134.01,
+          "y": 120.6,
+          "w": 46.87,
+          "h": 56.26,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 85.84,
+          "y": 139.33,
+          "w": 60.39,
+          "h": 17.96,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 218.64,
+          "y": 242.36,
+          "w": 14.62,
+          "h": 43.87,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 76.2,
+          "y": 164.75,
+          "w": 101.61,
+          "h": 35.25,
+          "crowd": false
+        },
+        {
+          "label": "book",
+          "x": 21,
+          "y": 102,
+          "w": 224,
+          "h": 247,
+          "crowd": true
+        }
+      ]
+    },
+    {
+      "id": 140658,
+      "file": "000000140658.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000140658.jpg",
+      "sha256": "9e3d19463de795f192bc766c34422ea1c21c0cc864b0748c82600d21490d27b3",
+      "bytes": 156684,
+      "width": 480,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/alfreddiem/7818203192/",
+      "author": "Tauralbus",
+      "title": "120819_Wilfersdorf_A_ 136",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "clock",
+          "x": 144.69,
+          "y": 124.44,
+          "w": 39.33,
+          "h": 35.54,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 143998,
+      "file": "000000143998.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000143998.jpg",
+      "sha256": "609385695cda531905c5170d25d080d8218d202b4267707a406bf551f4c5e9e3",
+      "bytes": 202538,
+      "width": 612,
+      "height": 612,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/ink_mama/6619947073/",
+      "author": "Amber DeGrace",
+      "title": "Organic carrots and my lovely new Wusthof knife",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "dining table",
+          "x": 0,
+          "y": 0.01,
+          "w": 612,
+          "h": 603.01,
+          "crowd": false
+        },
+        {
+          "label": "knife",
+          "x": 364.45,
+          "y": 126.53,
+          "w": 247.55,
+          "h": 198.04,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 2.88,
+          "y": 44.64,
+          "w": 290.88,
+          "h": 478.08,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 22.25,
+          "y": 7.95,
+          "w": 354.49,
+          "h": 508.67,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 43.03,
+          "y": 27.89,
+          "w": 415.97,
+          "h": 422.34,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 63.92,
+          "y": 114.65,
+          "w": 341.95,
+          "h": 407.47,
+          "crowd": false
+        },
+        {
+          "label": "carrot",
+          "x": 46.38,
+          "y": 410.62,
+          "w": 132.85,
+          "h": 201.38,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 146489,
+      "file": "000000146489.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000146489.jpg",
+      "sha256": "6b458ff1cc4ae8c4006f460ea0b10b0e60f1e8c5775370717fd1aa5d082c4f80",
+      "bytes": 186809,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/brostad/5841328823/",
+      "author": "Bernt Rostad",
+      "title": "Dinner at BrewDog Edinburgh",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bottle",
+          "x": 180.3,
+          "y": 3.6,
+          "w": 110.82,
+          "h": 319.43,
+          "crowd": false
+        },
+        {
+          "label": "cell phone",
+          "x": 1.08,
+          "y": 279.64,
+          "w": 87.37,
+          "h": 136.99,
+          "crowd": false
+        },
+        {
+          "label": "wine glass",
+          "x": 1.07,
+          "y": 79.57,
+          "w": 201.88,
+          "h": 330.74,
+          "crowd": false
+        },
+        {
+          "label": "pizza",
+          "x": 317.12,
+          "y": 144.54,
+          "w": 310.66,
+          "h": 117.57,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 2.16,
+          "y": 2.28,
+          "w": 637.84,
+          "h": 477.72,
+          "crowd": false
+        },
+        {
+          "label": "wine glass",
+          "x": 69.86,
+          "y": 0,
+          "w": 126.2,
+          "h": 170.82,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 147745,
+      "file": "000000147745.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000147745.jpg",
+      "sha256": "2297abddf7dbbcbf4be69b6e950b7bb3ff5cdc31834820c427a1599ed656ef16",
+      "bytes": 183114,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/skiphireedinburgh/7160109697/",
+      "author": "Kevin",
+      "title": "Skip Hire Edinburgh Truck Front",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "truck",
+          "x": 32.43,
+          "y": 23.24,
+          "w": 347.03,
+          "h": 392.44,
+          "crowd": false
+        },
+        {
+          "label": "truck",
+          "x": 354.36,
+          "y": 129.78,
+          "w": 224.98,
+          "h": 237.31,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 153217,
+      "file": "000000153217.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000153217.jpg",
+      "sha256": "fdc6c58a35f90ea7cd0c2f14e329466e7892aa51bca56c25312650640cabf9f1",
+      "bytes": 66831,
+      "width": 375,
+      "height": 500,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/scoregasm/36546844/",
+      "author": "Michael Neel",
+      "title": "P1000059",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "cat",
+          "x": 17.2,
+          "y": 315.05,
+          "w": 143.02,
+          "h": 174.2,
+          "crowd": false
+        },
+        {
+          "label": "motorcycle",
+          "x": 40.45,
+          "y": 2.06,
+          "w": 334.55,
+          "h": 416.85,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 153632,
+      "file": "000000153632.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000153632.jpg",
+      "sha256": "26e7be7312bef629d313fdaedec6215c4e060b482d02d51b40ac557e5c8709fd",
+      "bytes": 102733,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/sergemelki/4039827010/",
+      "author": "Serge Melki",
+      "title": "Cooked birds",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "fork",
+          "x": 1.08,
+          "y": 123.71,
+          "w": 22.6,
+          "h": 77.49,
+          "crowd": false
+        },
+        {
+          "label": "knife",
+          "x": 13.47,
+          "y": 3.28,
+          "w": 314.68,
+          "h": 187.56,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 43.98,
+          "y": 0.2,
+          "w": 173.6,
+          "h": 49.6,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 0,
+          "y": 2.16,
+          "w": 638.56,
+          "h": 469.21,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 154000,
+      "file": "000000154000.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000154000.jpg",
+      "sha256": "4224e841b58048d5568088cd5e7a67b6882a4f8fd3dda928ac7ea97a864bfe76",
+      "bytes": 161617,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/skiphireedinburgh/7345318588/",
+      "author": "Kevin",
+      "title": "Skip Hire Edinburgh Skip Truck",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "truck",
+          "x": 33.85,
+          "y": 61.98,
+          "w": 511.59,
+          "h": 377.02,
+          "crowd": false
+        },
+        {
+          "label": "truck",
+          "x": 496.72,
+          "y": 177.75,
+          "w": 75.84,
+          "h": 195.55,
+          "crowd": false
+        },
+        {
+          "label": "truck",
+          "x": 601.73,
+          "y": 268.18,
+          "w": 38.02,
+          "h": 23.35,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 154213,
+      "file": "000000154213.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000154213.jpg",
+      "sha256": "fbb77a1faee6f5aebb6c88c226bdfd4a48764149532381120cd62b9e9771c083",
+      "bytes": 134309,
+      "width": 500,
+      "height": 375,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/lenore-m/291975294/",
+      "author": "Lenore Edman",
+      "title": "Trim edges",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "scissors",
+          "x": 384.27,
+          "y": 122.05,
+          "w": 115.73,
+          "h": 213.2,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 163155,
+      "file": "000000163155.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000163155.jpg",
+      "sha256": "0fd43885c0ecc7f058a4e8232e60abf0baf224496ed8df353c341ce7ce7b5564",
+      "bytes": 117193,
+      "width": 640,
+      "height": 427,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/pierre-selim/6277328008/",
+      "author": "Pierre-Selim",
+      "title": "The cat next door",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "cat",
+          "x": 5.51,
+          "y": 154.27,
+          "w": 537.19,
+          "h": 244.26,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 166287,
+      "file": "000000166287.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000166287.jpg",
+      "sha256": "8c1e01146df6e51a43b12bedd7913834d5ed8f91031924a964e915a74cc9f72d",
+      "bytes": 151734,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/rusty_clark/6682122873/",
+      "author": "Rusty Clark ~ 100K Photos",
+      "title": "Highway 50 Boat Ramp, Christmas FL",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bird",
+          "x": 31.71,
+          "y": 180.34,
+          "w": 33.75,
+          "h": 27.53,
+          "crowd": false
+        },
+        {
+          "label": "bird",
+          "x": 28.68,
+          "y": 156.47,
+          "w": 30.3,
+          "h": 12.75,
+          "crowd": false
+        },
+        {
+          "label": "bird",
+          "x": 10.26,
+          "y": 107.34,
+          "w": 22.03,
+          "h": 13.31,
+          "crowd": false
+        },
+        {
+          "label": "bird",
+          "x": 91.12,
+          "y": 133.63,
+          "w": 32.03,
+          "h": 7.74,
+          "crowd": false
+        },
+        {
+          "label": "bird",
+          "x": 152.3,
+          "y": 146.77,
+          "w": 30.88,
+          "h": 10.51,
+          "crowd": false
+        },
+        {
+          "label": "bird",
+          "x": 250.24,
+          "y": 149.47,
+          "w": 34.95,
+          "h": 19.53,
+          "crowd": false
+        },
+        {
+          "label": "bird",
+          "x": 277.42,
+          "y": 32.94,
+          "w": 35.95,
+          "h": 33.57,
+          "crowd": false
+        },
+        {
+          "label": "bird",
+          "x": 393.75,
+          "y": 178.51,
+          "w": 33.86,
+          "h": 12.23,
+          "crowd": false
+        },
+        {
+          "label": "bird",
+          "x": 209.89,
+          "y": 154.64,
+          "w": 35.14,
+          "h": 13.05,
+          "crowd": false
+        },
+        {
+          "label": "bird",
+          "x": 587.13,
+          "y": 168.42,
+          "w": 45.11,
+          "h": 17.74,
+          "crowd": false
+        },
+        {
+          "label": "bird",
+          "x": 476.92,
+          "y": 118.39,
+          "w": 44.85,
+          "h": 8.22,
+          "crowd": false
+        },
+        {
+          "label": "cow",
+          "x": 150.71,
+          "y": 221.94,
+          "w": 90.84,
+          "h": 87.74,
+          "crowd": false
+        },
+        {
+          "label": "cow",
+          "x": 532.26,
+          "y": 211.91,
+          "w": 50.36,
+          "h": 94.95,
+          "crowd": false
+        },
+        {
+          "label": "bird",
+          "x": 596.28,
+          "y": 205.49,
+          "w": 25.57,
+          "h": 25.56,
+          "crowd": false
+        },
+        {
+          "label": "bird",
+          "x": 358.28,
+          "y": 172.1,
+          "w": 32.22,
+          "h": 8.6,
+          "crowd": false
+        },
+        {
+          "label": "cow",
+          "x": 221.83,
+          "y": 184.4,
+          "w": 139.27,
+          "h": 126.4,
+          "crowd": false
+        },
+        {
+          "label": "bird",
+          "x": 1,
+          "y": 52,
+          "w": 508,
+          "h": 264,
+          "crowd": true
+        }
+      ]
+    },
+    {
+      "id": 166642,
+      "file": "000000166642.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000166642.jpg",
+      "sha256": "7505cf2fe933b1652e652b8c7fb5600a9fef255b7ef06f0ad7e41e3465287738",
+      "bytes": 331367,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/rollercoasterphilosophy/6977687239/",
+      "author": "Jeremy Thompson",
+      "title": "Busch Gardens Tampa",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "elephant",
+          "x": 50.58,
+          "y": 57.04,
+          "w": 486.46,
+          "h": 272.29,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 167353,
+      "file": "000000167353.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000167353.jpg",
+      "sha256": "8e6737773e7548e3fc299c7dc5e255b5997c0b05e08423f016b277719e8232a0",
+      "bytes": 153975,
+      "width": 480,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/ell-r-brown/7178592902/",
+      "author": "Elliott Brown",
+      "title": "Tintinhull House - inside - clock",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "clock",
+          "x": 0,
+          "y": 37.64,
+          "w": 315.55,
+          "h": 602.36,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 175364,
+      "file": "000000175364.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000175364.jpg",
+      "sha256": "badb2570222f6900a65bfc9d39615216c683ce3c5d03afb85c692a3cf08f323c",
+      "bytes": 121389,
+      "width": 614,
+      "height": 461,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/yhaconwy-yharowen/6267025876/",
+      "author": "Eric Audige-Soutter",
+      "title": "Kitchen YHA Rowen",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bottle",
+          "x": 240.6,
+          "y": 57.91,
+          "w": 15.1,
+          "h": 34.63,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 232.87,
+          "y": 116.4,
+          "w": 12.1,
+          "h": 26.49,
+          "crowd": false
+        },
+        {
+          "label": "wine glass",
+          "x": 577.81,
+          "y": 106.53,
+          "w": 22.47,
+          "h": 36.93,
+          "crowd": false
+        },
+        {
+          "label": "cup",
+          "x": 42.63,
+          "y": 126.61,
+          "w": 15.67,
+          "h": 23.89,
+          "crowd": false
+        },
+        {
+          "label": "oven",
+          "x": 158.95,
+          "y": 250.32,
+          "w": 102.78,
+          "h": 178.2,
+          "crowd": false
+        },
+        {
+          "label": "oven",
+          "x": 430.96,
+          "y": 232.05,
+          "w": 150.21,
+          "h": 122.25,
+          "crowd": false
+        },
+        {
+          "label": "toaster",
+          "x": 67.12,
+          "y": 217.83,
+          "w": 60.69,
+          "h": 41.36,
+          "crowd": false
+        },
+        {
+          "label": "toaster",
+          "x": 404.66,
+          "y": 199.53,
+          "w": 49.22,
+          "h": 31.85,
+          "crowd": false
+        },
+        {
+          "label": "sink",
+          "x": 259.58,
+          "y": 227.52,
+          "w": 78.56,
+          "h": 18.1,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 230.19,
+          "y": 52.33,
+          "w": 12.74,
+          "h": 42.05,
+          "crowd": false
+        },
+        {
+          "label": "cup",
+          "x": 447.02,
+          "y": 124.18,
+          "w": 19.09,
+          "h": 17,
+          "crowd": false
+        },
+        {
+          "label": "spoon",
+          "x": 342.55,
+          "y": 197.33,
+          "w": 13.24,
+          "h": 23.04,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 555.75,
+          "y": 319.91,
+          "w": 44.9,
+          "h": 32.6,
+          "crowd": false
+        },
+        {
+          "label": "cup",
+          "x": 424.74,
+          "y": 80.75,
+          "w": 8.23,
+          "h": 12.87,
+          "crowd": false
+        },
+        {
+          "label": "cup",
+          "x": 432.57,
+          "y": 79.33,
+          "w": 10.68,
+          "h": 13.58,
+          "crowd": false
+        },
+        {
+          "label": "cup",
+          "x": 446.91,
+          "y": 79.88,
+          "w": 11.75,
+          "h": 12.15,
+          "crowd": false
+        },
+        {
+          "label": "cup",
+          "x": 462.12,
+          "y": 76.41,
+          "w": 5.72,
+          "h": 12.15,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 234.69,
+          "y": 305.34,
+          "w": 378.38,
+          "h": 149.67,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 176847,
+      "file": "000000176847.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000176847.jpg",
+      "sha256": "513f5d2862f8ca1bfcf268a523e139d2bb1fb9ae6a4817671534f0666c464358",
+      "bytes": 353910,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/rob-young/9757323794/",
+      "author": "Rob Young",
+      "title": "Bird Eating Berries @ Eden Project",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bird",
+          "x": 246.84,
+          "y": 216.62,
+          "w": 271.05,
+          "h": 143.19,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 181859,
+      "file": "000000181859.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000181859.jpg",
+      "sha256": "913f529537acad5fb8344559344c26fce9aaeebec5ff446aa9871b828aa37a75",
+      "bytes": 75161,
+      "width": 426,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/moresheth/3430882393/",
+      "author": "Moresheth",
+      "title": "ur sink",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "cat",
+          "x": 96.34,
+          "y": 221.59,
+          "w": 232.61,
+          "h": 268.39,
+          "crowd": false
+        },
+        {
+          "label": "sink",
+          "x": 64.72,
+          "y": 267.27,
+          "w": 293.39,
+          "h": 277.57,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 182417,
+      "file": "000000182417.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000182417.jpg",
+      "sha256": "688c4a3bf75a7dd19a9401d7f105f9675d50b2b1bc01a1355320878500e4d1fd",
+      "bytes": 132008,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/dalegillard/2100467664/",
+      "author": "Dale Gillard",
+      "title": "Mango, lime & mint cheesecake",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "spoon",
+          "x": 339.78,
+          "y": 202.46,
+          "w": 190.92,
+          "h": 194.15,
+          "crowd": false
+        },
+        {
+          "label": "cake",
+          "x": 188.76,
+          "y": 208.18,
+          "w": 213.58,
+          "h": 136.99,
+          "crowd": false
+        },
+        {
+          "label": "cake",
+          "x": 212.49,
+          "y": 163.96,
+          "w": 156.41,
+          "h": 93.84,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 539.31,
+          "y": 403.56,
+          "w": 100.34,
+          "h": 76.44,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 1.08,
+          "y": 94.92,
+          "w": 638.92,
+          "h": 378.61,
+          "crowd": false
+        },
+        {
+          "label": "cup",
+          "x": 517.4,
+          "y": 0.87,
+          "w": 122.18,
+          "h": 179.53,
+          "crowd": false
+        },
+        {
+          "label": "spoon",
+          "x": 0,
+          "y": 250.86,
+          "w": 30.79,
+          "h": 42.6,
+          "crowd": false
+        },
+        {
+          "label": "bowl",
+          "x": 0,
+          "y": 221.66,
+          "w": 48.57,
+          "h": 83.97,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 186282,
+      "file": "000000186282.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000186282.jpg",
+      "sha256": "73c0456e323cfed4d729360302c86b5a4cefca1257e2ae9e30a04deda0b35e14",
+      "bytes": 132892,
+      "width": 640,
+      "height": 427,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/declanjewell/5812924771/",
+      "author": "DeclanTM",
+      "title": "New iMac",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "tv",
+          "x": 271.9,
+          "y": 0.96,
+          "w": 243.18,
+          "h": 309.24,
+          "crowd": false
+        },
+        {
+          "label": "mouse",
+          "x": 359.43,
+          "y": 358.14,
+          "w": 123.23,
+          "h": 45.9,
+          "crowd": false
+        },
+        {
+          "label": "keyboard",
+          "x": 168.9,
+          "y": 273.86,
+          "w": 162.26,
+          "h": 61.03,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 186632,
+      "file": "000000186632.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000186632.jpg",
+      "sha256": "a9e150a34b0f76252c2049857ed88f94368ae45ebbff65e3bfccb3a2b49ae82c",
+      "bytes": 162486,
+      "width": 480,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/scaredykat/7816339198/",
+      "author": "Krista",
+      "title": "grosvenor house bathroom",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "tv",
+          "x": 2.88,
+          "y": 213.21,
+          "w": 166.83,
+          "h": 93.49,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 412.89,
+          "y": 388.41,
+          "w": 27.33,
+          "h": 51.26,
+          "crowd": false
+        },
+        {
+          "label": "sink",
+          "x": 459.81,
+          "y": 405.96,
+          "w": 20.19,
+          "h": 39.34,
+          "crowd": false
+        },
+        {
+          "label": "vase",
+          "x": 253.69,
+          "y": 371.48,
+          "w": 88.26,
+          "h": 70.74,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 166.2,
+          "y": 361.4,
+          "w": 17.52,
+          "h": 37.07,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 186.57,
+          "y": 360.98,
+          "w": 17.04,
+          "h": 40.31,
+          "crowd": false
+        },
+        {
+          "label": "bottle",
+          "x": 167.88,
+          "y": 398.09,
+          "w": 24.58,
+          "h": 55,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 189078,
+      "file": "000000189078.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000189078.jpg",
+      "sha256": "be35d8cf9253deefe62871e6abb91f26f345787ed4dfb54de6b3aed7deade662",
+      "bytes": 77344,
+      "width": 500,
+      "height": 334,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/scaredykat/4430551771/",
+      "author": "Krista",
+      "title": "putahracsa fruit plate",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "banana",
+          "x": 20.64,
+          "y": 66.41,
+          "w": 152.93,
+          "h": 86.31,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 59.64,
+          "y": 44.99,
+          "w": 121.28,
+          "h": 44.49,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 21.27,
+          "y": 74.83,
+          "w": 177.24,
+          "h": 130.77,
+          "crowd": false
+        },
+        {
+          "label": "apple",
+          "x": 335.18,
+          "y": 7.38,
+          "w": 142.46,
+          "h": 191.8,
+          "crowd": false
+        },
+        {
+          "label": "orange",
+          "x": 252.29,
+          "y": 119.88,
+          "w": 102.82,
+          "h": 100.43,
+          "crowd": false
+        },
+        {
+          "label": "orange",
+          "x": 183.55,
+          "y": 47.08,
+          "w": 84.31,
+          "h": 87.64,
+          "crowd": false
+        },
+        {
+          "label": "orange",
+          "x": 261.39,
+          "y": 60.52,
+          "w": 89.47,
+          "h": 76.8,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 189310,
+      "file": "000000189310.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000189310.jpg",
+      "sha256": "1131e3cdfaea66939822601fff589543ecef2142b7b2ad45104916ff7125d575",
+      "bytes": 155608,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/14778685@N00/7375894572/",
+      "author": "an iconoclast",
+      "title": "Living Room into Foyer",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "chair",
+          "x": 189.28,
+          "y": 348.64,
+          "w": 113.51,
+          "h": 119.27,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 189698,
+      "file": "000000189698.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000189698.jpg",
+      "sha256": "ce9c60ba26d620a0ee11723bc7e39dc4d09b17d9ac4906048704c8f3d8b2919f",
+      "bytes": 164700,
+      "width": 640,
+      "height": 428,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/31246066@N04/5334889612/",
+      "author": "Ian Sane",
+      "title": "Bodacious Drive",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "truck",
+          "x": 101.91,
+          "y": 293.12,
+          "w": 166.51,
+          "h": 125.36,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 191761,
+      "file": "000000191761.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000191761.jpg",
+      "sha256": "26c0697f27e653a634840879f24189a8326ffaf72da758b2a9b8cf5271c2fd34",
+      "bytes": 150958,
+      "width": 500,
+      "height": 375,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/plindberg/63857259/",
+      "author": "Peter Lindberg",
+      "title": "Giant Butterflies Having Lunch",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "bowl",
+          "x": 42.98,
+          "y": 27.81,
+          "w": 457.02,
+          "h": 302.53,
+          "crowd": false
+        },
+        {
+          "label": "banana",
+          "x": 297.47,
+          "y": 107.87,
+          "w": 202.53,
+          "h": 94.38,
+          "crowd": false
+        },
+        {
+          "label": "orange",
+          "x": 278.17,
+          "y": 194.54,
+          "w": 132.92,
+          "h": 80.11,
+          "crowd": false
+        },
+        {
+          "label": "orange",
+          "x": 378.74,
+          "y": 199.01,
+          "w": 117.31,
+          "h": 84.63,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 192191,
+      "file": "000000192191.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000192191.jpg",
+      "sha256": "f83a0d30504559d85c366bbedccac4b432c73f7bf159a61f075e5e4b938e9a72",
+      "bytes": 197078,
+      "width": 480,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/zepfanman/8154240196/",
+      "author": "Zepfanman.com",
+      "title": "The Official Pizza of Halloween",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "pizza",
+          "x": 127.14,
+          "y": 396.43,
+          "w": 171.69,
+          "h": 142.92,
+          "crowd": false
+        },
+        {
+          "label": "oven",
+          "x": 1.43,
+          "y": 44.48,
+          "w": 423.32,
+          "h": 585.48,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 194746,
+      "file": "000000194746.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000194746.jpg",
+      "sha256": "08e39064a965e47d55df33298f53892e1f7dd4f1c1a4715dd73c0d471a8f70b5",
+      "bytes": 120730,
+      "width": 500,
+      "height": 375,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/inmysparetime/174081185/",
+      "author": "Nicole",
+      "title": "I'm cooking impaired",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "pizza",
+          "x": 194.2,
+          "y": 113.35,
+          "w": 157.53,
+          "h": 52.95,
+          "crowd": false
+        },
+        {
+          "label": "oven",
+          "x": 0,
+          "y": 0,
+          "w": 499.99,
+          "h": 375,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 196759,
+      "file": "000000196759.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000196759.jpg",
+      "sha256": "91e7ce017c2bb00c5fb22919f12749823d371b1c4664cdaccc0a2854bc992710",
+      "bytes": 158633,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/rusty_clark/9356649003/",
+      "author": "Rusty Clark ~ 100K Photos",
+      "title": "Lays Potato Chip Truck",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "car",
+          "x": 0,
+          "y": 240.24,
+          "w": 41.94,
+          "h": 29.43,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 575.83,
+          "y": 228.51,
+          "w": 50.4,
+          "h": 27.27,
+          "crowd": false
+        },
+        {
+          "label": "truck",
+          "x": 44.03,
+          "y": 167.62,
+          "w": 574.49,
+          "h": 255.57,
+          "crowd": false
+        },
+        {
+          "label": "car",
+          "x": 530.58,
+          "y": 230.82,
+          "w": 46.45,
+          "h": 19.62,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 198641,
+      "file": "000000198641.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000198641.jpg",
+      "sha256": "b8bdd114e61026dc29f487c9ff4ef4286fb3e961b1661651c472c680eb04c372",
+      "bytes": 139667,
+      "width": 640,
+      "height": 479,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/czarcats/4346863707/",
+      "author": "Ben Loomis",
+      "title": "Computer Access Denial Cat",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "tv",
+          "x": 94.81,
+          "y": 112.59,
+          "w": 290.37,
+          "h": 192.59,
+          "crowd": false
+        },
+        {
+          "label": "tv",
+          "x": 0.99,
+          "y": 111.77,
+          "w": 109.85,
+          "h": 241.48,
+          "crowd": false
+        },
+        {
+          "label": "cat",
+          "x": 221.13,
+          "y": 184.16,
+          "w": 274.16,
+          "h": 238.78,
+          "crowd": false
+        },
+        {
+          "label": "keyboard",
+          "x": 0,
+          "y": 363.5,
+          "w": 265.87,
+          "h": 108.71,
+          "crowd": false
+        },
+        {
+          "label": "clock",
+          "x": 571.61,
+          "y": 275.9,
+          "w": 17.33,
+          "h": 20.19,
+          "crowd": false
+        },
+        {
+          "label": "laptop",
+          "x": 413.08,
+          "y": 178.07,
+          "w": 161.68,
+          "h": 121.56,
+          "crowd": false
+        },
+        {
+          "label": "laptop",
+          "x": 427.86,
+          "y": 298.75,
+          "w": 168.4,
+          "h": 62.37,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 201025,
+      "file": "000000201025.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000201025.jpg",
+      "sha256": "3623bedc5d32b203901417f5c061310e04c22ef66fad3a810df13f665744d125",
+      "bytes": 135929,
+      "width": 400,
+      "height": 604,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/neate_photos/4856632552/",
+      "author": "Greg Neate",
+      "title": "Elephants on Mole Park safari",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "elephant",
+          "x": 1.36,
+          "y": 0.94,
+          "w": 149.3,
+          "h": 488.63,
+          "crowd": false
+        },
+        {
+          "label": "elephant",
+          "x": 78.72,
+          "y": 33.37,
+          "w": 296.18,
+          "h": 444.4,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 206218,
+      "file": "000000206218.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000206218.jpg",
+      "sha256": "74426999cd1b58aac06353d2afac10c9e6a8c3bbfeb05abfd3386801c47c035d",
+      "bytes": 164395,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/38462165@N05/7161410855/",
+      "author": "Mechatronics Guy",
+      "title": "Science Tripod, V01.",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "laptop",
+          "x": 360,
+          "y": 101.08,
+          "w": 269.19,
+          "h": 216.22,
+          "crowd": false
+        },
+        {
+          "label": "keyboard",
+          "x": 393.66,
+          "y": 232.18,
+          "w": 175.01,
+          "h": 43.37,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 208901,
+      "file": "000000208901.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000208901.jpg",
+      "sha256": "cac12003fbac894b1ae9aae6e7361f74b6a5bc796ec3fd5c8cdc843cff4be320",
+      "bytes": 69183,
+      "width": 640,
+      "height": 427,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/78428166@N00/5773232566/",
+      "author": "Tony Alter",
+      "title": "Airplane Flying Over",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "airplane",
+          "x": 232.67,
+          "y": 148.37,
+          "w": 193.32,
+          "h": 136.22,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 211069,
+      "file": "000000211069.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000211069.jpg",
+      "sha256": "8877792747394689425715a1fffae9580c5d05e4a03fbfbc0b9a97ee7e4ee131",
+      "bytes": 250875,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/rollercoasterphilosophy/8210566586/",
+      "author": "Jeremy Thompson",
+      "title": "Disney's Animal Kingdom",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "giraffe",
+          "x": 253.95,
+          "y": 197.63,
+          "w": 192.88,
+          "h": 204.76,
+          "crowd": false
+        },
+        {
+          "label": "giraffe",
+          "x": 0,
+          "y": 225.61,
+          "w": 128.86,
+          "h": 150.33,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 213224,
+      "file": "000000213224.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000213224.jpg",
+      "sha256": "479bfbfb0a42c3b23769dc10bfa7227e0b592f964a576e3461fb085e53ea2d33",
+      "bytes": 226975,
+      "width": 427,
+      "height": 640,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/abbybatchelder/5484827300/",
+      "author": "Abigail Batchelder",
+      "title": "IMG_8073",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "vase",
+          "x": 205.57,
+          "y": 324.86,
+          "w": 116.66,
+          "h": 186.11,
+          "crowd": false
+        },
+        {
+          "label": "vase",
+          "x": 60.54,
+          "y": 374.86,
+          "w": 60.26,
+          "h": 160.69,
+          "crowd": false
+        },
+        {
+          "label": "dining table",
+          "x": 0,
+          "y": 414.2,
+          "w": 427,
+          "h": 224.36,
+          "crowd": false
+        },
+        {
+          "label": "chair",
+          "x": 0,
+          "y": 371.59,
+          "w": 46.27,
+          "h": 66.75,
+          "crowd": false
+        },
+        {
+          "label": "chair",
+          "x": 386.33,
+          "y": 349.21,
+          "w": 40.67,
+          "h": 109.42,
+          "crowd": false
+        },
+        {
+          "label": "chair",
+          "x": 0,
+          "y": 432,
+          "w": 50,
+          "h": 30,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 214205,
+      "file": "000000214205.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000214205.jpg",
+      "sha256": "20470118cd1429a1b81bb88fdf9289e21f936e1ce5d717ea1b353dc12072978d",
+      "bytes": 107149,
+      "width": 640,
+      "height": 439,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/39551170@N02/6349058853/",
+      "author": "Simon_sees",
+      "title": "United on approach",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "airplane",
+          "x": 252.24,
+          "y": 311.18,
+          "w": 152.14,
+          "h": 48.69,
+          "crowd": false
+        }
+      ]
+    },
+    {
+      "id": 215245,
+      "file": "000000215245.jpg",
+      "url": "http://images.cocodataset.org/val2017/000000215245.jpg",
+      "sha256": "8f26d81db7cb960105b0dbfdd5e2846a4aace8d2fb352b0698f00afb3fe6ebb4",
+      "bytes": 238646,
+      "width": 640,
+      "height": 480,
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "page": "https://www.flickr.com/photos/davidberkowitz/5699107573/",
+      "author": "David Berkowitz",
+      "title": "Zebra - Serengeti National Park safari - Tanzania, Africa",
+      "checked": "2026-10-12",
+      "boxes": [
+        {
+          "label": "zebra",
+          "x": 158.62,
+          "y": 290.35,
+          "w": 173,
+          "h": 124.33,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 309.12,
+          "y": 267.33,
+          "w": 139.49,
+          "h": 72.14,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 233.37,
+          "y": 199.01,
+          "w": 56.51,
+          "h": 34.2,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 160.16,
+          "y": 199.9,
+          "w": 47.71,
+          "h": 30.35,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 193.25,
+          "y": 204.47,
+          "w": 42.39,
+          "h": 22.44,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 13.76,
+          "y": 268.79,
+          "w": 205.24,
+          "h": 152.75,
+          "crowd": false
+        },
+        {
+          "label": "zebra",
+          "x": 324.57,
+          "y": 309.19,
+          "w": 80.37,
+          "h": 102.67,
+          "crowd": false
+        }
+      ]
+    }
+  ]
+}
