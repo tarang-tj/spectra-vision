@@ -188,6 +188,15 @@
   .lab-picks label {
     min-height: 44px;
   }
+  /* Six columns in about 320 px (the scorecard, a benchmark): the first
+     column, which holds a model's name, breaks inside a word before the
+     table runs past its block. */
+  .lab-table th:first-child {
+    overflow-wrap: anywhere;
+  }
+  .lab-table thead th {
+    letter-spacing: 0;
+  }
 }
 /* This device: a name over each value, so a long renderer name wraps. */
 .lab-device {
