@@ -54,11 +54,21 @@ for (const picture of pictures) {
     console.log(`Verified ${picture.file}`);
     continue;
   }
-  const response = await fetch(picture.url, {
-    signal: AbortSignal.timeout(120000),
-  });
-  if (!response.ok) throw new Error(`${picture.file}: HTTP ${response.status}`);
-  const bytes = Buffer.from(await response.arrayBuffer());
+  // A hundred requests to one server: a dropped one is tried twice more. A
+  // wrong hash is never retried.
+  let bytes;
+  for (let attempt = 1; !bytes; attempt += 1) {
+    try {
+      const response = await fetch(picture.url, {
+        signal: AbortSignal.timeout(120000),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      bytes = Buffer.from(await response.arrayBuffer());
+    } catch (error) {
+      if (attempt === 3) throw new Error(`${picture.file}: ${error.message}`);
+      await new Promise((done) => setTimeout(done, 2000 * attempt));
+    }
+  }
   if (hash(bytes) !== picture.sha256)
     throw new Error(`${picture.file}: SHA-256 mismatch; picture not saved.`);
   await writeFile(path, bytes);
