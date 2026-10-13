@@ -33,7 +33,7 @@
     grid-column: 1/3;
   }
   .panel-tabs button {
-    min-height: 40px;
+    min-height: 44px;
   }
 }
 /* A panel whose body is still on its way (panels/shared/lazy-panel.tsx). */

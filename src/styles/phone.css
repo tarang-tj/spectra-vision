@@ -1,0 +1,147 @@
+/* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
+/* The page on a phone-sized screen: one column (760 px and under) and a short
+   screen held sideways. Laid out and checked in desktop Chrome at phone
+   sizes with touch events; a real phone's bars, keyboard and notch are not
+   there to be seen. Component stylesheets load after this one, so every rule
+   is written under `:root .app` to out-rank them. */
+
+/* Picture first: the heading is kept for screen readers and taken off the
+   screen, here and on a short screen held sideways. */
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) {
+  :root .app .intro > div:first-child {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  :root .app .intro {
+    margin: 12px 0;
+  }
+  :root .app .actions {
+    margin-top: 0;
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  /* The camera chooser comes after the stage here (App.tsx). */
+  :root .app .camera-picker {
+    margin: 12px 0 0;
+  }
+  /* The pause button and the stage tools sit in a bar under the picture,
+     each a thumb wide, and none of them covers the picture. The stage's own
+     box is still exactly the picture. The bar is at least eight buttons of
+     44 px wide (the most there can be), centred under the stage. */
+  :root .app:not(.immersive) .camera-stage:not(:fullscreen) {
+    overflow: visible;
+    /* With nothing clipped, a box with an aspect ratio grows to its content:
+       a canvas still at its last size would hold the stage at the old shape
+       when the camera turns. */
+    min-height: 0;
+    margin-bottom: 56px;
+  }
+  :root .app:not(.immersive) .camera-stage:not(:fullscreen) canvas {
+    border-radius: 5px;
+  }
+  :root .app:not(.immersive) .camera-stage:not(:fullscreen) .stage-bottom {
+    top: 100%;
+    bottom: auto;
+    left: 50%;
+    right: auto;
+    width: max(100% + 2px, min(352px, 100vw - 16px));
+    transform: translateX(-50%);
+    height: 56px;
+    align-items: flex-start;
+    gap: 0;
+    background: #090e11;
+  }
+  /* The two groups dissolve, so every button is one equal share of the bar. */
+  :root .app:not(.immersive) .camera-stage:not(:fullscreen) .playback,
+  :root .app:not(.immersive) .camera-stage:not(:fullscreen) .stage-tools {
+    display: contents;
+  }
+  :root
+    .app:not(.immersive)
+    .camera-stage:not(:fullscreen)
+    .stage-bottom
+    button {
+    flex: 1 1 0;
+    min-width: 44px;
+    width: auto;
+    height: 48px;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+  :root
+    .app:not(.immersive)
+    .camera-stage:not(:fullscreen)
+    .stage-bottom
+    button[aria-pressed="true"] {
+    background: #a4ffd925;
+  }
+  /* The source's name stays for screen readers; the badge on the picture
+     already shows what the source is. */
+  :root .app:not(.immersive) .camera-stage:not(:fullscreen) .playback > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Upright, with room for it: the picture stays at the top of the screen
+   while the panel scrolls under it, so a tap on the picture and the
+   instruction for the next tap are on screen together. It is never taller
+   than 55% of the small viewport, at its own shape. */
+@media (max-width: 760px) and (min-height: 600px) and (orientation: portrait) {
+  :root .app:not(.immersive) .camera-stage:not(:fullscreen) {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    width: min(100%, calc(55svh * var(--stage-portrait, 1.3333)));
+    margin-inline: auto;
+    /* What scrolls under is hidden beside the picture and its bar as well:
+       a page-coloured band the full width of the screen, cut to their
+       height. A shadow adds nothing to the page's width. */
+    box-shadow: 0 0 0 100vmax #090e11;
+    clip-path: inset(0 -100vmax -57px -100vmax);
+  }
+  /* A field being typed in must not end up under the pinned picture: the
+     stage goes back to its place in the page (still `relative`, which its
+     badges and its bar are placed against). */
+  :root
+    .app:has(
+      .inspector
+        :is(
+          input:not([type="checkbox"], [type="radio"], [type="range"]),
+          select,
+          textarea
+        ):focus
+    )
+    .camera-stage {
+    position: relative;
+  }
+  /* Whatever is scrolled to lands under the picture and its bar. */
+  :root .app .inspector * {
+    scroll-margin-top: calc(55svh + 64px);
+  }
+}
+
+/* A short screen held sideways: the whole picture, with its tools, fits the
+   screen's height. Not pinned: there is no room to scroll under it. */
+@media (max-height: 500px) and (orientation: landscape) {
+  :root .app:not(.immersive) .camera-stage:not(:fullscreen) {
+    width: min(100%, calc((100svh - 64px) * 1.6));
+    margin-inline: auto;
+  }
+}
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 760px) {
+  :root .app:not(.immersive) .camera-stage:not(:fullscreen) {
+    width: min(100%, calc((100svh - 64px) * var(--stage-portrait, 1.3333)));
+  }
+}

@@ -186,7 +186,7 @@
   }
   .lab-switch button,
   .lab-picks label {
-    min-height: 40px;
+    min-height: 44px;
   }
 }
 /* This device: a name over each value, so a long renderer name wraps. */
@@ -205,4 +205,26 @@
   margin-top: 4px;
   color: var(--muted);
   line-height: 1.5;
+}
+/* No text under 12 px on a one-column screen or where the main pointer is a
+   finger. Wide screens with a mouse keep their sizes. */
+@media (max-width: 760px), (pointer: coarse) {
+  .lab-note,
+  .lab-stats dt,
+  .lab-card dt,
+  .lab-picks legend,
+  .lab-table thead th,
+  .lab-table small,
+  .lab-card code {
+    font-size: 12px;
+  }
+}
+/* A model's address is pressed with a finger: a link on its own, not a word
+   in a sentence. */
+@media (pointer: coarse) {
+  .lab-card dd > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
 }

@@ -74,10 +74,11 @@
   outline-offset: 5px;
   border-radius: 8px;
 }
-/* Between the phone layout and the full desktop one the heading and the
-   actions share a tight row: the pill keeps its icon and its name, not its
-   text. */
-@media (min-width: 761px) and (max-width: 1100px) {
+/* Under the full desktop layout the actions share a tight row, with the
+   heading on a tablet and with nothing to spare on a phone (at 360 px the
+   pill's text cut "Start camera" off): the pill keeps its icon and its name,
+   not its text. */
+@media (max-width: 1100px) {
   .tips-pill span {
     position: absolute;
     width: 1px;
@@ -100,5 +101,12 @@
   .coach strong + p {
     font-size: 12px;
     margin-bottom: 8px;
+  }
+}
+/* No text under 12 px on a one-column screen or where the main pointer is a
+   finger. Wide screens with a mouse keep their sizes. */
+@media (max-width: 760px), (pointer: coarse) {
+  .coach-count {
+    font-size: 12px;
   }
 }
