@@ -25,7 +25,7 @@ export function faintOf(task: Pick<TaskResult, "extra"> | undefined) {
 }
 
 /** One result into the tracker: what reached the Confidence value as
- * detections, the band under it beside them. The only path the band takes. */
+ * detections, the band under it beside them. The stage and the Lab meter both go through here. */
 export const trackResult = (
   tracker: Pick<Tracker, "update">,
   result: Pick<VisionResult, "detections" | "time" | "tasks">,

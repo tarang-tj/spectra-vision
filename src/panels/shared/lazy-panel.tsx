@@ -13,7 +13,13 @@ type Load = () => Promise<{ default: ComponentType }>;
  * its own fault and goes on to the rail's error boundary. */
 class PanelLoadError extends Error {}
 
-type Props = { label: string; onRetry(): void; children: ReactNode };
+type Props = {
+  label: string;
+  /** A retry has already failed: only a reload can fetch the file now. */
+  retried: boolean;
+  onRetry(): void;
+  children: ReactNode;
+};
 
 /** Catches a failed fetch of the body, and nothing else. */
 class LoadBoundary extends Component<Props, { error: unknown }> {
@@ -25,24 +31,26 @@ class LoadBoundary extends Component<Props, { error: unknown }> {
 
   render() {
     const { error } = this.state,
-      { label, onRetry, children } = this.props;
+      { label, retried, onRetry, children } = this.props;
     if (!error) return children;
     // Thrown again from here, it reaches the boundary around the panel.
     if (!(error instanceof PanelLoadError)) throw error;
     return (
       <div className="panel-fault" role="alert" data-testid="panel-load-fault">
         <p>
-          The {label} panel could not be loaded. Check your connection and try
-          again, or reload the page.
+          {retried
+            ? `The ${label} panel still could not be loaded. Reload the page to fetch it again.`
+            : `The ${label} panel could not be loaded. Check your connection and try again, or reload the page.`}
         </p>
         <button
           className="button compact"
           onClick={() => {
+            if (retried) return location.reload();
             onRetry();
             this.setState({ error: null });
           }}
         >
-          Try again
+          {retried ? "Reload the page" : "Try again"}
         </button>
       </div>
     );
@@ -81,9 +89,12 @@ export function lazyPanel(label: string, load: Load): ComponentType {
   // Chrome keeps a failed fetch of a module for the life of the page: the
   // same import fails again at once, with no request (seen in Chrome 154). So
   // a retry asks for the address the failure named under a new query, which
-  // is another address to the browser and the same file to the server.
+  // is another address to the browser and the same file to the server. That
+  // cannot help when the file that failed is one the body imports (a chunk
+  // two panels share), so after one retry the button reloads the page.
   let failedAt: string | null = null,
-    tries = 0;
+    tries = 0,
+    retried = false;
   const fetchBody = (): ReturnType<Load> =>
     (failedAt
       ? import(
@@ -103,7 +114,9 @@ export function lazyPanel(label: string, load: Load): ComponentType {
     return (
       <LoadBoundary
         label={label}
+        retried={retried}
         onRetry={() => {
+          retried = true;
           refetchStyles();
           Body = lazy(fetchBody);
           setAttempt((count) => count + 1);
