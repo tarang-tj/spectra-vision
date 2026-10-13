@@ -1,5 +1,4 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import catalogue from "../../scripts/models.json";
 import type { Source } from "../vision/types";
 import DepthControls from "./lib/depth-controls";
 import {
@@ -9,11 +8,12 @@ import {
   drawMarker,
   extremes,
 } from "./lib/depth-map";
-import { measuredDepth, onDepthReadout } from "./lib/depth-measured";
+import { measuredDepth } from "./lib/depth-measured";
 import { depthScale } from "./lib/depth-metric";
 import { noteDrawn } from "./lib/depth-probe";
 import { depthExtra, depthRows, legendOf } from "./lib/depth-readout";
 import { drawCloud, releaseCloud } from "./lib/depth-session";
+import { depthTask } from "./lib/depth-task";
 import { getDepthView } from "./lib/depth-store";
 import { depthSync, isMoving, lagLine } from "./lib/depth-sync";
 import { drawChip } from "./lib/hud";
@@ -23,38 +23,13 @@ import type { ModeDef } from "./types";
 // result arrives, with no frame at hand, and needs it to tell a photo from a
 // video.
 let onStage: Source | null = null;
-const MODEL = "depth_anything_v2_small.onnx";
 
 const depth: ModeDef = {
   id: "depth",
   label: "Depth map",
   short: "Depth",
   order: 80,
-  task: {
-    kind: "depth",
-    model: MODEL,
-    // The side the picture is resized toward before the model sees it. The
-    // CPU size is the largest that stayed near one second a frame on one
-    // WebAssembly thread; the GPU size about half a second on WebGPU (both
-    // measured on an Apple silicon laptop in low power mode).
-    // `bytes` is the model's size from the manifest: the worker reads the
-    // download into one buffer of that size instead of holding it twice.
-    options: {
-      size: { CPU: 196, GPU: 392 },
-      bytes: catalogue.find((m) => m.file === MODEL)?.bytes,
-    },
-    // GPU here is WebGPU. AUTO asks for it only where the page has a hardware
-    // renderer; a browser without WebGPU then falls back to CPU and says so.
-    delegate: "AUTO",
-    // A map takes long enough that a moving picture moves on: each result
-    // carries the frame it was made from, and the map is drawn over that.
-    holdFrame: true,
-    // Nothing counts depth maps, so a still picture is inferred once. Its
-    // metres follow the Ruler, and their error bars are worked out a moment
-    // after the Ruler settles: either is shown without a new map.
-    still: "once",
-    restate: onDepthReadout,
-  },
+  task: depthTask,
   hint: "Depth from one camera. Yellow is near, purple is far. For metres, mark a reference and a patch of floor in the Ruler on a photo.",
   demo: {
     still: "demo/studio.png",
