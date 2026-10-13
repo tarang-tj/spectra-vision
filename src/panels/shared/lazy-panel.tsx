@@ -87,7 +87,7 @@ function refetchStyles() {
  * own text. Once loaded, the body renders at once on every later visit. */
 export function lazyPanel(label: string, load: Load): ComponentType {
   // Chrome keeps a failed fetch of a module for the life of the page: the
-  // same import fails again at once, with no request (seen in Chrome 154). So
+  // same import fails again at once, with no request (seen in Chrome 154 and 155). So
   // a retry asks for the address the failure named under a new query, which
   // is another address to the browser and the same file to the server. That
   // cannot help when the file that failed is one the body imports (a chunk
