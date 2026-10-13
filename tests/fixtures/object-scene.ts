@@ -121,13 +121,16 @@ export const outputFor = (depth: number) =>
   Math.max(0, (1 / depth - SHIFT) / SCALE);
 
 /** A depth map of the floor with the board standing on it, as a relative
- * model would give it, with optional noise as a share of each value. */
+ * model would give it, with optional noise as a share of each value.
+ * `objectError` is the share by which the model misjudges the board's depth
+ * while reading the floor right: an error no fit to the floor can see. */
 export function sceneMap(
   width: number,
   height: number,
   board: Standing = UPRIGHT,
   noiseShare = 0,
   noise: () => number = () => 0,
+  objectError = 0,
 ) {
   const values = new Float32Array(width * height);
   let min = Infinity,
@@ -136,7 +139,11 @@ export function sceneMap(
     for (let col = 0; col < width; col++) {
       const u = ((col + 0.5) / width) * IMAGE.w,
         v = ((row + 0.5) / height) * IMAGE.h,
-        depth = boardDepthTruth(board, u, v) ?? floorDepthTruth(u, v),
+        onBoard = boardDepthTruth(board, u, v),
+        depth =
+          onBoard === null
+            ? floorDepthTruth(u, v)
+            : onBoard * (1 + objectError),
         clean = depth === null ? 0 : outputFor(depth),
         value = clean * (1 + noiseShare * noise());
       values[row * width + col] = value;

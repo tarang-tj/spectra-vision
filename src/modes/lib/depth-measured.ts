@@ -81,6 +81,11 @@ export function retakesOf(scale: MetricScale): Retake[] | null {
   return entry.fits;
 }
 
+/** The retakes if they are already worked out, without counting as an ask:
+ * for a reader other than the stage's once-a-frame one. */
+export const settledRetakes = (scale: MetricScale): Retake[] | null =>
+  store.get(scale)?.fits ?? null;
+
 /** A depth whose bar is wider than this share of it is not shown. */
 export const MAX_RELATIVE_BAR = 0.5;
 /** Fewest retakes that must have given a fit for a bar to be stated. */
