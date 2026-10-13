@@ -253,4 +253,26 @@ describe("a benchmark times one model file per task on every delegate", () => {
     expect(runner.model()).toBe(LARGE);
     runner.dispose();
   });
+  it("lets the hold go when the run ends on an error", async () => {
+    probe = { webgl2: true, renderer: M3 };
+    const { runner, host } = stage(objects);
+    let asked = 0;
+    // The first read is the mode to come back to; the second is in the row.
+    host.mode = () => {
+      if (++asked === 2) throw new Error("the stage went away");
+      return objects;
+    };
+    const failed = expect(
+      runBenchmark(
+        plan(objects, ["CPU"]),
+        host,
+        new AbortController().signal,
+        () => {},
+      ),
+    ).rejects.toThrow("the stage went away");
+    await vi.advanceTimersByTimeAsync(200);
+    await failed;
+    expect(standardModelHeld()).toBe(false);
+    runner.dispose();
+  });
 });

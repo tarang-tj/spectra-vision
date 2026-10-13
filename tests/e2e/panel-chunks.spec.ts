@@ -7,8 +7,7 @@ import { test, expect, type Page } from "@playwright/test";
 // after one visit, and says so with a working retry when it cannot be fetched.
 const production = process.env.SPECTRA_TEST_PRODUCTION === "1";
 /** The most the first paint may have to parse: the script the page names plus
- * the chunks that script imports at once. v2.5.0 was one script of 671,230
- * bytes. */
+ * the chunks that script imports at once. v2.5.0 was one script of about 671 kB. */
 const ENTRY_LIMIT = 540_000;
 const RULER_STEP = "Tap three or more points along an edge";
 /** Each on-demand panel with words only its own body shows. */
@@ -221,6 +220,37 @@ test.describe("a panel that cannot be fetched", () => {
     await expect(page.getByTestId("ruler-step")).toBeVisible();
     await expect(body(page)).toContainText(PANELS[2][1]);
     await expect(page.getByRole("alert")).toHaveCount(0);
+  });
+
+  test("after a retry that fails too, the button reloads the page", async ({
+    page,
+  }) => {
+    await open(page);
+    let chunk = /\/src\/panels\/ruler\/panel\.tsx/;
+    if (production) {
+      const { onDemand } = await built(page);
+      for (const path of onDemand.filter((file) => file.endsWith(".js")))
+        if ((await text(page, path)).includes(RULER_STEP))
+          // The retry asks for the same file under a query.
+          chunk = new RegExp(path.replace(/[.\\/]/g, "\\$&") + "(\\?|$)");
+    }
+    await page.route(chunk, (route) => route.abort("connectionfailed"));
+    await tab(page, "Ruler").click();
+    const alert = page.getByTestId("panel-load-fault");
+    await alert.getByRole("button", { name: "Try again" }).click();
+    await expect(alert.locator("p")).toHaveText(
+      "The Ruler panel still could not be loaded. Reload the page to fetch it again.",
+    );
+    await expect(alert.getByRole("button", { name: "Try again" })).toHaveCount(
+      0,
+    );
+    // With the file reachable again, the reload brings a page that has it.
+    await page.unroute(chunk);
+    await alert.getByRole("button", { name: "Reload the page" }).click();
+    await expect(alert).toHaveCount(0);
+    await expect(page.getByTestId("latency")).toHaveText(/^\d+ ms$/);
+    await tab(page, "Ruler").click();
+    await expect(page.getByTestId("ruler-step")).toBeVisible();
   });
 
   test("fetches a stylesheet that failed again too, so the panel comes back styled", async ({

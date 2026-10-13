@@ -152,6 +152,9 @@ describe("the frame holder", () => {
     h.settle(held[0].image);
     h.capture(bitmap("d"), 3);
     expect(h.commit()!.image).toBe(held[1].image);
+    // Only b was free: the next capture needs a canvas of its own.
+    h.capture(bitmap("e"), 4);
+    expect(h.commit()).not.toBeNull();
     expect(drawnInto(held[0])).toHaveLength(1);
     expect(drawnInto(held[2])).toHaveLength(1);
   });
