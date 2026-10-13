@@ -47,8 +47,9 @@ const no = (why: Why): Wanted => ({ wanted: false, why });
 export function measureWanted(source: Source | null): Wanted {
   if (!measureOn()) return no("off");
   if (!source) return no("none");
-  // A map takes up to a second to make: on a camera or a video, paused or
-  // not, it would describe an earlier frame than the boxes.
+  // The Ruler's scale exists on a photo only (depth-metric.ts). A map also
+  // takes up to a second to make, so on a moving picture it would describe
+  // an earlier frame than the boxes.
   if (!("naturalWidth" in source.element)) return no("moving");
   const s = getState();
   if (s.generation !== source.generation || !s.source || s.corners.length < 4)

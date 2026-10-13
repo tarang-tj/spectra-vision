@@ -17,6 +17,13 @@ export const MAX_SPREAD = 0.25;
 /** How many times past the marked floor's far edge (or short of its near
  * edge) the fit is still read. */
 export const REACH = 1.5;
+/** The foot of a box: this share of its rows, at the bottom. */
+export const FOOT_ROWS = 1 / 8;
+/** How much nearer than its middle a box's foot may read, as a share of the
+ * distance's bar, before the middle is taken to show what is behind the
+ * object. On the synthetic scenes the foot of a solid thing never read nearer
+ * than its middle, and half a bar kept every hollow thing out. */
+export const FOOT_SHARE = 0.5;
 /** Added to every bar for the depth model's error away from the floor the
  * fit was made on. Twice the model's published mean relative error on indoor
  * pictures (AbsRel 0.053, NYU Depth v2, Depth Anything V2 ViT-S). It is an
@@ -54,6 +61,10 @@ export type BoxSample = {
   median: number;
   low: number;
   high: number;
+  /** Its median over the box's foot: the lowest FOOT_ROWS of its rows, the
+   * middle half of its columns. Where a standing thing meets what it stands
+   * on, so about as far away as the thing, whatever its middle shows. */
+  foot: number;
 };
 
 const at = (sorted: Float32Array, q: number) =>
@@ -81,24 +92,31 @@ export function sampleBox(map: DepthMap, box: Box): BoxSample {
       Math.min(most - 1, Math.floor(edge - 0.5)),
     c0 = from(left + (right - left) / 4),
     c1 = to(right - (right - left) / 4, width),
-    r0 = from(top + (bottom - top) / 4),
-    r1 = to(bottom - (bottom - top) / 4, height),
-    picked = new Float32Array(
-      Math.max(0, c1 - c0 + 1) * Math.max(0, r1 - r0 + 1),
-    );
-  let n = 0;
-  for (let row = r0; row <= r1; row++)
-    for (let col = c0; col <= c1; col++)
-      picked[n++] = values[row * width + col];
-  picked.sort();
+    // The cells of rows `r0` to `r1` in those columns, sorted.
+    pick = (r0: number, r1: number) => {
+      const picked = new Float32Array(
+        Math.max(0, c1 - c0 + 1) * Math.max(0, r1 - r0 + 1),
+      );
+      let n = 0;
+      for (let row = r0; row <= r1; row++)
+        for (let col = c0; col <= c1; col++)
+          picked[n++] = values[row * width + col];
+      return picked.sort();
+    },
+    picked = pick(
+      from(top + (bottom - top) / 4),
+      to(bottom - (bottom - top) / 4, height),
+    ),
+    foot = pick(from(bottom - (bottom - top) * FOOT_ROWS), to(bottom, height));
   return {
     cols: Math.floor(right - left + 1e-9),
     rows: Math.floor(bottom - top + 1e-9),
     inside,
-    cells: n,
+    cells: picked.length,
     median: at(picked, 0.5),
     low: at(picked, 0.16),
     high: at(picked, 0.84),
+    foot: at(foot, 0.5),
   };
 }
 

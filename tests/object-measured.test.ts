@@ -206,7 +206,7 @@ describe("a box measured against the Ruler's floor", () => {
     const reading = one(map, track(box));
     expect(reading.state).toBe("refused");
     expect(reading.state === "refused" && reading.reason).toMatch(
-      /more than 1\.5 times as far as the far edge of the marked floor/,
+      /more than 1\.5 times as deep as the far edge of the marked floor/,
     );
   });
 

@@ -6,6 +6,7 @@
 // reads the one depth map the on-demand task made (object-measure.ts).
 import { boxBars, type BarTerms, type Barred } from "../../measure/box-bars";
 import {
+  FOOT_SHARE,
   MAX_SPREAD,
   MIN_BOX_CELLS,
   REACH,
@@ -44,6 +45,10 @@ export type BoxReading = { id: number; label: string } & (
       cells: number;
       /** Their spread in depth, as a share of the median depth. */
       spread: number;
+      /** How much nearer than the middle the box's foot reads, as a share of
+       * the middle's depth; under 0 when the foot is the farther. Null when
+       * the fit cannot place the foot. */
+      footNearer: number | null;
       /** What the distance's bar is made of, in metres. */
       terms: BarTerms;
     }
@@ -109,6 +114,13 @@ function readBox(
   // A depth most retakes cannot place has no bar worth stating.
   if (bars.placed < 0.8 * retakes.length) return refuse(REASONS.retakes);
   if (tooWide(bars.distance)) return refuse(REASONS.bar("distance"));
+  // A standing thing's foot is no nearer than its middle. Where it reads
+  // nearer by more than a share of the bar, the middle shows what is behind.
+  const foot = depthAt(fit, sample.foot),
+    footNearer = foot === null ? null : (z - foot) / z,
+    bar = bars.distance.error / bars.distance.value;
+  if (footNearer !== null && footNearer > FOOT_SHARE * bar)
+    return refuse(REASONS.foot(footNearer, bar, FOOT_SHARE));
   const span = z < fit.near || z > fit.far ? floorSpan(scale) : null,
     left = t.box.x * w,
     top = t.box.y * h,
@@ -144,6 +156,8 @@ function readBox(
               beyond: {
                 near: formatMeasured(span.near),
                 far: formatMeasured(span.far),
+                end: z > fit.far ? "far" : "near",
+                times: z / (z > fit.far ? fit.far : fit.near),
               },
             }
           : {}),
@@ -153,6 +167,7 @@ function readBox(
     height,
     cells: sample.cells,
     spread,
+    footNearer,
     terms: Object.fromEntries(
       Object.entries(bars.distance.terms).map(([k, v]) => [k, v / 1000]),
     ) as BarTerms,

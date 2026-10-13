@@ -4,7 +4,7 @@
 // number rests on, and the session export. A size is always "box ... wide"
 // or "box ... tall": it is the detector's box at the object's distance, not
 // the object's outline.
-import { OFF_FLOOR_ALLOWANCE } from "../../measure/box-size";
+import { FOOT_SHARE, OFF_FLOOR_ALLOWANCE, REACH } from "../../measure/box-size";
 import { formatMeasured } from "../../measure/format";
 import type { Measured } from "../../measure/noise";
 import type { BoxReading, Measurement, Sized } from "./object-measured";
@@ -23,8 +23,10 @@ export const REASONS = {
   spread:
     "the middle of the box holds more than one depth: the object may be thin, hollow or partly hidden",
   far: (reach: number) =>
-    `it is more than ${reach} times as far as the far edge of the marked floor, where the fit is a guess`,
-  near: "it is much nearer than the near edge of the marked floor, where the fit is a guess",
+    `along the camera's axis it is more than ${reach} times as deep as the far edge of the marked floor, where the fit is a guess`,
+  near: "along the camera's axis it is much nearer than the near edge of the marked floor, where the fit is a guess",
+  foot: (nearer: number, bar: number, share: number) =>
+    `the foot of the box reads ${Math.round(nearer * 100)}% nearer than its middle, more than ${share} times the error bar (${Math.round(bar * 100)}%): the middle may show what is behind a hollow or thin object, or the box is loose`,
   retakes: "too few retakes of the Ruler's taps gave a fit",
   bar: (what: string) => `the error bar is wider than half the ${what}`,
   side: "the box touches the side of the picture, so the object may continue outside it",
@@ -36,7 +38,7 @@ export const REASONS = {
 export const WAITING = {
   none: "Not measuring yet: there is no picture on the stage. Open a photo.",
   moving:
-    "Not measuring: this is a camera or a video. A depth map takes up to a second to make, so it would describe an earlier frame than the boxes. Open a photo.",
+    "Not measuring: this is a camera or a video. The Ruler's scale needs a photo, and a depth map takes up to a second to make, so on a moving picture it would describe an earlier frame than the boxes. Open a photo.",
   reference:
     "Not measuring yet: the Ruler has no reference on this photo. Open the Ruler, tap the four corners of a sheet lying on the floor, then outline a patch of floor from near to far with the Area tool. The depth model is not downloaded until then.",
   focal:
@@ -98,10 +100,12 @@ export const distanceBasis = (p: {
   retakes: number;
   residual: number;
   spread: number;
-  /** The marked floor's span, when the depth is outside it. */
-  beyond?: { near: string; far: string };
+  /** When the depth is outside the marked floor: the floor's span, and the
+   * depth as a multiple of the end it is past. Reach is judged on depth along
+   * the camera's axis, which is shorter than the straight line shown. */
+  beyond?: { near: string; far: string; end: "near" | "far"; times: number };
 }) =>
-  `Straight line from the camera to the surface in the middle of the box: the median of the depth map over the middle half of the box (${p.cells.toLocaleString("en-US")} cells), put in metres by the fit to the floor marked in the Ruler. The bar combines 2 standard deviations over ${p.retakes} simulated retakes of the Ruler's taps, twice the scatter of the fit on the marked floor (${share(p.residual)}), the spread of depths in the middle of the box (${share(p.spread)}) and an allowance of ${ALLOWANCE} for the depth model's error away from the floor. The allowance is twice the model's published mean relative error on indoor pictures (5.3%, NYU Depth v2); it was not measured on this picture, and the published figure is for a larger input than the one used here.${p.beyond ? ` This is beyond the marked floor (${p.beyond.near} to ${p.beyond.far} from the camera), so the fit is stretched.` : ""}`;
+  `Straight line from the camera to the surface in the middle of the box: the median of the depth map over the middle half of the box (${p.cells.toLocaleString("en-US")} cells), put in metres by the fit to the floor marked in the Ruler. The bar combines 2 standard deviations over ${p.retakes} simulated retakes of the Ruler's taps, twice the scatter of the fit on the marked floor (${share(p.residual)}), the spread of depths in the middle of the box (${share(p.spread)}) and an allowance of ${ALLOWANCE} for the depth model's error away from the floor. The allowance is twice the model's published mean relative error on indoor pictures (5.3%, NYU Depth v2); it was not measured on this picture, and the published figure is for a larger input than the one used here. A box whose foot (its lowest eighth) reads nearer than its middle by more than ${FOOT_SHARE} times this bar is not measured: its middle would be showing what is behind the object.${p.beyond ? ` Along the camera's axis the middle of the box is ${p.beyond.times.toFixed(2)} times as deep as the ${p.beyond.end} end of the marked floor (the floor runs from ${p.beyond.near} to ${p.beyond.far} deep), so the fit is stretched; ${p.beyond.end === "far" ? `past ${REACH}` : `under ${(1 / REACH).toFixed(2)}`} times nothing is measured.` : ""}`;
 
 const UNCOVERED =
   "How far the box is from the object's real outline is not in the bar.";
@@ -130,7 +134,7 @@ export function detailOf(reading: BoxReading): string[] {
   ];
 }
 
-export const EXPORT_BASIS = `Distances are straight lines from the camera to the surface in the middle of each box, from one depth map scaled to floor marked in the Ruler. Sizes are the detector's box at that distance, not the object's outline. Errors are 2 standard deviations over simulated retakes of the Ruler's taps, combined with the fit's scatter, the spread of depth inside the box, an ${ALLOWANCE} allowance for the depth model away from the floor and one detector cell per box edge.`;
+export const EXPORT_BASIS = `Distances are straight lines from the camera to the surface in the middle of each box, from one depth map scaled to floor marked in the Ruler. Sizes are the detector's box at that distance, not the object's outline. Errors are 2 standard deviations over simulated retakes of the Ruler's taps, combined with the fit's scatter, the spread of depth inside the box, an ${ALLOWANCE} allowance for the depth model away from the floor and one detector cell per box edge. A box whose foot reads nearer than its middle by more than ${FOOT_SHARE} times its bar has no number; footNearer is that gap as a share of the middle's depth.`;
 
 const plain = (m: Measured) => ({
   value: m.value,
@@ -178,6 +182,7 @@ export function exportMeasured(
         ...(Object.keys(refused).length ? { refused } : {}),
         cells: box.cells,
         spread: box.spread,
+        footNearer: box.footNearer,
       };
     }),
     basis: EXPORT_BASIS,
