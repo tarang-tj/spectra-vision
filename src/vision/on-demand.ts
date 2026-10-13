@@ -18,8 +18,7 @@ export type OnDemandTask = {
   spec: TaskSpec;
   /** Should this task run for this source right now? */
   wanted(source: Source | null): boolean;
-  /** Called when the answer to `wanted` may have changed. It may be called
-   * far more often than the answer changes. */
+  /** Called when the answer to `wanted` may have changed, or may not have. */
   subscribe(listener: () => void): () => void;
 };
 export type OnDemandState =
@@ -49,9 +48,8 @@ function setState(kind: TaskKind, next: OnDemandState) {
 }
 
 type Live = { source: Source | null; confidence: number };
-/** Hand one frame of the source to a runner that claimed it. Each worker
- * gets its own bitmap because a bitmap is transferred, not shared. `live`
- * gives the page's current source and confidence, or null once it stopped. */
+/** Hand one frame of the source to a runner that claimed it (a bitmap is
+ * transferred, so each worker gets its own). `live` is null once stopped. */
 export async function feedFrame(
   runner: TaskRunner,
   holder: FrameHolder | null,
@@ -163,8 +161,7 @@ export function createOnDemand(
         look();
       },
       tick(time: number, paused: boolean) {
-        // One frame per picture, and never one of a video: a map of a
-        // moving picture would describe an earlier frame.
+        // One frame per picture, and never one of a moving picture.
         if (!runner || result || paused || !source) return;
         if (!("naturalWidth" in source.element) || !runner.wants(time)) return;
         runner.claim(time);
@@ -188,8 +185,7 @@ export function createOnDemand(
       }
     },
     /** The result with each slot's map of the same picture under
-     * `tasks[kind]`, and without one that is not. Nothing else changes:
-     * the latency and the flat fields stay the mode's own. */
+     * `tasks[kind]`. The latency and the flat fields stay the mode's own. */
     attach(shown: VisionResult): VisionResult {
       let tasks = shown.tasks;
       for (const slot of slots) {
