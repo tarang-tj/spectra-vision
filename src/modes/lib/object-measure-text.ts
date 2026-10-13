@@ -32,6 +32,43 @@ export const REASONS = {
   plumb: "the camera looks too nearly straight down for a plumb line to show",
 };
 
+/** The status line while nothing can be measured yet, by what is missing. */
+export const WAITING = {
+  none: "Not measuring yet: there is no picture on the stage. Open a photo.",
+  moving:
+    "Not measuring: this is a camera or a video. A depth map takes up to a second to make, so it would describe an earlier frame than the boxes. Open a photo.",
+  reference:
+    "Not measuring yet: the Ruler has no reference on this photo. Open the Ruler, tap the four corners of a sheet lying on the floor, then outline a patch of floor from near to far with the Area tool. The depth model is not downloaded until then.",
+  focal:
+    "Not measuring yet: this picture does not pin down the camera's focal length. Tilt the camera so the reference shows perspective, or mark a plumb edge in the Ruler.",
+};
+export const STATUS = {
+  loading: "Loading the depth model. The first time this is a 99 MB download.",
+  mapping: "Making the depth map of this photo.",
+  relative: (reason: string) => `No metres: ${reason}`,
+  failed: (note: string) =>
+    `The depth model did not load (${note.replace(/^Vision model failed: /, "").replace(/\.$/, "")}). Boxes are not affected.`,
+};
+const boxes = (n: number) => (n === 1 ? "1 box" : `${n} boxes`);
+/** The status line once there are metres: what was measured, and from what. */
+export const readyText = (p: {
+  measured: number;
+  boxes: number;
+  /** False until the retakes behind the bars are worked out. */
+  settled: boolean;
+  width: number;
+  height: number;
+  ms: number;
+  delegate: string;
+  floorCells: number;
+  residual: number;
+}) =>
+  `${p.settled ? `Measuring ${p.measured} of ${boxes(p.boxes)}.` : `Working out the error bars for ${boxes(p.boxes)}.`} One depth map, ${p.width} x ${p.height} cells, made in ${p.ms.toFixed(0)} ms on ${p.delegate}. Fitted to ${p.floorCells.toLocaleString("en-US")} cells of marked floor, scatter ${share(p.residual)} of depth.`;
+export const NO_SELECTION =
+  "Select a box in the list above to see what its numbers rest on.";
+export const libraryLine = (measured: number, all: number) =>
+  `Measured objects: ${measured} of ${boxes(all)} in the latest frame ${measured === 1 ? "has" : "have"} a distance. Open Inspect and select a box for what each number rests on.`;
+
 const got = (size: Sized): size is Measured => "value" in size;
 
 /** The piece added to a box's label before its id, or "" for none. */
@@ -107,7 +144,7 @@ export function exportMeasured(
   map: { width: number; height: number; delegate: string },
 ): Record<string, unknown> {
   if (!measurement.metric)
-    return { metric: false, reason: `No metres: ${measurement.reason}` };
+    return { metric: false, reason: STATUS.relative(measurement.reason) };
   const { scale } = measurement;
   return {
     metric: true,

@@ -2,6 +2,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { finerOn, onFinerChange } from "../../modes/lib/finer";
 import FinerSetting from "../../modes/lib/finer-setting";
+import ObjectMeasureSetting from "../../modes/lib/object-measure-setting";
 import {
   filterSummary,
   getFilter,
@@ -106,6 +107,7 @@ export default function Library() {
               : `Finer names failed: ${classifier.note}`}
         </p>
       )}
+      <ObjectMeasureSetting compact />
       <label className="library-search">
         <span>Search classes</span>
         <input

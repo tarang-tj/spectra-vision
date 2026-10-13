@@ -9,6 +9,7 @@ import {
   resetMeasure,
   setMeasure,
 } from "../src/modes/lib/object-measure";
+import { measureStatus } from "../src/modes/lib/object-measure-frame";
 import {
   detailOf,
   exportMeasured,
@@ -383,6 +384,29 @@ describe("when the depth model is wanted for measuring", () => {
     setMeasure(true);
     resetRuler();
     expect(look).toHaveBeenCalledTimes(before);
+  });
+
+  it("says in one line what is missing before anything is fetched", () => {
+    expect(measureStatus(video)).toMatchObject({
+      state: "waiting",
+      text: expect.stringMatching(
+        /^Not measuring: this is a camera or a video\./,
+      ),
+    });
+    expect(measureStatus(source)).toMatchObject({
+      state: "waiting",
+      text: expect.stringMatching(
+        /the Ruler has no reference on this photo.*The depth model is not downloaded until then\.$/,
+      ),
+    });
+    // Ready to measure, the model not started: it is loading, and says its size.
+    tapRuler();
+    expect(measureStatus(source)).toEqual({
+      state: "loading",
+      text: "Loading the depth model. The first time this is a 99 MB download.",
+    });
+    setMeasure(false);
+    expect(measureStatus(source)).toEqual({ state: "off", text: "" });
   });
 
   it("runs the very task Depth runs", async () => {

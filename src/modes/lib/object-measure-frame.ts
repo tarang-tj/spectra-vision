@@ -6,8 +6,10 @@ import { detectorSide } from "../../measure/box-size";
 import type { Source, Track, VisionResult } from "../../vision/types";
 import { retakesOf, settledRetakes } from "./depth-measured";
 import { depthScale } from "./depth-metric";
-import { depthExtra } from "./depth-readout";
-import { measureOn } from "./object-measure";
+import { DELEGATE_NAMES, depthExtra } from "./depth-readout";
+import { onDemandState } from "../../vision/on-demand";
+import { measureOn, measureWanted } from "./object-measure";
+import { STATUS, WAITING, readyText } from "./object-measure-text";
 import {
   measureTracks,
   type BoxReading,
@@ -106,4 +108,61 @@ export function readingsOf(
       (map = new Map(measurement.boxes.map((box) => [box.id, box]))),
     );
   return (id) => map.get(id);
+}
+
+export type MeasureStatus = {
+  state:
+    | "off"
+    | "waiting"
+    | "loading"
+    | "mapping"
+    | "relative"
+    | "ready"
+    | "failed";
+  text: string;
+  /** Boxes with a distance, and boxes in all, once ready. */
+  measured?: number;
+  boxes?: number;
+};
+/** Where Measure objects stands for this source, in words for the page. */
+export function measureStatus(source: Source | null): MeasureStatus {
+  const wanted = measureWanted(source);
+  if (!wanted.wanted)
+    return wanted.why === "off"
+      ? { state: "off", text: "" }
+      : { state: "waiting", text: WAITING[wanted.why] };
+  const demand = onDemandState("depth");
+  if (demand.state === "failed")
+    return { state: "failed", text: STATUS.failed(demand.note) };
+  if (
+    demand.state !== "ready" ||
+    !latest ||
+    latest.generation !== source?.generation
+  )
+    return demand.state === "mapping" || demand.state === "ready"
+      ? { state: "mapping", text: STATUS.mapping }
+      : { state: "loading", text: STATUS.loading };
+  const { measurement, map } = latest;
+  if (!measurement.metric)
+    return { state: "relative", text: STATUS.relative(measurement.reason) };
+  const measured = measurement.boxes.filter(
+      (box) => box.state === "measured",
+    ).length,
+    all = measurement.boxes.length;
+  return {
+    state: "ready",
+    measured,
+    boxes: all,
+    text: readyText({
+      measured,
+      boxes: all,
+      settled: measurement.retakes !== null,
+      width: map.width,
+      height: map.height,
+      ms: map.ms,
+      delegate: DELEGATE_NAMES[map.delegate],
+      floorCells: measurement.scale.floorCells,
+      residual: measurement.scale.fit.residual,
+    }),
+  };
 }
