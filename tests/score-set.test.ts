@@ -114,6 +114,24 @@ describe("parseSet", () => {
       ),
     ).toThrow(/has no license/);
   });
+  it("refuses an address that is not the photo's Flickr page, COCO's file or the licence", () => {
+    // These become links on the page, so only the expected sites pass.
+    expect(broken((s) => (s.items[2].page = "javascript:alert(1)"))).toThrow(
+      /Flickr page/,
+    );
+    expect(
+      broken((s) => (s.items[2].page = "https://example.test/photos/a/1/")),
+    ).toThrow(/Flickr page/);
+    expect(
+      broken((s) => (s.items[2].licenseUrl = "https://example.test/by/2.0/")),
+    ).toThrow(/licence address/);
+    expect(broken((s) => (s.items[2].license = "CC BY-NC 2.0"))).toThrow(
+      /CC BY 2\.0/,
+    );
+    expect(broken((s) => (s.labelsUrl = "javascript:alert(1)"))).toThrow(
+      /labels' terms/,
+    );
+  });
   it("refuses a repeated picture, a box outside its picture and a header that disagrees", () => {
     expect(broken((s) => (s.items[1].id = s.items[0].id))).toThrow(
       /id of its own/,

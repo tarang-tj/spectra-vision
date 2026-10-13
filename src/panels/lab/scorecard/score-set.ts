@@ -91,6 +91,8 @@ export function parseSet(value: unknown): ScoreSet {
   if (!set || typeof set !== "object" || !Array.isArray(set.items))
     return fail("it has no pictures");
   for (const key of HEADER) if (!text(set[key])) fail(`it has no ${key}`);
+  if (!set.labelsUrl.startsWith("https://cocodataset.org/"))
+    fail("the labels' terms are not on COCO's site");
   const seen = new Set<number>();
   let boxes = 0,
     crowds = 0,
@@ -102,6 +104,12 @@ export function parseSet(value: unknown): ScoreSet {
     seen.add(item.id);
     for (const key of TEXT) if (!text(item[key])) fail(`${name} has no ${key}`);
     if (!/^[0-9a-f]{64}$/.test(item.sha256)) fail(`${name} has no SHA-256`);
+    // The page shows these as links and names the licence beside the picture.
+    if (!/^https:\/\/www\.flickr\.com\/photos\/[^/]+\/\d+\/$/.test(item.page))
+      fail(`${name} does not link to its Flickr page`);
+    if (item.license !== "CC BY 2.0") fail(`${name} is not CC BY 2.0`);
+    if (item.licenseUrl !== "https://creativecommons.org/licenses/by/2.0/")
+      fail(`${name} has another licence address`);
     if (!/^\d{12}\.jpg$/.test(item.file)) fail(`${name} has an odd file name`);
     if (!whole(item.width) || !whole(item.height) || !whole(item.bytes))
       fail(`${name} has no size`);
