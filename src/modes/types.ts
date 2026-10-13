@@ -2,6 +2,7 @@
 import type { ComponentType } from "react";
 import { isRecord } from "../registry";
 import type { Frame, FrameData } from "../vision/frame";
+import type { OnDemandTask } from "../vision/on-demand";
 import type { Point, TaskSpec, VisionResult } from "../vision/types";
 
 /** One row of the inspector's "In the frame" list and one dot on the motion map. */
@@ -24,6 +25,11 @@ export type ModeDef = {
   /** One model, or several for a fusion mode (one worker each). The first task
    * is the primary one: it fills the flat VisionResult fields. */
   task: TaskSpec | TaskSpec[];
+  /** Further models the mode runs only while each one's `wanted` says so
+   * (vision/on-demand.ts): Objects' depth map for Measure objects. They are
+   * not part of `tasksOf`, so the status line, the latency, the Lab and the
+   * model cards see only `task`. A result lands under `result.tasks[kind]`. */
+  onDemand?: OnDemandTask[];
   hint: string;
   demo: DemoSpec;
   /** Show the stage's Clear tool, which resets effect state such as painted trails. */
