@@ -1,7 +1,9 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
 // The error bars of a measured box (box-size.ts). Each bar is its terms
 // added in quadrature as independent, with every standard deviation stated
-// as two. What no term covers is said in the words that go with the number
+// as two. The spread of depths inside the box is the one exception: it goes
+// in whole, as one standard deviation of the box's cells, which is already
+// wider than the error of their median. What no term covers is said in the words that go with the number
 // (modes/lib/object-measure-text.ts): how loosely the box sits round the
 // object, and lens distortion that was not corrected. Pure.
 import { depthAt } from "../vision/depth/affine-fit";
