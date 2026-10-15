@@ -3,51 +3,15 @@ import { describe, it, expect } from "vitest";
 import { ACCENTS, BLUE, LAVENDER, MINT, ramp, rgb } from "../src/gl/color";
 import {
   arcOffset,
-  catmullRom,
   clamp,
   emitRate,
   hash,
   nextAlive,
   noise,
-  smoothPath,
   smoothstep,
   spawnChance,
 } from "../src/gl/maths";
 import { describeShaderError } from "../src/gl/shader";
-
-describe("curve smoothing", () => {
-  it("passes through the two middle control points", () => {
-    expect(catmullRom(0, 2, 5, 9, 0)).toBeCloseTo(2, 10);
-    expect(catmullRom(0, 2, 5, 9, 1)).toBeCloseTo(5, 10);
-  });
-  it("is exact on a straight, evenly spaced line", () => {
-    for (const t of [0.1, 0.25, 0.5, 0.9])
-      expect(catmullRom(0, 1, 2, 3, t)).toBeCloseTo(1 + t, 10);
-  });
-  it("smooths a path through every measured point and ends on the last", () => {
-    const points = [0, 0, 1, 2, 3, 1, 4, 4],
-      out = new Float32Array(64),
-      n = smoothPath(points, 4, 4, out);
-    expect(n).toBe(3 * 4 + 1);
-    for (let i = 0; i < 4; i++) {
-      expect(out[2 * i * 4]).toBeCloseTo(points[2 * i], 5);
-      expect(out[2 * i * 4 + 1]).toBeCloseTo(points[2 * i + 1], 5);
-    }
-    // Between the first two points the curve stays near the segment.
-    expect(out[2]).toBeGreaterThan(0);
-    expect(out[2]).toBeLessThan(1);
-  });
-  it("handles one point, no points, and a full output buffer", () => {
-    const out = new Float32Array(8);
-    expect(smoothPath([], 0, 4, out)).toBe(0);
-    expect(smoothPath([7, 9], 1, 4, out)).toBe(1);
-    expect([out[0], out[1]]).toEqual([7, 9]);
-    const many = Array.from({ length: 40 }, (_, i) => i);
-    const n = smoothPath(many, 20, 4, out);
-    expect(n).toBe(4);
-    expect([out[6], out[7]]).toEqual([38, 39]);
-  });
-});
 
 describe("noise and arcs", () => {
   it("hash is deterministic and stays in [0, 1)", () => {

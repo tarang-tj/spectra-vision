@@ -25,7 +25,7 @@ const BONES: Rgb = [1, 0, 0],
 const hologram: EffectDef = {
   id: "hologram",
   label: "Hologram",
-  modes: ["body", "hands", "gestures", "segment", "fusion"],
+  modes: ["body", "segment", "fusion"],
   kind: "gl",
   order: 50,
   intensity: { default: DEFAULT_INTENSITY },

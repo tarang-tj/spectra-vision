@@ -2,7 +2,7 @@
 
 **Reality, augmented.** A camera-first computer vision studio by **Tarang Jammalamadaka**.
 
-[Open the live studio](https://tarang-tj.github.io/spectra-vision/) · [Watch the video demo](https://tarang-tj.github.io/spectra-vision/demo/) · [v2.5.1](https://github.com/tarang-tj/spectra-vision/releases/tag/v2.5.1) · [Ownership and license](LICENSE)
+[Open the live studio](https://tarang-tj.github.io/spectra-vision/) · [Watch the video demo](https://tarang-tj.github.io/spectra-vision/demo/) · [v2.6.0](https://github.com/tarang-tj/spectra-vision/releases/tag/v2.6.0) · [Ownership and license](LICENSE)
 
 Eight modes run seven real vision models on your camera: tracked object boxes, a body skeleton, hand-controlled light painting, a 478-point face mesh, a person cutout, gesture recognition, body, hands and face together, and a depth map from one camera. Ten effects draw on what the models find, a Ruler tab measures on a frozen picture with a stated error on every number and can lay several pictures of one room on one plan, and a Lab tab measures how fast the models run on your device. Objects has a further model, D-FINE-S, that runs only where you choose it and the browser has WebGPU. Everything runs in your browser.
 
@@ -43,18 +43,18 @@ The inspector shows what is in the frame and where, and lists every row. Confide
 
 Effects are optional layers over a mode's own drawing. The tray lists only the effects that have something to draw from in the current mode. Every effect is driven by model output: none of them plays a scripted animation.
 
-| Effect         | Drawn with | Modes                                  | What it draws from                                                                                           |
-| -------------- | ---------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Trails         | Canvas 2D  | Objects, Body, Hands, Fusion           | Object tracks, wrists and ankles, pinch-to-paint strokes. On by default                                      |
-| Constellation  | Canvas 2D  | All                                    | Dims the source to a dark sky; halos on fingertips                                                           |
-| Plasma hands   | WebGL2     | Hands, Gestures, Fusion                | Arcs between fingertips and palms                                                                            |
-| Ember trail    | WebGL2     | Body, Hands, Gestures, Fusion          | Particles shed along the measured path of wrists and ankles, or of a hand's wrist and index fingertip        |
-| Neon ribbons   | WebGL2     | Body, Hands, Gestures, Fusion          | Ribbons along the recent path of wrists, ankles or fingertips                                                |
-| Aura           | WebGL2     | Body, Hands, Gestures, Segment, Fusion | A glow around the segmentation mask, or around tracked bones                                                 |
-| Hologram       | WebGL2     | Body, Hands, Gestures, Segment, Fusion | A scanline cutout of the masked person, or of the skeleton                                                   |
-| Starfield pull | WebGL2     | Objects, Body, Hands, Gestures, Fusion | Stars drawn toward hands, wrists or tracked objects                                                          |
-| Echo           | WebGL2     | Body, Hands, Gestures, Fusion          | Delayed copies of past model results                                                                         |
-| Face light     | WebGL2     | Body, Face, Fusion                     | Light on the face mesh that follows the blendshape scores; in Body, on the pose model's eye and mouth points |
+| Effect         | Drawn with | Modes                                  | What it draws from                                                                                              |
+| -------------- | ---------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Trails         | Canvas 2D  | Objects, Body, Hands, Fusion           | Object tracks, wrists and ankles, pinch-to-paint strokes. On by default                                         |
+| Constellation  | Canvas 2D  | All                                    | Dims the source to a dark sky; halos on fingertips                                                              |
+| Plasma hands   | WebGL2     | Hands, Gestures, Fusion                | Arcs between fingertips and palms                                                                               |
+| Ember trail    | WebGL2     | Body, Hands, Gestures, Fusion          | Particles shed along the measured path of wrists and ankles, or of a hand's wrist and index fingertip           |
+| Aura           | WebGL2     | Body, Segment, Fusion                  | A glow around the segmentation mask, or around tracked bones                                                    |
+| Hologram       | WebGL2     | Body, Segment, Fusion                  | A scanline cutout of the masked person, or of the skeleton                                                      |
+| Starfield pull | WebGL2     | Objects, Body, Hands, Gestures, Fusion | Stars drawn toward hands, wrists or tracked objects                                                             |
+| Echo           | WebGL2     | Body, Fusion                           | Delayed copies of past model results                                                                            |
+| Water          | WebGL2     | Hands, Gestures, Fusion                | A ball of water summoned by an open palm that follows the palm, is thrown by a flick and splashes into droplets |
+| Face light     | WebGL2     | Body, Face, Fusion                     | Light on the face mesh that follows the blendshape scores; in Body, on the pose model's eye and mouth points    |
 
 The eight WebGL2 effects share one WebGL2 context, composite onto the stage canvas (so Record and Screenshot capture them), and hold still while paused or when reduced motion is requested. In a browser without WebGL2 their switches are disabled and the tray says why; the modes and the two canvas effects keep working. On a software renderer they run, slowly.
 
