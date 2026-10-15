@@ -644,6 +644,11 @@ function Sway() {
 - **A faint detection never confirms a track** (`src/vision/tracker.ts`). The band under the Confidence value can carry a confirmed track and can no longer be the sighting that gives a track its id. `trackResult` in `track-gate.ts` is the one path a result takes into a tracker: `useSession` and the Lab's stability meter both call it, and `tests/tracker-gate.test.ts` covers it.
 - **Camera side** (`src/vision/camera-start.ts`, `camera-choice.ts`). The side is read from the track's `getCapabilities()` where its settings give none. A camera that names no side on a device that has sides is mirrored on a guess and `unknownSideNote` says so; for a remembered camera with no side (`sideUnknown`) the chooser shows neither Front nor Rear as pressed. The unanswered permission prompt's **Cancel** ends with "Stopped waiting for the camera. Showing the demo."
 
+## Added in 2.6
+
+- **Water** (`src/effects/water.ts`, with `lib/water-sim.ts`, `lib/water-hand.ts`, `lib/water-shaders.ts`). An open palm held for 0.25 s gathers a ball of water on it; the ball follows the palm, a flick throws it, it falls, splashes into drops and leaves a puddle that fades. Positions come only from hand landmarks. A hand counts as open only when its fingers are spread and the index fingertip is not pinched to the thumb (`PINCH_BELOW`), so an OK sign does not summon it. A held ball keeps to the hand nearest it within `REACH` palm sizes, and a hand missing for less than `GRACE_S` (0.2 s) does not drop it. The ball, drops and puddle are one metaball field; inside it the picture behind is bent through a lens of that shape with a small hard glint and a thin rim. The simulation is pure and covered by `tests/water-sim.test.ts`. Throw speed and splash feel were seen on a sign-language video, not tuned on a live camera.
+- **Fewer switches**. Neon ribbons is removed (it overlapped Trails and Ember trail), and Aura, Hologram and Echo are offered only in modes that see a whole body, so the Hands tray has six switches. The footer no longer repeats the mode list, and the GitHub link is in Help.
+
 ## Telemetry bus
 
 `src/telemetry/bus.ts`. A typed emitter with no UI. Events carry measured values only.

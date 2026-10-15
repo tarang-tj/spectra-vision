@@ -16,7 +16,7 @@ import {
 } from "./lib/water-sim";
 import type { EffectDef } from "./types";
 
-/** Water: hold an open palm up and a glassy ball of water gathers on it. It
+/** Water: hold an open palm up and a ball of water gathers on it. It
  * follows the palm, a flick throws it, it splashes into drops where it lands
  * and leaves a puddle that fades. Every position comes from hand landmarks;
  * the picture seen through the water is the camera's own. */
@@ -28,7 +28,7 @@ const water: EffectDef = {
   order: 32,
   intensity: { default: DEFAULT_INTENSITY },
   create: (env) =>
-    glEffect(env, { id: "water", exposure: 1, bloom: 0.15 }, (kit) => {
+    glEffect(env, { id: "water", exposure: 1, bloom: 0.04 }, (kit) => {
       const gl = kit.gl,
         owned: { dispose(): void }[] = [],
         dispose = () => {
@@ -138,7 +138,7 @@ const water: EffectDef = {
             gl.uniform1i(loc("uCount"), sim.dropCount);
             gl.uniform4f(loc("uPuddle"), puddle.x, puddle.y, puddle.w, fade);
             gl.uniform4f(loc("uBox"), x0 - pad, y0 - pad, x1 + pad, y1 + pad);
-            gl.uniform1f(loc("uBend"), 0.35 * r * strength);
+            gl.uniform1f(loc("uBend"), 0.45 * r * strength);
             gl.uniform1f(loc("uLift"), 0.8 * r);
             gl.uniform1f(loc("uTime"), clock.time % 97);
             gl.uniform1f(loc("uE"), strength);

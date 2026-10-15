@@ -7,7 +7,7 @@ const white = WHITE.map((v) => v.toFixed(4)).join(", ");
 /** Water: the blob, its drops and the puddle are one metaball field in stage
  * CSS pixels, so drops merge back into the blob and each other. Inside the
  * edge the picture behind is bent through a lens shaped like the field, with
- * a pale Fresnel edge, a bright rim line and a glint from an upper-left
+ * a faint Fresnel edge, a thin rim line and a glint from an upper-left
  * light. Alpha is coverage, and the colour is written through the inverse of
  * the composite's tone map so the picture comes out at its own brightness. */
 export const WATER_FRAGMENT = `#version 300 es
@@ -60,22 +60,23 @@ void main() {
   vec2 grad = vec2(height(p + vec2(1.5, 0.0)) - h, height(p + vec2(0.0, 1.5)) - h);
   vec3 n = normalize(vec3(-grad / 1.5 * uLift, 1.0));
   float F = pow(1.0 - n.z, 3.0);
-  vec3 pale = mix(BLUE, WHITE, 0.6);
+  vec3 pale = mix(BLUE, WHITE, 0.4);
   vec3 c;
   if (uHasSource > 0.5) {
     // A convex lens: the picture is pulled in from the middle, and each
     // channel bends a little differently.
     vec2 bend = n.xy * uBend * (0.35 + 0.65 * h);
     c = vec3(behind(p - bend).r, behind(p - bend * 1.06).g, behind(p - bend * 1.12).b);
-    c = c * vec3(0.9, 0.97, 1.04) + BLUE * 0.04;
+    c = c * vec3(0.86, 0.95, 1.05) + BLUE * 0.06;
   } else c = mix(BLUE, MINT, 0.3) * 0.35;
-  c = mix(c * (1.0 - 0.25 * F), pale, 0.55 * F);
-  float rim = smoothstep(0.92, 1.02, f) * (1.0 - smoothstep(1.02, 1.35, f));
+  c = mix(c * (1.0 - 0.2 * F), pale, 0.3 * F);
+  float rim = smoothstep(0.92, 1.0, f) * (1.0 - smoothstep(1.0, 1.15, f));
   vec3 r = reflect(-normalize(L), n);
-  float glint = pow(max(r.z, 0.0), 28.0) * 1.8 + pow(max(r.z, 0.0), 5.0) * 0.1;
+  // Water is clear: a small hard glint, not a broad glassy sheen.
+  float glint = pow(max(r.z, 0.0), 180.0) * 2.4 + pow(max(r.z, 0.0), 24.0) * 0.12;
   // Light focused through the water lands on the side away from the lamp.
   float caustic = pow(clamp(dot(n.xy, -L.xy) * 1.6, 0.0, 1.0), 2.0) * h;
-  c += pale * (rim * 0.5 + caustic * 0.3) + WHITE * glint;
+  c += pale * (rim * 0.35 + caustic * 0.3) + WHITE * glint;
   float a = cover * (uHasSource > 0.5 ? 1.0 : 0.4);
   c = min(c * a, vec3(uCap));
   o = vec4(-log(1.0 - c) / uE, a);
