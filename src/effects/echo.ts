@@ -18,7 +18,7 @@ const DELAYS = [0.12, 0.24, 0.38, 0.54, 0.72],
 const echo: EffectDef = {
   id: "echo",
   label: "Echo",
-  modes: ["body", "hands", "gestures", "fusion"],
+  modes: ["body", "fusion"],
   kind: "gl",
   order: 70,
   intensity: { default: DEFAULT_INTENSITY },

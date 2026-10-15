@@ -17,7 +17,7 @@ import type { EffectDef } from "./types";
 const aura: EffectDef = {
   id: "aura",
   label: "Aura",
-  modes: ["body", "hands", "gestures", "segment", "fusion"],
+  modes: ["body", "segment", "fusion"],
   kind: "gl",
   order: 45,
   intensity: { default: DEFAULT_INTENSITY },

@@ -2,11 +2,11 @@
 
 SPECTRA is built from three registries. Each one is a folder that is scanned at build time with `import.meta.glob`, so **adding one file adds one entry**. Nothing else needs editing: no list, no switch, no shared stylesheet.
 
-| Registry | Folder         | A plugin file exports | Shows up as                         | Shipped                                                                                                          |
-| -------- | -------------- | --------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Modes    | `src/modes/`   | `ModeDef`             | A button on the mode switch         | Objects, Body, Hands, Face, Segment, Gestures, Fusion, Depth                                                     |
-| Effects  | `src/effects/` | `EffectDef`           | A switch in the effects tray        | Trails, Constellation, Plasma hands, Ember trail, Neon ribbons, Aura, Hologram, Starfield pull, Echo, Face light |
-| Panels   | `src/panels/`  | `PanelDef`            | A tab in the inspector (right rail) | Inspect, Lab, Library, Ruler, Presence                                                                           |
+| Registry | Folder         | A plugin file exports | Shows up as                         | Shipped                                                                                                   |
+| -------- | -------------- | --------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Modes    | `src/modes/`   | `ModeDef`             | A button on the mode switch         | Objects, Body, Hands, Face, Segment, Gestures, Fusion, Depth                                              |
+| Effects  | `src/effects/` | `EffectDef`           | A switch in the effects tray        | Trails, Constellation, Plasma hands, Ember trail, Aura, Hologram, Starfield pull, Echo, Water, Face light |
+| Panels   | `src/panels/`  | `PanelDef`            | A tab in the inspector (right rail) | Inspect, Lab, Library, Ruler, Presence                                                                    |
 
 The version 1 visual design (colours, type, composition) is recorded in [design/implementation-spec.md](design/implementation-spec.md); its notes on structure are out of date. This file is the current account of structure.
 
@@ -714,7 +714,7 @@ src/modes/                  types.ts, index.ts, objects.ts, body.ts, hands.ts, f
                             object-boxes.ts, object-controls.tsx, object-model-setting.tsx,
                             object-sharper-setting.tsx)
 src/effects/                types.ts, index.ts, trails.ts, constellation.ts, plasma-hands.ts,
-                            ember-trail.ts, neon-ribbons.ts, aura.ts, hologram.ts, starfield-pull.ts,
+                            ember-trail.ts, aura.ts, hologram.ts, starfield-pull.ts, water.ts,
                             echo.ts, face-light.ts, lib/
 src/panels/                 types.ts, index.ts, inspect.tsx, lab.tsx, lab/, library.tsx, library/,
                             ruler.tsx, ruler/, presence.tsx, presence/; the last four .tsx files

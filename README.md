@@ -49,11 +49,11 @@ Effects are optional layers over a mode's own drawing. The tray lists only the e
 | Constellation  | Canvas 2D  | All                                    | Dims the source to a dark sky; halos on fingertips                                                           |
 | Plasma hands   | WebGL2     | Hands, Gestures, Fusion                | Arcs between fingertips and palms                                                                            |
 | Ember trail    | WebGL2     | Body, Hands, Gestures, Fusion          | Particles shed along the measured path of wrists and ankles, or of a hand's wrist and index fingertip        |
-| Neon ribbons   | WebGL2     | Body, Hands, Gestures, Fusion          | Ribbons along the recent path of wrists, ankles or fingertips                                                |
-| Aura           | WebGL2     | Body, Hands, Gestures, Segment, Fusion | A glow around the segmentation mask, or around tracked bones                                                 |
-| Hologram       | WebGL2     | Body, Hands, Gestures, Segment, Fusion | A scanline cutout of the masked person, or of the skeleton                                                   |
+| Aura           | WebGL2     | Body, Segment, Fusion                  | A glow around the segmentation mask, or around tracked bones                                                 |
+| Hologram       | WebGL2     | Body, Segment, Fusion                  | A scanline cutout of the masked person, or of the skeleton                                                   |
 | Starfield pull | WebGL2     | Objects, Body, Hands, Gestures, Fusion | Stars drawn toward hands, wrists or tracked objects                                                          |
-| Echo           | WebGL2     | Body, Hands, Gestures, Fusion          | Delayed copies of past model results                                                                         |
+| Echo           | WebGL2     | Body, Fusion                           | Delayed copies of past model results                                                                         |
+| Water          | WebGL2     | Hands, Gestures, Fusion                | A glass blob summoned by an open palm that follows the palm, is thrown by a flick and splashes into droplets |
 | Face light     | WebGL2     | Body, Face, Fusion                     | Light on the face mesh that follows the blendshape scores; in Body, on the pose model's eye and mouth points |
 
 The eight WebGL2 effects share one WebGL2 context, composite onto the stage canvas (so Record and Screenshot capture them), and hold still while paused or when reduced motion is requested. In a browser without WebGL2 their switches are disabled and the tray says why; the modes and the two canvas effects keep working. On a software renderer they run, slowly.

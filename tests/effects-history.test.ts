@@ -221,9 +221,9 @@ describe("effect intensity", () => {
       "ember-trail",
       "face-light",
       "hologram",
-      "neon-ribbons",
       "plasma-hands",
       "starfield-pull",
+      "water",
     ]);
     for (const effect of gl) {
       expect(effect.intensity?.default).toBeGreaterThan(0);
