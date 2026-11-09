@@ -485,13 +485,14 @@ test("the rail matches the stage, tabs follow the registry and the tray hides ef
     expect(s!.width / s!.height).toBeCloseTo(1.6, 2);
     expect(Math.abs(r!.height - s!.height)).toBeLessThanOrEqual(1);
   }
-  // The footer names the registered modes, not a fixed three.
+  // The mode switch is the one place that names the modes; the footer does not
+  // repeat them.
   const modes = await page
     .getByRole("navigation", { name: "Vision mode" })
     .getByRole("button")
     .allInnerTexts();
   for (const mode of modes)
-    await expect(page.locator("main > footer")).toContainText(mode);
+    await expect(page.locator("main > footer")).not.toContainText(mode);
   // Trails follows objects, bodies and hands. In a mode that tracks none of
   // them its switch is gone; Constellation, which works anywhere, stays.
   await expect(page.getByRole("switch", { name: "Trails" })).toBeVisible();

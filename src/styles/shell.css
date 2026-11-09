@@ -225,11 +225,6 @@ footer > div {
   align-items: center;
   gap: 18px;
 }
-footer i {
-  font-style: normal;
-  padding: 0 12px;
-  color: #4d6961;
-}
 .toast {
   position: fixed;
   bottom: 24px;
@@ -519,9 +514,6 @@ kbd {
   footer > div {
     flex: 1;
     justify-content: space-between;
-  }
-  footer i {
-    padding: 0 5px;
   }
   footer > div {
     gap: 6px;

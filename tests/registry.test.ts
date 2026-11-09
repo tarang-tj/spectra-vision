@@ -92,6 +92,14 @@ describe("the shipped registries", () => {
     for (const m of modes)
       expect(effectsFor(m.id).some((e) => e.id === "constellation")).toBe(true);
   });
+  it("water is offered in hands, gestures and fusion only and is not default-on", () => {
+    const offered = modes
+      .filter((m) => effectsFor(m.id).some((e) => e.id === "water"))
+      .map((m) => m.id);
+    expect(offered).toEqual(["hands", "gestures", "fusion"]);
+    const water = effects.find((e) => e.id === "water");
+    expect([water?.kind, !!water?.defaultOn]).toEqual(["gl", false]);
+  });
   it("list Inspect as the first panel, then the Lab, then the measuring panels", () => {
     expect(panels.map((p) => p.id)).toEqual([
       "inspect",

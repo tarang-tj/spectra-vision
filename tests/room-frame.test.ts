@@ -400,7 +400,10 @@ describe("a refusal says what to do about each cause", () => {
   });
 });
 
-describe("with noisy taps, 200 retakes each", () => {
+// Hundreds of solves per test: 10 s alone, longer under a full run.
+const SLOW = { timeout: 60_000 };
+
+describe("with noisy taps, 200 retakes each", SLOW, () => {
   const RETAKES = 200;
   type Tally = {
     right: number;

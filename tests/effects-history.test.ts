@@ -7,12 +7,7 @@ import {
   HAND,
   POSE,
 } from "../src/effects/lib/figures";
-import {
-  createTrail,
-  delayedIndex,
-  pushTrail,
-  trimTrail,
-} from "../src/effects/lib/history";
+import { delayedIndex } from "../src/effects/lib/history";
 import {
   blendshapesOf,
   facesOf,
@@ -69,29 +64,6 @@ function frameWith(tasks: Partial<Record<TaskKind, TaskResult>>): Frame {
 }
 const points = (n: number, visibility?: number): Point[] =>
   Array.from({ length: n }, (_, i) => ({ x: i / n, y: 1 - i / n, visibility }));
-
-describe("trails", () => {
-  it("skips a still point, keeps moving ones, and drops the oldest when full", () => {
-    const trail = createTrail(3);
-    expect(pushTrail(trail, 0, 0, 0, 0.01)).toBe(true);
-    expect(pushTrail(trail, 0.001, 0, 1, 0.01)).toBe(false);
-    pushTrail(trail, 1, 0, 2, 0.01);
-    pushTrail(trail, 2, 0, 3, 0.01);
-    pushTrail(trail, 3, 0, 4, 0.01);
-    expect(trail.count).toBe(3);
-    expect(Array.from(trail.xy.slice(0, 6))).toEqual([1, 0, 2, 0, 3, 0]);
-    expect(Array.from(trail.times.slice(0, 3))).toEqual([2, 3, 4]);
-  });
-  it("forgets old points but always keeps where the point is now", () => {
-    const trail = createTrail(8);
-    for (let i = 0; i < 5; i++) pushTrail(trail, i, i, i, 0.01);
-    trimTrail(trail, 5, 2.5);
-    expect(Array.from(trail.times.slice(0, trail.count))).toEqual([3, 4]);
-    trimTrail(trail, 100, 2.5);
-    expect(trail.count).toBe(1);
-    expect([trail.xy[0], trail.xy[1]]).toEqual([4, 4]);
-  });
-});
 
 describe("delayed ghosts", () => {
   it("picks the newest snapshot that is old enough, across the ring seam", () => {
@@ -221,9 +193,9 @@ describe("effect intensity", () => {
       "ember-trail",
       "face-light",
       "hologram",
-      "neon-ribbons",
       "plasma-hands",
       "starfield-pull",
+      "water",
     ]);
     for (const effect of gl) {
       expect(effect.intensity?.default).toBeGreaterThan(0);

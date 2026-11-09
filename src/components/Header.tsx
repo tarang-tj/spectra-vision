@@ -4,7 +4,6 @@ import {
   Camera,
   Lightbulb,
   Search,
-  SquareArrowOutUpRight,
   ShieldCheck,
   Square,
   Upload,
@@ -58,15 +57,6 @@ export default function Header({
           >
             <Search size={20} />
           </button>
-          <a
-            className="icon-button"
-            href="https://github.com/tarang-tj/spectra-vision"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="SPECTRA on GitHub"
-          >
-            <SquareArrowOutUpRight size={22} />
-          </a>
         </div>
       </header>
       <section className="intro">

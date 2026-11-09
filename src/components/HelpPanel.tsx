@@ -83,6 +83,13 @@ export default function HelpPanel() {
         rel="noreferrer"
       >
         Third-party notices
+      </a>{" "}
+      <a
+        href="https://github.com/tarang-tj/spectra-vision"
+        target="_blank"
+        rel="noreferrer"
+      >
+        SPECTRA on GitHub
       </a>
     </section>
   );

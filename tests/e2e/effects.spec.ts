@@ -5,8 +5,8 @@ import { test, expect, type Page } from "@playwright/test";
 const EFFECTS = [
   { label: "Plasma hands", mode: "Hands" },
   { label: "Ember trail", mode: "Hands" },
-  { label: "Neon ribbons", mode: "Hands" },
   { label: "Starfield pull", mode: "Hands" },
+  { label: "Water", mode: "Hands" },
   { label: "Aura", mode: "Body" },
   { label: "Hologram", mode: "Body" },
   { label: "Echo", mode: "Body" },

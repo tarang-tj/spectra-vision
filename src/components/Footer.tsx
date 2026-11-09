@@ -1,7 +1,6 @@
 /* Copyright (c) 2026 Tarang Jammalamadaka. All rights reserved. */
-import { Fragment, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { CircleHelp, Download, X } from "lucide-react";
-import { modes } from "../modes";
 import { onStillState, stillState, stillWords } from "../vision/still";
 import HelpPanel from "./HelpPanel";
 export default function Footer({
@@ -59,12 +58,6 @@ export default function Footer({
       </section>
       <footer>
         <span>
-          {/* The registered modes, so the line is true for any number of them. */}
-          {modes.map((mode) => (
-            <Fragment key={mode.id}>
-              {mode.short} <i>·</i>{" "}
-            </Fragment>
-          ))}
           <a href={`${import.meta.env.BASE_URL}demo/`}>Watch demo</a>
         </span>
         <div>
